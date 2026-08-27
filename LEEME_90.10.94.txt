@@ -1,0 +1,29 @@
+CORE AWAKENED 90.10.94 — CÁMARA VS FIJA + BUFFER MANDO
+
+BASE: 90.10.93 INPUT ROUTER DETERMINISTA.
+
+CAMBIOS REALES:
+1) main.gd
+   - En VERSUS LOCAL, durante combate normal, cámara horizontal fija al centro de arena.
+   - Zoom normal fijo (1.0) en VERSUS LOCAL.
+   - Las cámaras cinematográficas/CORE siguen teniendo prioridad y no se eliminan.
+   - Motivo: el análisis cuadro a cuadro mostró que el supuesto dash-back de J2 coincidía con el desplazamiento del fondo/cámara, mientras J2 conservaba su X mundial.
+
+2) fighter.gd
+   - Buffer humano de puño/patada de 0.24 s.
+   - Si el mando pulsa X/Y durante startup/activo/recovery, la pulsación no se pierde: se ejecuta en el primer frame legal.
+   - Se conserva el comportamiento histórico de botón sostenido.
+
+NO CAMBIAN:
+- Versus Local / selector J1-J2 / selector de escenario.
+- Daño, rangos, CORE, IA, sprites o reglas de golpes.
+- Archivos menu_principal.gd, selector_personajes.gd, selector_escenarios.gd y game_state.gd son los mismos de 90.10.93.
+
+PRUEBA 1 — DASH ESPEJO:
+J1 Kali teclado, J2 Helena mando sin tocar.
+Hacer -> -> varias veces con J1.
+Esperado: Kali dashea; Helena queda visualmente clavada respecto del escenario.
+
+PRUEBA 2 — COMBO MANDO:
+Con J2 mando, pulsar repetidamente X o Y con ritmo rápido.
+Esperado: los taps hechos durante recovery quedan bufferizados y puede encadenar COMBO x2 como el teclado.

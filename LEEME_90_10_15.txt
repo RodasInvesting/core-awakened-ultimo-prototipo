@@ -1,0 +1,21 @@
+CORE AWAKENED 90.10.15 — VICTORIA BLOQUEADA
+
+CAMBIOS:
+- El ganador queda congelado en la pose de victoria hasta que termina la escena.
+- El teclado ya no puede mover al ganador después de "GANA LA PARTIDA".
+- La limpieza tardía del Golpe Absoluto ya no puede desbloquear la victoria.
+- La salida de Furia ya no pisa victoria.png con la pose normal.
+- Se limpian empujes/carrera/hitstop residuales al entrar en victoria.
+- Las victorias obtenidas por el flujo normal de rondas también llaman a mostrar_pose_victoria().
+- El texto de resultado recibe contorno negro para legibilidad en escenarios claros.
+
+NO SE MODIFICARON:
+- Hitbox de patadas.
+- Límites de arena.
+- Derribos.
+- Scripts individuales de personajes.
+
+INSTALACIÓN:
+Cerrar Godot, extraer el ZIP en la raíz del proyecto y reemplazar:
+scripts/fighter.gd
+scripts/main.gd

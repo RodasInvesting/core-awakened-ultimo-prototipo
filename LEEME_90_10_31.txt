@@ -1,0 +1,16 @@
+CORE AWAKENED — 90.10.31
+GAMEPAD UI ACCEPT / CANCEL
+
+Xbox One:
+- A = CONFIRMAR / SELECCIONAR en menú principal, selector de personajes y selector de escenarios.
+- B = VOLVER / CANCELAR en pantallas que usan ui_cancel.
+
+IMPORTANTE:
+- Enter y Esc siguen funcionando.
+- No se modifica fighter.gd.
+- No se modifica el funcionamiento del mando dentro del combate.
+- B / LT / abajo siguen bloqueando en combate por ahora; este parche sólo completa navegación de UI.
+
+ARCHIVOS:
+- project.godot
+- scripts/gamepad_ui_bootstrap.gd

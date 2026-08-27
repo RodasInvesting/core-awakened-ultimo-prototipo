@@ -1,0 +1,17 @@
+CORE AWAKENED 90.10.50 — FINAL AUDIO CLEAN CUT
+
+Objetivo:
+- Cuando aparece la gigantografía del CORE III, la música/ambiente persistente del escenario se detiene en ese instante.
+- El sonido de gigantografía 90.10.49 queda limpio, sin competir con la pista del escenario.
+- Durante la pose/sonido de victoria final, la música del escenario permanece detenida.
+- Una victoria de partida obtenida por la vía normal también detiene el escenario antes del audio de victoria.
+- El loop del escenario queda bloqueado durante el cierre para que la pista no se reinicie accidentalmente.
+
+No modifica:
+- Fighter ni lógica CORE.
+- Cámara.
+- Hitboxes, daño, IA o movimiento.
+- SFX de golpes, voces, recarga o gigantografía.
+
+Archivo modificado:
+- scripts/main.gd

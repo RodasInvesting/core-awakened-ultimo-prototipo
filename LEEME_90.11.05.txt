@@ -1,0 +1,40 @@
+CORE AWAKENED 90.11.05
+========================
+
+OBJETIVO DE ESTA VERSION
+------------------------
+Comparar IA vs Versus Local sin acelerar golpes ni aumentar hitstun a ciegas.
+
+CAMBIO 1 — COMBO x2/x3 CONTRA IA
+- Se mantiene el mismo Combo Cancel de Versus Local.
+- NO se cambian startup, activo, recovery ni hitstun base.
+- NO se cambia la ventana VENTANA_COMBO_CANCEL = 0.24.
+- Se conserva el anclaje de knockback de 90.11.04.
+- Al confirmar el cancel contra CPU, se bloquean brevemente SOLO decisiones exclusivas de IA:
+  * bloqueo automático
+  * retroceso
+  * mantener distancia
+  * carrera/dash en curso
+- La IA vuelve a decidir normalmente al terminar la microventana.
+
+CAMBIO 2 — VELOCIDAD DE CARGA CORE
+- CORE 1 = igual que 90.11.04 (1.22)
+- CORE 2 = 0.90
+- CORE 3 = 0.90 (ahora exactamente igual a CORE 2)
+
+PRUEBA CLAVE
+-------------
+1. Probar X-X y X-C en Versus Local.
+2. Repetir exactamente el mismo ritmo contra IA.
+3. Verificar que COMBO x2 aparezca y que la CPU no meta bloqueo/retroceso entre impactos.
+4. El ultimo golpe de la cadena debe recuperar el knockback normal.
+5. Comparar especificamente el sonido/ritmo TA-TA, sin juzgar todavía otros balances.
+
+ARCHIVOS MODIFICADOS
+--------------------
+scripts/fighter.gd
+scripts/perfect_block_90_1.gd
+
+BASE
+----
+Construido directamente sobre CORE AWAKENED 90.11.04 CODE.

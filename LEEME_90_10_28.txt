@@ -1,0 +1,38 @@
+CORE AWAKENED — PARCHE 90.10.28
+NOMBRE: JESTER DEPTH V2 + FANG CONTENT PASS
+
+INCLUYE:
+1) Gigantografías / posters de poder más atrás todavía:
+   - separación general aumentada
+   - ajuste extra para Jester
+   - ligera corrección extra para Kali
+   Objetivo: mostrar mejor el escenario y dejar más protagonista al cuerpo del luchador.
+
+2) Fang — integración de contenido nuevo:
+   - dash/aceleración frontal conectada con PNG dedicado (aceleracion.png)
+   - dash Fase Absoluta opcional (furia_carrera.png)
+   - más variedad de puños normales (punetazo_5, 6 y 7)
+   - más variedad de patadas normales (patada_3 y 4)
+   - orden de rotación de puños rearmado para que la secuencia se sienta menos repetida
+
+3) Extras Fang dejados en assets para futuras pasadas:
+   - combo_extra_1.png
+   - victoria_alt.png
+   - recarga_alt.png
+
+ARCHIVOS DEL PARCHE:
+- scripts/fighter.gd
+- scripts/fang.gd
+- assets/fang/aceleracion.png
+- assets/fang/furia_carrera.png
+- assets/fang/patada_3.png
+- assets/fang/patada_4.png
+- assets/fang/punetazo_5.png
+- assets/fang/punetazo_6.png
+- assets/fang/punetazo_7.png
+- assets/fang/combo_extra_1.png
+- assets/fang/victoria_alt.png
+- assets/fang/recarga_alt.png
+
+INSTALACIÓN:
+Copiar y reemplazar en la raíz del proyecto, respetando carpetas.

@@ -1,0 +1,7 @@
+CORE AWAKENED 90.10.52 — GIGANTOGRAFIAS CORE III
+
+Actualiza la gigantografia final de Magnus, Kali y Fang.
+Los absoluto.png anteriores NO se eliminan: los scripts apuntan a gigantografia_core3_nueva.png.
+Esto permite rollback seguro sin perder arte anterior.
+
+Instalacion: copiar el contenido de este ZIP sobre la raiz del proyecto.

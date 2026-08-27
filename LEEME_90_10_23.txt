@@ -1,0 +1,16 @@
+CORE AWAKENED 90.10.23 — AIR CONTROL + COMBAT DASH
+
+CAMBIOS:
+1) Puños y patadas en el aire siempre salen orientados hacia el rival.
+2) El segundo salto activa cruce aéreo: con izquierda/derecha se puede pasar por encima del rival y cambiar de lado.
+3) Doble toque izquierda/derecha deja de ser carrera sostenida: ahora es dash corto de combate.
+4) El dash conserva la mirada hacia el rival tanto hacia delante como hacia atrás.
+5) X/C pueden cancelar el dash para enlazar dash -> golpe.
+
+NO MODIFICA:
+- Cámara dinámica 90.10.22
+- Hitboxes/timing de golpes
+- Separación corporal BODY CONTACT V2
+- Límites de arena
+- K.O. y victoria
+- Especiales / Furia / Absoluto

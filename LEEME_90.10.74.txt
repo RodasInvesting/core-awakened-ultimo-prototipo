@@ -1,0 +1,21 @@
+CORE AWAKENED — 90.10.74 RITMO DE COMBATE / MICROESPACIOS
+
+BASE: 90.10.73 HIT FEEDBACK
+
+CAMBIO FUNCIONAL:
+- Microespacio post-impacto únicamente después de golpes limpios y suficientemente fuertes.
+- Patadas abren más espacio que puños.
+- No altera el rango antes del impacto.
+- No modifica daño, IA, velocidad general, hitboxes, CORE, bloqueo, gravedad, sprites ni escenarios.
+- CORE automático y golpes bloqueados quedan excluidos de la nueva apertura.
+
+ARCHIVOS:
+- scripts/fighter.gd: MODIFICADO 90.10.74
+- scripts/main.gd: SIN CAMBIOS respecto a 90.10.73
+
+PRUEBA RECOMENDADA:
+1. Intercambiar varios puños rápidos a corta distancia.
+2. Conectar patadas limpias y observar si aparece un pequeño espacio sin perder fluidez.
+3. Probar bloqueo: no debe separarse artificialmente más que antes.
+4. Probar CORE II/III: el combo debe conservar su distancia compacta y conectar normalmente.
+5. Confirmar KO y pose de victoria.

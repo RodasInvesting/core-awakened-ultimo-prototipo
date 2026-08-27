@@ -1,0 +1,54 @@
+CORE AWAKENED 90.10.78 — VERSUS LOCAL COMPLETO
+
+ARCHIVOS A REEMPLAZAR EN /scripts:
+- fighter.gd             (misma base aprobada 90.10.77)
+- main.gd                (Versus local oficial, sin F10)
+- menu_principal.gd      (nuevo botón VERSUS LOCAL)
+- selector_personajes.gd (selección secuencial J1 -> J2)
+- selector_escenarios.gd (identifica VERSUS LOCAL)
+- game_state.gd          (estado persistente de J1/J2)
+
+FLUJO NUEVO:
+MENÚ PRINCIPAL
+  -> VERSUS LOCAL
+  -> JUGADOR 1 ELIGE PERSONAJE
+  -> JUGADOR 2 ELIGE PERSONAJE
+  -> SELECCIÓN DE ESCENARIO
+  -> PRESENTACIÓN VS
+  -> PELEA J1 vs J2
+
+CONTROLES DE PELEA:
+Sin mandos:
+  J1: Flechas / X puño / C patada / Z CORE
+  J2: WASD / F puño / G patada / H CORE
+
+Con 1 mando:
+  J1: teclado
+  J2: mando
+
+Con 2 mandos:
+  J1: mando 1
+  J2: mando 2
+
+SELECTOR J2 EN TECLADO:
+  A/D: mover selección
+  F: confirmar
+  ESC: volver a selección J1
+También siguen funcionando las acciones UI/mando normales.
+
+NOTAS:
+- Se permiten mirror matches (ej. Kai vs Kai).
+- El puente de prueba F10 de 90.10.77 se retiró del flujo normal.
+- Arcade y Batalla Rápida conservan IA y flujo previos.
+- No se modificaron daño, hitboxes, CORE, velocidad, pushbox ni sensación de impacto.
+- Varkhos continúa temporalmente seleccionable porque así está en el selector actual del proyecto.
+- La arena de Varkhos sigue fuera del selector de escenarios, respetando el archivo actual recibido.
+
+PRUEBA RECOMENDADA:
+1. Abrir VERSUS LOCAL desde el menú.
+2. Elegir J1.
+3. Elegir J2.
+4. Elegir escenario.
+5. Confirmar que el lado derecho diga (J2), no (IA).
+6. Probar teclado + mando, y si es posible dos mandos.
+7. Terminar una pelea y probar REVANCHA/SELECCIÓN/MENÚ para detectar cualquier ajuste pendiente de la pantalla Resultado.

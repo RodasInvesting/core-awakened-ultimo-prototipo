@@ -1,0 +1,15 @@
+CORE AWAKENED 90.11.12 — DAX AUDITORÍA TOTAL
+
+Correcciones aisladas:
+- Selector: PNG normalizado físicamente a 1280x720 + 11 bordes recalibrados.
+- Arena Dax: encuadre vertical -50 px para hacer coincidir octágono visual con SUELO_Y.
+- Dax parado: usa exactamente POSICION DE INICIO DE BATALLA.png.
+- Dax normal: 9 puños + 5 patadas exactos, sin sprites Furia mezclados.
+- Dax Furia: 8 sprites de COMBO MODO FURIA separados del repertorio normal.
+- Dash adelante: ACELERACION DASH.
+- Dash atrás: DASH BACK mediante textura_evasion, también compatible con air dash.
+- Recibidos, salto, doble salto, descenso, KO, recarga y victoria remapeados por nombre exacto.
+- REMATE MODO FURIA usado como pose corporal del cierre CORE III.
+- CORE I queda listo para recibir su gigantografía dedicada; no se coloca un PNG incorrecto.
+
+No se modifica fighter.gd ni la física/combate global aprobado.

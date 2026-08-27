@@ -1,0 +1,11 @@
+CORE AWAKENED 90.11.03 — CORE MÁS ÁGIL + COMBO x2 VS IA
+
+Cambios únicos respecto de 90.11.02:
+1) Progresión de carga CORE algo más rápida manteniendo escalera:
+   CORE I x1.15 / CORE II x0.80 / CORE III x0.60.
+2) perfect_block_90_1.gd: Combo Cancel, Launcher y Air Combo del jugador ahora
+   se abren también cuando el defensor es IA. Se corrige el return prematuro
+   que hacía que COMBO x2 funcionara contra humano pero no contra CPU.
+
+Se conservan: dash espejo corregido, cámara dinámica, Coreografía 1.5,
+Combo Cage, Xenoid limpio, Aethel Air Lock y remix de Helena.

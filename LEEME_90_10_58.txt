@@ -1,0 +1,6 @@
+CORE AWAKENED 90.10.58 — HELENA CORE I VISIBLE PUNCH FIX
+
+Parche exclusivo de Helena.
+CORE I ahora: homing -> doble puño visible -> impacto -> gigantografía.
+No modifica CORE I de los otros personajes ni CORE II/III.
+Requiere tener instalado 90.10.57.

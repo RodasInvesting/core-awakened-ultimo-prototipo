@@ -1,0 +1,25 @@
+CORE AWAKENED 90.10.20 — DYNAMIC FIGHT CAMERA V2
+
+CAMBIOS
+- Zoom lejano: 0.94x (antes 0.96x).
+- Zoom cuerpo a cuerpo: 1.14x base (antes 1.10x).
+- Durante ataques: punch-in adicional moderado.
+- En impacto: micro punch-in algo más perceptible.
+- Límite máximo normal: 1.165x.
+- El zoom entra más rápido al acercarse/pegar (respuesta 5.2).
+- El zoom se abre más lentamente al separarse (respuesta 3.0).
+- Mantiene seguimiento del punto medio, arrastre horizontal y suspensión durante cinemáticas.
+- NO modifica fighter.gd, hitboxes, patadas, colisiones ni K.O.
+
+INSTALACIÓN
+1. Cerrar Godot.
+2. Extraer el ZIP sobre la carpeta raíz del proyecto.
+3. Reemplazar scripts/main.gd.
+4. Abrir el proyecto y probar una pelea completa.
+
+PRUEBA RECOMENDADA
+- Separarse al máximo.
+- Acercarse caminando.
+- Intercambiar puños/patadas a corta distancia.
+- Llevar la pelea a ambos extremos.
+- Probar salto, Especial, Furia y Golpe Absoluto.

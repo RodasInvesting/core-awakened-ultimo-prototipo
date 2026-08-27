@@ -1,0 +1,16 @@
+CORE AWAKENED 90.10.25 — IA COMBAT DYNAMICS
+
+Reemplaza únicamente:
+  scripts/fighter.gd
+
+Objetivo:
+- IA más agresiva y móvil sin leer inputs del jugador.
+- Corrige el umbral de ataque para que BODY CONTACT V2 no deje a la CPU fuera de rango por pocos píxeles.
+- Bloqueo principalmente reactivo cuando el jugador realmente ataca.
+- Menos retroceso pasivo.
+- Dash ofensivo y backdash ocasional.
+- Salto ofensivo.
+- Doble salto/cruce ocasional.
+- Ataques aéreos orientados al rival.
+
+No modifica cámara, zoom, hitboxes, separación corporal, K.O. ni sprites.

@@ -1,0 +1,14 @@
+CORE AWAKENED 90.10.80 — PUSHBOX NEUTRAL ANCLADO
+
+Base: 90.10.79 INPUT AISLADO.
+
+Corrección:
+- J1 y J2 siguen con dispositivos totalmente aislados.
+- En neutral, un luchador que camina contra un rival quieto ya NO desplaza al rival frame a frame.
+- El luchador que avanza absorbe la penetración del pushbox y se detiene en el borde corporal.
+- Si ambos avanzan uno contra otro, la separación se reparte por masa.
+- Ataques, impacto, knockback, CORE, hitstun, daño, velocidades y rangos NO fueron modificados.
+
+Prueba clave:
+1 mando conectado: J1 teclado / J2 mando.
+Dejar J2 totalmente quieto y caminar con J1 hasta tocarlo. J2 no debe deslizarse ni parecer hacer backdash.

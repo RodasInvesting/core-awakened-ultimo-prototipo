@@ -1,0 +1,33 @@
+CORE AWAKENED — 90.10.34
+CÓMO JUGAR / TUTORIAL DE CONTROLES
+
+AGREGA:
+- Nueva opción CÓMO JUGAR en el menú principal.
+- Pantalla de guía en 3 páginas:
+  1. Movimiento y defensa
+  2. Combate
+  3. Sistema CORE
+- Controles mostrados para Xbox One y teclado.
+- Navegación con D-Pad/Stick/teclado.
+- A / Enter = siguiente / confirmar.
+- B / Esc = volver.
+- Mouse también puede usar ANTERIOR / SIGUIENTE.
+
+NO MODIFICA:
+- fighter.gd
+- cámara
+- IA
+- hitboxes
+- dash
+- salto
+- K.O.
+- audio del combate
+- opciones/guardado
+- pausa
+
+INSTALACIÓN:
+Copiar el contenido del ZIP en la raíz del proyecto respetando carpetas.
+
+EXTRA DE CIERRE GAMEPAD:
+- Las dos secuencias narrativas aceptan ahora cualquier botón de mando para saltar.
+- El texto inferior muestra A / tecla / toque.

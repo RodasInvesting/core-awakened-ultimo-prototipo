@@ -1,0 +1,26 @@
+CORE AWAKENED 90.11.04 — CORE MÁS ÁGIL + COMBO x2 ROBUSTO VS IA
+
+CAMBIOS
+1) Curva de carga CORE:
+   - CORE I: x1.22
+   - CORE II: x0.90
+   - CORE III: x0.70
+   Mantiene progresión creciente de costo, pero reduce la sensación tediosa de carga.
+
+2) COMBO x2/x3 contra IA:
+   - Si el segundo X/C se pulsó antes de que el primer golpe alcance a una CPU móvil,
+     Fighter ya lo guarda en su buffer. PerfectBlock ahora consume ese buffer apenas
+     el impacto se confirma y ejecuta el Combo Cancel en diferido.
+   - Cuando el cancel ya está confirmado, se cancela sólo el knockback horizontal
+     pendiente de la CPU para que el siguiente golpe no falle por separación.
+   - El hitstun/reacción visual se conserva y el último golpe vuelve a empujar normal.
+   - No se reintroducen lecturas globales de teclado; dash espejo sigue corregido.
+
+NO CAMBIA
+- Velocidad de ráfaga CORE
+- Coreografía 1.5 adaptativa
+- Helena remix
+- Xenoid sprint cleanup
+- Aethel Air Lock
+- Cámara dinámica
+- Daño / hit-stop

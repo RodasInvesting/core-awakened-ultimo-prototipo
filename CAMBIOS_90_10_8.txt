@@ -1,0 +1,85 @@
+--- fighter.gd 90.10.7
++++ fighter.gd 90.10.8
+@@ -1,5 +1,5 @@
+ class_name Fighter
+-# CORE AWAKENED 90.10.7 — colisión corporal visual + rebote de K.O.
++# CORE AWAKENED 90.10.8 — combo limpio: sin retroceso preventivo.
+ extends CharacterBody2D
+ 
+ signal impacto(fuerza: float)
+@@ -1479,7 +1479,9 @@
+ 	# más marcada; si ya están relativamente cerca, el avance es mínimo.
+ 	var distancia_objetivo: float = DISTANCIA_COMBO_AUTO_OBJETIVO
+ 	if distancia > DISTANCIA_COMBO_AUTO_MAX:
+-		distancia_objetivo = 96.0
++		# Incluso desde lejos terminamos a la misma distancia de golpe.
++		# Antes 96 px podía dejar ciertos puños cortos fuera de la hurtbox.
++		distancia_objetivo = DISTANCIA_COMBO_AUTO_OBJETIVO
+ 	var destino_x: float = objetivo.global_position.x - lado * distancia_objetivo
+ 	var duracion: float = clampf(distancia / 900.0, 0.08, 0.20)
+ 	var tween := create_tween()
+@@ -3080,8 +3082,20 @@
+ 	if dir == 0.0:
+ 		dir = mirando if mirando != 0.0 else 1.0
+ 	var actual: float = absf(otro.global_position.x - global_position.x)
+-	var separacion_objetivo: float = _distancia_minima_contextual(otro)
+-	separacion_objetivo = maxf(separacion_objetivo, DISTANCIA_MINIMA_CONTACTO_BLOQUEO if bloqueado else DISTANCIA_MINIMA_CONTACTO)
++	var combo_core_activo: bool = en_combo_auto_visual or otro.en_combo_auto_visual
++
++	var separacion_objetivo: float
++	if combo_core_activo:
++		# Durante el combo, los PNG de puño/patada/reacción pueden ser muy anchos.
++		# No usamos el radio visual adaptativo porque empujaría al rival fuera
++		# del siguiente golpe. Conservamos una distancia compacta de contacto.
++		separacion_objetivo = 82.0 if not bloqueado else 88.0
++	else:
++		separacion_objetivo = _distancia_minima_contextual(otro)
++		separacion_objetivo = maxf(
++			separacion_objetivo,
++			DISTANCIA_MINIMA_CONTACTO_BLOQUEO if bloqueado else DISTANCIA_MINIMA_CONTACTO
++		)
+ 	var energia: float = clampf(fuerza / 320.0, 0.0, 1.0)
+ 	var impulso_defensor: float = lerpf(5.5, 14.0, energia)
+ 	var impulso_atacante: float = lerpf(1.0, 4.0, energia)
+@@ -3103,13 +3117,18 @@
+ 		# solamente la respuesta física de dos cuerpos que no pueden ocupar
+ 		# el mismo lugar.
+ 		var rebote_cuerpo: float = clampf(28.0 + penetracion * 1.10, 28.0, 92.0)
+-		if not en_secuencia_especial and not otro.en_secuencia_especial:
++		if not combo_core_activo and not en_secuencia_especial and not otro.en_secuencia_especial:
+ 			velocity.x = -dir * maxf(absf(velocity.x), rebote_cuerpo * 0.35)
+ 			otro.velocity.x = dir * maxf(absf(otro.velocity.x), rebote_cuerpo)
+-	# Luego suma un microdesplazamiento instantáneo del defensor para que el
+-	# retroceso se sienta en el mismo frame del impacto, antes del empuje total.
+-	otro.global_position.x += dir * impulso_defensor
+-	global_position.x -= dir * impulso_atacante
++	# Luego suma un microdesplazamiento instantáneo. En auto-combo lo reducimos
++	# para que el siguiente ataque no tenga que perseguir un rival que ya se
++	# alejó artificialmente antes de aplicar el knockback real.
++	if combo_core_activo:
++		otro.global_position.x += dir * minf(impulso_defensor, 4.0)
++		global_position.x -= dir * minf(impulso_atacante, 1.0)
++	else:
++		otro.global_position.x += dir * impulso_defensor
++		global_position.x -= dir * impulso_atacante
+ 
+ func _aplicar_limites_arena() -> void:
+ 	var x_anterior: float = global_position.x
+@@ -3145,9 +3164,14 @@
+ func _aplicar_separacion_fisica() -> void:
+ 	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+ 		return
+-	# Durante el combo automático sí conservamos separación corporal.
+-	if (en_secuencia_especial or objetivo.en_secuencia_especial) \
+-		and not (en_combo_auto_visual or objetivo.en_combo_auto_visual):
++
++	# 90.10.8 — durante el auto-combo NO existe separación preventiva.
++	# El atacante debe poder cerrar la distancia hasta su rango de golpe sin
++	# que el motor empuje al receptor hacia atrás antes del impacto.
++	if en_combo_auto_visual or objetivo.en_combo_auto_visual:
++		return
++
++	if en_secuencia_especial or objetivo.en_secuencia_especial:
+ 		return
+ 	var dx := objetivo.global_position.x - global_position.x
+ 	var dist := absf(dx)

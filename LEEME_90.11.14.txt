@@ -1,0 +1,10 @@
+CORE AWAKENED 90.11.14
+
+- Dax arena normalized to 1280x720: horizontal centering corrected.
+- Dax floor vertical calibration retained with a small scenario-only Y offset.
+- Dax ground back dash now locks DASH BACK visual for the exact dash duration.
+- Forward ground dash uses ACELERACION DASH.
+- Air dash/back dash untouched.
+- Stage selector cards are compact horizontal rectangles and clipped correctly.
+- Dax stage renamed COLISEO ROJO.
+- Fighter global combat logic untouched.

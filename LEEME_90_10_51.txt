@@ -1,0 +1,32 @@
+CORE AWAKENED 90.10.51 — CORE READY + UI NAVIGATION + JUMP AUDIO
+
+1) CORE READY
+- Nuevo: assets/sonidos/core/core_listo_unificado.wav
+- Suena cada vez que la barra de poder llega a 100%.
+- Se reutiliza para las tres cargas: CORE I, CORE II y CORE III.
+- No cambia la lógica CORE ni su velocidad de carga.
+
+2) NAVEGACIÓN UI UNIFICADA
+- Nuevo: assets/sonidos/menu/navegacion_unificada.wav
+- Un mismo SFX para:
+  * menú principal
+  * pausa y opciones
+  * selector de personajes
+  * selector de escenarios
+- GameState mantiene un único reproductor y reinicia el SFX al navegar rápido,
+  evitando colas superpuestas.
+
+3) SALTO / DOBLE SALTO
+- Nuevo: assets/sonidos/movimiento/salto_nuevo.wav
+- Reemplaza el salto anterior tanto para salto normal como doble salto.
+- No cambia física, altura, gravedad ni control aéreo.
+
+Scripts modificados:
+- scripts/main.gd
+- scripts/game_state.gd
+- scripts/menu_principal.gd
+- scripts/pause_manager.gd
+- scripts/selector_personajes.gd
+- scripts/selector_escenarios.gd
+
+BASE: compatible con el estado aprobado hasta 90.10.50.

@@ -1,0 +1,7 @@
+CORE AWAKENED 90.11.26 — JESTER BLOQUEO
+
+Cambio aislado:
+- Se recuperó de las hojas originales de Jester su pose defensiva real.
+- Se agrega assets/jester/bloqueo.png.
+- jester.gd ya apuntaba a esa ruta, por lo que no se modifica Fighter ni el sistema global de bloqueo.
+- El bloqueo lógico, Perfect Block, daño, hitstun, IA, Versus Local y CORE permanecen intactos.

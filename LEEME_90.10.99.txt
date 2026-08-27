@@ -1,0 +1,25 @@
+CORE AWAKENED 90.10.99 — COREOGRAFÍA 1.5
+
+CAMBIO PRINCIPAL
+- CORE II y CORE III ya no repiten dos veces el repertorio completo.
+- PASADA A (100%): usa TODOS los sprites disponibles del modo correspondiente exactamente una vez.
+- Los puños/patadas se distribuyen proporcionalmente a lo largo de toda la pasada.
+- PASADA B (REMIX ~50%): toma poses de distintas zonas del repertorio y cambia el orden.
+- Después se ejecuta un único Rematador (CORE II) o Absoluto (CORE III).
+
+SE CONSERVA
+- Velocidad continua 90.10.98 (beat uniforme, sin pausa cada dos golpes).
+- Combo Cage / receptor anclado 90.10.97 durante golpes intermedios.
+- Cámara dinámica.
+- Fix raíz del dash espejo 90.10.95 en perfect_block_90_1.gd.
+
+EXCEPCIÓN
+- Magnus conserva combo_auto_incluye_patada=false. No se reactivan sus patadas automáticas todavía.
+
+PRUEBA RECOMENDADA
+1) Helena CORE II: observar que recorra toda la variedad normal antes del remix.
+2) Xenoid CORE II: verificar variedad y duración del repertorio grande.
+3) CORE III: comprobar repertorio Furia + remix + Absoluto.
+4) Confirmar que el dash espejo sigue solucionado.
+
+Archivo realmente modificado respecto de 90.10.98: scripts/fighter.gd

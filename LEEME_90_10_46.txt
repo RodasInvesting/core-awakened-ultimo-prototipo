@@ -1,0 +1,29 @@
+CORE AWAKENED 90.10.46 — AIR CORE HOMING / COMBO TARGET LOCK
+
+BUG CORREGIDO:
+Si CORE II o CORE III se activaba durante salto/doble salto, el acercamiento
+cinemático del combo corregía solamente X. El atacante podía quedarse varios
+metros por encima del rival y ejecutar toda la secuencia al aire.
+
+CAMBIO:
+- El acercamiento de combo ahora hace target-lock 2D: X + Y.
+- Antes del primer golpe, el atacante termina a la distancia frontal segura
+  del rival y a su misma altura de combate.
+- Durante la racha, el sistema vuelve a verificar/acercar antes de cada golpe.
+- Funciona desde piso, salto y doble salto.
+- Xenoid mantiene su sprite especial de aceleración de combo.
+
+ARCHIVOS:
+- scripts/fighter.gd
+- scripts/xenoid.gd
+
+NO SE MODIFICA:
+- daño
+- hitboxes
+- cámara
+- IA
+- velocidad manual
+- dash/backdash
+- sprites de Xenoid 90.10.45
+- gigantografías
+- CORE I

@@ -1,0 +1,11 @@
+CORE AWAKENED 90.10.63 — FANG NORMAL COMBAT VARIETY PASS
+
+Cambios:
+- Agrega 4 ataques normales nuevos de brazo: 3 puños + 1 codazo.
+- Agrega 2 ataques normales nuevos de pierna: rodillazo + patada baja.
+- Intercala los nuevos con los anteriores para reducir repetición visual.
+- NO modifica el modo Furia / CORE III.
+- Mantiene la gigantografía final vigente de Fang.
+
+Aplicación:
+Descomprimir en la raíz del proyecto y aceptar reemplazos.

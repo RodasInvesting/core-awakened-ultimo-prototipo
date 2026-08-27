@@ -1,0 +1,6 @@
+CORE AWAKENED 90.10.54 — KALI + MAGNUS CORE III TRANSPARENT GIGANTOGRAPHY FIX
+
+- Reemplaza únicamente las gigantografías del CORE III de Kali y Magnus.
+- Usa los PNG transparentes originales enviados por el usuario.
+- Mantiene exactamente las mismas rutas que 90.10.52, por lo que no requiere cambios de scripts.
+- No modifica VS, Fighter, cámara, IA, daño, hitboxes, audio ni movimiento.

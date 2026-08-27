@@ -1,0 +1,17 @@
+CORE AWAKENED 90.10.62 — JESTER CORE III FINAL GIGANTOGRAPHY FIX
+
+Este parche se aplica ENCIMA de 90.10.61.
+
+Cambia solamente:
+- La gigantografía final de Jester en CORE III.
+- Usa exactamente el PNG enviado por el usuario: GIGANTOGRAFIA DEL ULTIMO GOLPE FINAL(2).png
+
+No cambia:
+- golpes normales
+- combo Furia
+- CORE I / CORE II
+- daño, hitboxes, cámara, IA ni audio
+
+Aplicación:
+1) Descomprimir en la raíz del proyecto.
+2) Reemplazar archivos cuando se solicite.

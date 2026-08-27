@@ -1,0 +1,14 @@
+CORE AWAKENED 90.11.15 — VARKHOS + MÚSICAS DE ESCENARIO
+
+Base: 90.11.14 aprobada.
+
+Cambios aislados:
+- Nueva arena Varkhos integrada como 11.º escenario seleccionable.
+- Nombre de arena: TRONO DEL NÚCLEO.
+- Fondo Varkhos normalizado a 1280x720 para el pipeline actual.
+- Música propia de Dax: assets/sonidos/escenarios/dax.mp3.
+- Música propia de Varkhos: assets/sonidos/escenarios/varkhos.mp3.
+- Nueva música del escenario de Kai: assets/sonidos/escenarios/kai_nuevo.mp3.
+- Mezcla compensada para que las pistas queden debajo de golpes/voces.
+- El selector de escenarios conserva exactamente la geometría rectangular aprobada de 90.11.14 (6 columnas, 2 filas); sólo se suma la tarjeta 11.
+- No se modifican Fighter, Dax, dash/back dash, golpes, patadas, CORE ni Versus Local.

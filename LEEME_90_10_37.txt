@@ -1,0 +1,52 @@
+CORE AWAKENED — PARCHE 90.10.37
+DISPLAY / FULLSCREEN / RESOLUTION FOUNDATION
+
+OBJETIVO:
+- Mantener 1280x720 como resolución lógica interna segura del juego.
+- Escalar correctamente a monitores Full HD, 1440p y 4K sin mover UI/cámara/sprites.
+- Mantener relación 16:9 para evitar deformaciones.
+
+CAMBIOS:
+1) PANTALLA COMPLETA (NATIVA)
+   - Usa automáticamente la resolución real del monitor.
+   - Ejemplos: 1920x1080, 2560x1440, 3840x2160.
+   - No cambia las coordenadas internas del juego.
+
+2) RESOLUCIÓN EN VENTANA
+   - Nuevo selector en PAUSA > OPCIONES.
+   - Sólo muestra resoluciones 16:9 que caben físicamente en el monitor:
+     1280x720 / 1600x900 / 1920x1080 / 2560x1440 / 3840x2160.
+   - La ventana se centra automáticamente.
+
+3) GUARDADO
+   - Se guarda la resolución de ventana junto con fullscreen, VSync y audio.
+   - Al volver a abrir el juego se recupera la configuración.
+
+4) RELACIÓN DE ASPECTO
+   - project.godot conserva viewport lógico 1280x720.
+   - stretch canvas_items + aspect keep.
+   - Evita estirar/deformar el juego en monitores que no sean 16:9.
+
+ARCHIVOS:
+- project.godot
+- scripts/settings_manager.gd
+- scripts/pause_manager.gd
+
+NO SE TOCA:
+- combate
+- IA
+- cámara dinámica/zoom
+- sprites
+- hitboxes
+- daño
+- resultados
+- tutorial
+- gigantografías
+
+PRUEBA RECOMENDADA:
+1. Entrar a pelea > Pausa > Opciones.
+2. Ver la resolución nativa detectada abajo.
+3. Probar 1280x720 y 1920x1080 en modo ventana si aparecen.
+4. Activar PANTALLA COMPLETA (NATIVA).
+5. Confirmar que ocupa todo el monitor y no deforma personajes/UI.
+6. Cerrar y volver a abrir para confirmar persistencia.

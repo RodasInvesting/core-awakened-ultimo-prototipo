@@ -1,0 +1,28 @@
+CORE AWAKENED 90.10.96 — DOBLE RÁFAGA CORE + CÁMARA DINÁMICA
+
+BASE:
+- Proyecto de código exacto enviado por el usuario.
+- Mantiene el fix raíz 90.10.95 en perfect_block_90_1.gd.
+
+CAMBIOS REALES:
+1) scripts/fighter.gd
+   - CORE II: repertorio normal puño/patada en DOS pasadas completas.
+   - CORE III: repertorio Furia puño/patada en DOS pasadas completas.
+   - Cadencia acelerada estilo COMBO x2.
+   - Sin pausa cinematográfica entre pasada 1 y 2.
+   - El remate de CORE II y el Absoluto de CORE III se ejecutan UNA sola vez al final.
+
+2) scripts/main.gd
+   - Se elimina la cámara fija temporal de 90.10.94.
+   - Vuelve cámara dinámica por distancia, paneo, zoom y apertura en dash.
+   - Se conserva el Input Router de Versus Local.
+
+3) scripts/perfect_block_90_1.gd
+   - Se incluye sin cambios funcionales respecto a 90.10.95 para conservar
+     la solución definitiva del dash espejo y el input individual por jugador.
+
+PRUEBAS RECOMENDADAS:
+A. Versus Local: confirmar que NO vuelve el dash espejo.
+B. CORE II: observar doble ráfaga normal rápida + remate único.
+C. CORE III: observar doble ráfaga Furia rápida + Absoluto único.
+D. Confirmar que la cámara vuelve a seguir dinámicamente la pelea.

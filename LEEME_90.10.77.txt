@@ -1,0 +1,46 @@
+CORE AWAKENED 90.10.77 — VERSUS LOCAL / PLAYER 2 FOUNDATION
+
+OBJETIVO
+- Validar dos jugadores humanos usando exactamente el mismo Fighter.
+- No se toca daño, IA base, velocidad, hitboxes, CORE, sprites ni escenarios.
+- Esta versión NO modifica todavía selector_personajes.gd ni GameState para no arriesgar el menú actual.
+
+INSTALACION
+Reemplazar:
+  scripts/fighter.gd
+  scripts/main.gd
+
+PRUEBA VERSUS LOCAL
+1. Entrar normalmente a BATALLA RAPIDA.
+2. Ya dentro de la pelea, presionar F10.
+3. El texto del rival debe cambiar de (IA) a (J2) y aparecer "VERSUS LOCAL — J2 LISTO".
+4. Presionar F10 otra vez devuelve el rival a IA Fácil.
+
+CONTROLES TECLADO
+J1:
+- Izquierda/Derecha: flechas
+- Salto: flecha arriba
+- Bloqueo: flecha abajo
+- Puño: X
+- Patada: C
+- CORE: Z
+
+J2:
+- Izquierda/Derecha: A / D
+- Salto: W
+- Bloqueo: S
+- Puño: F
+- Patada: G
+- CORE: H
+
+MANDOS
+- 2 mandos conectados: mando 1 = J1, mando 2 = J2.
+- 1 mando conectado: J1 queda en teclado y el mando controla J2.
+- 0 mandos: ambos pueden jugar con los dos esquemas de teclado.
+
+NOTA ONLINE
+- _entrada_jugador() ahora respeta FuenteControl.EXTERNA incluso en personajes que sobrescriben _procesar_entrada().
+- Esto deja el mismo Fighter preparado para recibir más adelante Input Frames de red/rollback.
+
+SIGUIENTE FASE SI ESTA PRUEBA FUNCIONA
+90.10.78 — integración real en menú/selector: opción VERSUS LOCAL y selección secuencial J1/J2, sin usar F10.

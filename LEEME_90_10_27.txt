@@ -1,0 +1,20 @@
+CORE AWAKENED — 90.10.27 GIGANTOGRAPHY DEPTH PASS
+
+CAMBIOS
+- Todas las ilustraciones cinematograficas de poder se desplazan mas detras del luchador real.
+- Absoluto: mayor profundidad para conservar lectura del escenario.
+- Rematador y Especial: profundidad moderada.
+- Jester recibe un desplazamiento extra porque su gigantografia es la que mas invade el cuerpo y el escenario.
+- Kali recibe un ajuste extra menor por el volumen visual de alas/energia.
+- Se conserva el clamp de camara de 90.10.26 para evitar que la gigantografia se corte en los bordes.
+- No se tocaron hitboxes, dano, IA, movilidad, dash, doble salto, camara dinamica ni K.O.
+
+INSTALACION
+1. Cerrar Godot.
+2. Extraer el ZIP en la carpeta raiz del proyecto.
+3. Reemplazar scripts/fighter.gd cuando Windows lo pregunte.
+
+PRUEBA RECOMENDADA
+- Jester: Absoluto en centro y cerca de ambos bordes.
+- Kali: Absoluto en centro.
+- Fang/Kai: comparar que el poster quede detras sin perder presencia.

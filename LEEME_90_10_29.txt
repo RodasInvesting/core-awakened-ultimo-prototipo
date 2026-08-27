@@ -1,0 +1,11 @@
+CORE AWAKENED 90.10.29 — FANG NORMAL/FURIA CLEAN SPLIT
+
+- Gigantografía: CONGELADA. No se modifica.
+- Fang normal: usa solamente sprites sin aura/efectos Furia.
+- Fang Furia/Combo: usa exclusivamente sprites COMBO/FURIA.
+- Dash normal conectado a "ACELARACION DOS VECES LA FLECHITA".
+- Dash Furia conectado a "ACELERACION ANTES DEL COMBO".
+- Se agregan 3 puños normales distintos y 1 patada normal adicional.
+- Los sprites COMBO enviados quedan sólo en el set Furia.
+
+INSTALACIÓN: copiar el contenido sobre la raíz del proyecto y reemplazar.

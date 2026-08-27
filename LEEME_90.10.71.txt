@@ -1,0 +1,21 @@
+CORE AWAKENED 90.10.71 — PUSHBOX 2.0
+
+Objetivo único de esta revisión:
+- Reducir la penetración visual torso-contra-torso, especialmente durante CORE II/III y entre personajes voluminosos.
+
+Cambios en scripts/fighter.gd:
+1. El acercamiento automático de CORE ya no usa siempre 82 px.
+2. Se calcula una distancia adaptativa compacta de 88 a 100 px según volumen corporal/masa.
+3. El tween del auto-combo, el pushbox físico y la separación post-impacto usan exactamente el mismo objetivo.
+4. Alas, pelo, colas y auras NO se convierten en collider.
+5. No se modificaron daño, IA, velocidad general, hitboxes, gravedad, CORE, sprites ni escenarios.
+
+scripts/main.gd está incluido sin modificaciones respecto al archivo recibido.
+
+Prueba recomendada:
+- Kali vs Aethel (principal prueba de estrés)
+- Kali vs Helena
+- Caminar uno contra otro
+- Ataque simultáneo
+- CORE II / CORE III
+- KO final

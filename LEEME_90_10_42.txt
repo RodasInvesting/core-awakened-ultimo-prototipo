@@ -1,0 +1,22 @@
+CORE AWAKENED 90.10.42 — BACKDASH / EVASIÓN POR PERSONAJE
+
+Contenido:
+- assets/aethel/evasion.png
+- assets/cibor-x/evasion.png
+- assets/fang/evasion.png
+- assets/helena/evasion.png
+- assets/jester/evasion.png
+- assets/kai/evasion.png
+- assets/kali/evasion.png
+- assets/magnus/evasion.png
+- assets/varkhos/evasion.png
+- assets/xenoid/evasion.png
+
+Qué hace:
+- Carga el sprite de evasión / backdash dedicado para cada personaje.
+- Mantiene separado el dash hacia adelante (aceleración/carrera) del dash hacia atrás (evasión).
+- Xenoid y Magnus ya van espejados para corregir la orientación.
+
+Nota técnica:
+- No hace falta tocar scripts adicionales porque Fighter 90.10.41 ya detecta automáticamente
+  "evasion.png" dentro de la carpeta de assets de cada luchador.

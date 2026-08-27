@@ -1,0 +1,8 @@
+CORE AWAKENED 90.10.88 — DASH DEFENSOR ANCLADO
+
+REEMPLAZAR SOLAMENTE:
+  res://scripts/fighter.gd
+
+NO reemplazar main.gd, menú, selectores ni GameState.
+
+Objetivo: en Versus Local, un dash de movimiento de un jugador no puede desplazar ni activar movimiento del rival si el rival no está dando input horizontal y no está recibiendo un golpe/CORE/knockback.

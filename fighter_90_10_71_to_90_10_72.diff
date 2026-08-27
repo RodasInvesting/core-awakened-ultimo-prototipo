@@ -1,0 +1,162 @@
+--- /mnt/data/fighter_90_10_71.gd	2026-08-25 01:34:48.786355760 +0000
++++ /mnt/data/fighter_90_10_72.gd	2026-08-25 01:36:47.554121792 +0000
+@@ -570,6 +570,14 @@
+ const CONTACTO_POST_GOLPE_MAX := 118.0
+ const CONTACTO_POST_GOLPE_DUR_PUNO := 0.095
+ const CONTACTO_POST_GOLPE_DUR_PATADA := 0.125
++# 90.10.72 — PUSHBOX 2.1: la pose de ataque puede proyectar el torso varios
++# píxeles por delante del origen físico. Este margen se suma SOLO después de
++# que el golpe ya conectó; nunca actúa antes del hitbox y por eso no acorta
++# ni rompe el alcance real del puño/patada.
++const PUSH_POSE_CONTACTO_PUNO := 4.0
++const PUSH_POSE_CONTACTO_PATADA := 6.0
++const PUSH_POSE_CONTACTO_TRADE := 2.0
++const PUSH_POSE_CONTACTO_MAX := 8.0
+ # 90.10.17 — colchón corporal ANTES del impacto. La vieja cifra fija de 72 px
+ # servía para no romper las patadas, pero era demasiado compacta para Magnus,
+ # Jester y combinaciones con torsos anchos. Ahora el mínimo se adapta al torso
+@@ -739,6 +747,11 @@
+ # por el alto visible de la pose y sólo se aplica al K.O. definitivo.
+ const OFFSET_DERRIBADO_DINAMICO_MAX := 18.0
+ const DISTANCIA_FINAL_GANADOR_DERRIBADO := 190.0
++# 90.10.72 — presentación final: una vez cargada la pose de victoria, el
++# ganador mantiene aire suficiente respecto al cuerpo horizontal del perdedor.
++# Se calcula además con los radios visuales reales, así no depende de un PNG.
++const DISTANCIA_VICTORIA_GANADOR_DERRIBADO := 220.0
++const MARGEN_VICTORIA_KO_VISUAL := 34.0
+ 
+ func _ready() -> void:
+ 	# FASE 85: si más adelante se agrega assets/<personaje>/victoria.png, se
+@@ -2515,6 +2528,54 @@
+ 	_aplicar_limites_arena()
+ 
+ 
++func _separar_ganador_del_ko() -> void:
++	if not objetivo or not is_instance_valid(objetivo) or not objetivo.esta_derrotado:
++		return
++
++	# El K.O. horizontal puede ser mucho más ancho que un luchador de pie.
++	# Usamos ambos radios visuales actuales, pero dejamos un piso de presentación
++	# para que la pose de victoria nunca quede parada encima del derrotado.
++	var distancia_necesaria: float = maxf(
++		DISTANCIA_VICTORIA_GANADOR_DERRIBADO,
++		_radio_corporal_visual() + objetivo._radio_corporal_visual() + MARGEN_VICTORIA_KO_VISUAL
++	)
++	var dx: float = global_position.x - objetivo.global_position.x
++	var distancia_actual: float = absf(dx)
++	if distancia_actual >= distancia_necesaria:
++		return
++
++	var limites: Vector2 = _limites_arena_x_pose_actual()
++	var lado_actual: float = signf(dx)
++	if lado_actual == 0.0:
++		# Mantener al ganador en el lado coherente con su orientación de combate.
++		lado_actual = -objetivo.mirando if absf(objetivo.mirando) > 0.01 else 1.0
++
++	var destino_mismo_lado: float = objetivo.global_position.x + lado_actual * distancia_necesaria
++	var destino_otro_lado: float = objetivo.global_position.x - lado_actual * distancia_necesaria
++	var mismo_lado_valido: bool = destino_mismo_lado >= limites.x and destino_mismo_lado <= limites.y
++	var otro_lado_valido: bool = destino_otro_lado >= limites.x and destino_otro_lado <= limites.y
++
++	var destino_x: float
++	if mismo_lado_valido:
++		destino_x = destino_mismo_lado
++	elif otro_lado_valido:
++		destino_x = destino_otro_lado
++	else:
++		# Si ninguna dirección permite la distancia completa por estar contra un
++		# borde, elegimos el extremo que más separación real ofrezca.
++		var dist_izq: float = absf(limites.x - objetivo.global_position.x)
++		var dist_der: float = absf(limites.y - objetivo.global_position.x)
++		destino_x = limites.x if dist_izq >= dist_der else limites.y
++
++	global_position.x = clampf(destino_x, limites.x, limites.y)
++	velocity = Vector2.ZERO
++	_aplicar_limites_arena()
++
++	# La victoria debe seguir mirando hacia el área del combate/perdedor.
++	var dir_rival: float = signf(objetivo.global_position.x - global_position.x)
++	if dir_rival != 0.0:
++		mirando = dir_rival
++
+ func reiniciar_para_ronda() -> void:
+ 	vida = vida_maxima
+ 	esta_derrotado = false
+@@ -3529,6 +3590,10 @@
+ 		forma_colision.size = Vector2(ancho_colision, alto_colision)
+ 		colision_shape.position.y = -alto_colision / 2.0
+ 
++	# 90.10.72 — la separación final se hace DESPUÉS de cargar/normalizar la
++	# pose de victoria, porque recién aquí conocemos su volumen visual real.
++	_separar_ganador_del_ko()
++
+ func _escala_normalizada_por_pose(tex: Texture2D, rect: Rect2) -> float:
+ 	if not tex:
+ 		return escala_sprite * MULT_TAMANO_GLOBAL
+@@ -3672,6 +3737,29 @@
+ 	return clampf(distancia, PRECONTACTO_MIN, PRECONTACTO_MAX)
+ 
+ 
++func _bonus_pushbox_pose_contacto(otro: Fighter) -> float:
++	# Sólo corrige la proyección VISUAL después de un impacto confirmado.
++	# Antes del contacto retorna 0, manteniendo intactos rango, hitbox y lunge.
++	if not otro or not is_instance_valid(otro):
++		return 0.0
++	if en_combo_auto_visual or otro.en_combo_auto_visual:
++		# CORE II/III ya comparte target adaptativo entre tween y pushbox; no
++		# introducimos aquí una cifra distinta que haga pelear ambos sistemas.
++		return 0.0
++
++	var bonus: float = 0.0
++	var yo_contacte: bool = fase_ataque != FaseAtaque.NINGUNA and _atk_ya_conecto
++	var otro_contacto: bool = otro.fase_ataque != FaseAtaque.NINGUNA and otro._atk_ya_conecto
++
++	if yo_contacte:
++		bonus = maxf(bonus, PUSH_POSE_CONTACTO_PATADA if _atk_tipo == "patada" else PUSH_POSE_CONTACTO_PUNO)
++	if otro_contacto:
++		bonus = maxf(bonus, PUSH_POSE_CONTACTO_PATADA if otro._atk_tipo == "patada" else PUSH_POSE_CONTACTO_PUNO)
++	if yo_contacte and otro_contacto:
++		bonus += PUSH_POSE_CONTACTO_TRADE
++
++	return clampf(bonus, 0.0, PUSH_POSE_CONTACTO_MAX)
++
+ func _distancia_minima_contextual(otro: Fighter = null) -> float:
+ 	var minimo: float = DISTANCIA_MINIMA_LUCHADORES
+ 	if otro and is_instance_valid(otro):
+@@ -3720,6 +3808,10 @@
+ 			CONTACTO_POST_GOLPE_MIN,
+ 			CONTACTO_POST_GOLPE_MAX
+ 		)
++		# 90.10.72 — margen por pose SOLO post-impacto. Un puño proyecta menos
++		# el torso que una patada; un trade puede sumar 2 px extra. Al ocurrir
++		# después de _atk_ya_conecto, este margen jamás puede provocar un whiff.
++		separacion_objetivo += _bonus_pushbox_pose_contacto(otro)
+ 		if bloqueado:
+ 			separacion_objetivo = maxf(separacion_objetivo, 98.0)
+ 	var energia: float = clampf(fuerza / 320.0, 0.0, 1.0)
+@@ -3760,6 +3852,10 @@
+ 	# Esto es lo que impide que el atacante vuelva a penetrar el torso durante
+ 	# hit-stop/recovery. En combo CORE se conserva el contacto compacto.
+ 	var dur_contacto: float = 0.045 if combo_core_activo else (CONTACTO_POST_GOLPE_DUR_PATADA if _atk_tipo == "patada" else CONTACTO_POST_GOLPE_DUR_PUNO)
++	if not combo_core_activo and _bonus_pushbox_pose_contacto(otro) > 0.0:
++		# Unas centésimas extra mantienen la lectura del contacto mientras la pose
++		# extendida termina; no es hitstun y no ralentiza el control del jugador.
++		dur_contacto += 0.018
+ 	_activar_separacion_post_golpe(otro, separacion_objetivo, dur_contacto)
+ 
+ 	# 90.10.14 — este método modifica posiciones directamente, por fuera de
+@@ -3985,6 +4081,14 @@
+ 	var otro_atacando: bool = objetivo.fase_ataque != FaseAtaque.NINGUNA
+ 	var distancia_minima: float = _distancia_combo_auto_adaptativa(objetivo) if combo_core_activo else _distancia_minima_contextual(objetivo)
+ 
++	# 90.10.72 — si ya hubo impacto confirmado, la pose extendida recibe un
++	# margen pequeño adicional. Antes del impacto NO se suma: el bloque de
++	# precontacto de abajo conserva exactamente la capacidad de entrar en rango.
++	if not combo_core_activo:
++		var bonus_pose_contacto: float = _bonus_pushbox_pose_contacto(objetivo)
++		if bonus_pose_contacto > 0.0:
++			distancia_minima += bonus_pose_contacto
++
+ 	# 90.10.17 — contacto preventivo adaptativo. Conservamos la regla crítica
+ 	# de 90.10.12: la separación NUNCA gana al golpe. Los chequeos de hitbox ya
+ 	# ocurrieron antes de llegar acá; si aún no hubo impacto, evitamos solamente

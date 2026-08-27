@@ -1,22 +1,12 @@
 extends Node2D
 
 # FASE 94: segunda secuencia narrativa -- la voz de Varkhos, entre el menú
-# principal y el selector de personajes. Se dispara al elegir Arcade O
-# Batalla Rápida (mismo camino: menu_principal.gd -> _ir_selector() ahora
-# apunta acá en vez de ir directo al selector). 9 láminas ya armadas,
-# mismo mecanismo que IntroHistoria.gd (fundido cruzado + música + salto
-# con cualquier tecla/click/toque) -- ver ese script para más detalle del
-# porqué de cada decisión, acá solo se documenta lo que cambia.
+# principal y el selector de personajes. 90.10.34 suma salto con mando.
 const SIGUIENTE_ESCENA := "res://scenes/SelectorPersonajes.tscn"
 const TAMANO_PANTALLA := Vector2(1280.0, 720.0)
 const FADE := 0.7
 const RETRASO_ANTES_DE_PODER_SALTAR := 0.3
 const FADE_SALIDA := 0.5
-
-# Suma calibrada contra la duración real del tema (34.512s), estirada un
-# ~8.7% porque el audio ahora corre a pitch_scale 0.92 (ver más abajo) --
-# la música se escucha casi igual pero dura más, y las láminas la
-# acompañan sin sentirse apuradas.
 const DURACIONES: Array[float] = [3.9, 2.8, 2.8, 3.7, 3.7, 2.2, 4.9, 6.0, 7.5]
 
 var laminas: Array[Sprite2D] = []
@@ -56,7 +46,7 @@ func _ready() -> void:
 	add_child(overlay_negro)
 
 	var ayuda := Label.new()
-	ayuda.text = "Toca o presioná cualquier tecla para saltar"
+	ayuda.text = "A / tecla / toque para saltar"
 	ayuda.position = Vector2(0.0, 688.0)
 	ayuda.size = Vector2(TAMANO_PANTALLA.x, 26.0)
 	ayuda.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -69,8 +59,6 @@ func _ready() -> void:
 	audio = AudioStreamPlayer.new()
 	audio.stream = load("res://assets/sonidos/historia_batalla.mp3")
 	audio.volume_db = -4.0
-	# FASE 94.1: mismo criterio que IntroHistoria -- 8% más lento, casi
-	# imperceptible, para darle más aire a cada lámina.
 	audio.pitch_scale = 0.92
 	add_child(audio)
 	audio.play()
@@ -108,6 +96,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var es_toque := false
 	if event is InputEventKey:
 		es_toque = (event as InputEventKey).pressed
+	elif event is InputEventJoypadButton:
+		es_toque = (event as InputEventJoypadButton).pressed
 	elif event is InputEventMouseButton:
 		es_toque = (event as InputEventMouseButton).pressed
 	elif event is InputEventScreenTouch:

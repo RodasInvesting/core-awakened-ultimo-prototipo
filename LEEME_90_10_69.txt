@@ -1,0 +1,23 @@
+CORE AWAKENED 90.10.69 — CONTINUOUS CORE II / CORE III COMBO FLOW
+
+Objetivo:
+- Eliminar la pausa visible entre los golpes del combo automático.
+
+Cambio técnico:
+- ÚNICAMENTE cuando en_combo_auto_visual está activo (CORE II y CORE III),
+  el recovery entre ataques se reduce a 0.035 s.
+- El chequeo interno de la siguiente transición baja de 0.025 s a 0.010 s.
+- Startup, ventana activa, hitbox, daño, hit-stop, sonido y sprites se conservan.
+
+NO SE TOCA:
+- CORE I.
+- Ataques normales/manuales.
+- Dash / backdash / salto / doble salto.
+- Homing / target lock.
+- Cámara.
+- IA.
+- Daño / hitboxes / contacto.
+- Scripts o assets individuales de personajes.
+
+Archivo modificado:
+- scripts/fighter.gd

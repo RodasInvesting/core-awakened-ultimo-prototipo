@@ -1,0 +1,7 @@
+CORE AWAKENED 90.11.19 — TRONO DEL NÚCLEO
+
+- Reemplaza el escenario anterior de Varkhos por el nuevo arte oficial.
+- Fondo final normalizado a 1280x720.
+- Nombre definitivo: TRONO DEL NÚCLEO.
+- Varkhos usa escala de fondo 1.0 y offset Y 0: se eliminaron los parches visuales del escenario viejo.
+- No se modifican Fighter, combate, Dax, Kai, músicas ni selectores fuera de la miniatura automática del nuevo fondo.

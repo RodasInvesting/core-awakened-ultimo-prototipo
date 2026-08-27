@@ -1,0 +1,18 @@
+CORE AWAKENED 90.10.26 — FINISHER VISUAL PASS V1
+
+REEMPLAZA:
+- scripts/fighter.gd
+
+CAMBIOS:
+1) Especial / Remate / Absoluto: el poster cinematografico usa tiempo real y ya no se estira por la camara lenta del Absoluto.
+2) El poster se escala usando el contenido visible del PNG y no todo el lienzo transparente.
+3) Encuadre seguro: limita ancho y desplaza el arte hacia detras del atacante para conservar rival y bordes visibles.
+4) Jester y Kali reciben una reduccion visual leve de poster/VFX por ser los artes mas expansivos.
+5) Anillos/rayos de presentacion pasan detras de los Fighter y son mas sutiles; el impacto real sigue delante.
+6) NO se modifican IA, movilidad, dash, salto, camara normal, hitboxes, dano, KO ni BODY CONTACT.
+
+PRUEBA RECOMENDADA:
+- Jester: CORE 1, CORE 2 y CORE 3.
+- Kali: CORE 1, CORE 2 y CORE 3.
+- Fang o Kai: CORE 3 para comparar un personaje que ya tenia buena lectura.
+- Ejecutar al menos un Absoluto cerca del borde izquierdo o derecho.

@@ -20,20 +20,24 @@ func _init() -> void:
 
 	escala_sprite = 0.6693
 	textura_parado = load("res://assets/fang/parado.png")
-	# FASE REDISEÑO: por ahora solo llegaron 2 puñetazos nuevos (de los 9
-	# viejos) y 1 patada nueva (de las 5 que mandaron, 4 en un estilo pixel
-	# art que no coincide con el resto -- quedan afuera hasta nueva orden).
-	# Se recorta el array en vez de mezclar arte viejo con nuevo; se
-	# expande solo cuando lleguen más variantes en el próximo lote.
+	# 90.10.63 — repertorio NORMAL ampliado. Se intercalan los nuevos con
+	# los anteriores para evitar que salgan dos rectos visualmente parecidos
+	# de forma consecutiva. El modo Furia queda completamente intacto.
 	textura_punetazo = load("res://assets/fang/punetazo_1.png")
 	texturas_punetazo_extra = [
+		load("res://assets/fang/punetazo_5_90_10_63.png"),
 		load("res://assets/fang/punetazo_2.png"),
+		load("res://assets/fang/codazo_90_10_63.png"),
 		load("res://assets/fang/punetazo_3.png"),
+		load("res://assets/fang/punetazo_6_90_10_63.png"),
 		load("res://assets/fang/punetazo_4.png"),
+		load("res://assets/fang/punetazo_7_90_10_63.png"),
 	]
 	textura_patada = load("res://assets/fang/patada_1.png")
 	texturas_patada_extra = [
+		load("res://assets/fang/rodillazo_90_10_63.png"),
 		load("res://assets/fang/patada_2.png"),
+		load("res://assets/fang/patada_baja_90_10_63.png"),
 	]
 	textura_golpe_recibido = load("res://assets/fang/golpe_recibido.png")
 	texturas_golpe_recibido_extra = [
@@ -44,12 +48,10 @@ func _init() -> void:
 	textura_derribado = load("res://assets/fang/derribado.png")
 	textura_especial = load("res://assets/fang/especial.png")
 	textura_rematador = load("res://assets/fang/rematador.png")
-	textura_absoluto = load("res://assets/fang/absoluto.png")
+	textura_absoluto = load("res://assets/fang/gigantografia_core3_nueva.png")
 	textura_recarga = load("res://assets/fang/recarga.png")
 	textura_descenso = load("res://assets/fang/descenso.png")
 	textura_furia_parado = load("res://assets/fang/furia_parado.png")
-	# FASE REDISEÑO: combo Furia completo -- 3 puñetazos + 4 patadas (los 7
-	# cuadros de la secuencia COMBO que mandaron en los dos lotes).
 	textura_furia_punetazo = load("res://assets/fang/furia_punetazo_1.png")
 	texturas_furia_punetazo_extra = [
 		load("res://assets/fang/furia_punetazo_2.png"),
@@ -63,10 +65,6 @@ func _init() -> void:
 	]
 	textura_furia_golpe_recibido = load("res://assets/fang/furia_golpe_recibido.png")
 	textura_furia_derribado = load("res://assets/fang/furia_derribado.png")
-
-	# FASE REDISEÑO: caminata con cuadros reales (antes der/izq). Se deja
-	# textura_caminata_der/izq vacío a propósito para que el motor use el
-	# ciclo de N cuadros (texturas_caminata) con ping-pong automáticamente.
 	textura_salto = load("res://assets/fang/salto.png")
 	textura_doble_salto = load("res://assets/fang/doble_salto.png")
 	textura_bloqueo = load("res://assets/fang/bloqueo.png")

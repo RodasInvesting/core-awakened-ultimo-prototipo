@@ -2,9 +2,12 @@ extends Control
 
 const FONDOS := {
 	"Kai":"kai.jpg", "Cibor-X":"cibor-x.jpg", "Fang":"fang.jpg", "Kali":"kali.jpg",
-	"Aethel":"aethel.jpg", "Magnus":"magnus.jpg", "Helena":"helena.jpg"
+	"Aethel":"aethel.jpg", "Magnus":"magnus.jpg", "Helena":"helena.jpg",
+	"Jester":"jester.png", "Xenoid":"xenoid.png", "Varkhos":"varkhos.png"
 }
+const AUTO_CONTINUAR_ARCADE := 5.5
 var estado
+var transicion_en_curso := false
 
 func _ready() -> void:
 	estado = get_node("/root/GameState")
@@ -18,7 +21,13 @@ func _ready() -> void:
 
 func crear_fondo(nombre: String) -> void:
 	var bg := TextureRect.new()
-	bg.texture = load("res://assets/fondos/" + str(FONDOS.get(nombre, "kai.jpg")))
+	var archivo: String = str(FONDOS.get(nombre, "kai.jpg"))
+	var ruta := "res://assets/fondos/" + archivo
+	# Varkhos todavía puede no tener fondo final instalado. Si no existe,
+	# usamos el fondo de Kai como respaldo en vez de producir un error.
+	if not ResourceLoader.exists(ruta):
+		ruta = "res://assets/fondos/kai.jpg"
+	bg.texture = load(ruta)
 	bg.position = Vector2.ZERO
 	bg.size = Vector2(1280,720)
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -74,16 +83,25 @@ func reproducir(ruta: String, vol: float = -3.0) -> void:
 	a.play()
 
 func mostrar_siguiente() -> void:
-	etiqueta("¡VICTORIA!", 170, 64, Color(1.0,0.58,0.10))
-	etiqueta("RIVAL SUPERADO: " + estado.ultimo_rival.to_upper(), 265, 24)
-	etiqueta("PROGRESO DEL TORNEO  " + estado.progreso_arcade_texto(), 315, 22, Color(0.80,0.62,1.0))
+	etiqueta("¡VICTORIA!", 145, 64, Color(1.0,0.58,0.10))
+	etiqueta("RIVAL SUPERADO: " + estado.ultimo_rival.to_upper(), 238, 24)
+	etiqueta("PROGRESO DEL TORNEO  " + estado.progreso_arcade_texto(), 288, 22, Color(0.80,0.62,1.0))
 	if estado.rival_actual == "Varkhos":
-		etiqueta("EL NÚCLEO DESPIERTA...", 385, 36, Color(0.95,0.15,0.20))
+		etiqueta("EL NÚCLEO DESPIERTA...", 355, 36, Color(0.95,0.15,0.20))
 	else:
-		etiqueta("SIGUIENTE: " + estado.rival_actual.to_upper(), 385, 34, Color(0.45,0.86,1.0))
+		etiqueta("SIGUIENTE: " + estado.rival_actual.to_upper(), 355, 34, Color(0.45,0.86,1.0))
 	reproducir("res://assets/sonidos/menu/next_level.mp3")
-	await get_tree().create_timer(3.2).timeout
-	get_tree().change_scene_to_file("res://scenes/PresentacionVS.tscn")
+
+	# 90.10.36: el jugador ya no queda obligado a esperar la transición.
+	# A / Enter continúa inmediatamente gracias al foco estándar de Godot.
+	var b := boton("CONTINUAR", Vector2(500,500), _continuar_arcade)
+	b.grab_focus()
+	var ayuda := etiqueta("A / ENTER  CONTINUAR   •   AVANCE AUTOMÁTICO", 575, 14, Color(0.82,0.80,0.92))
+	ayuda.modulate.a = 0.82
+
+	await get_tree().create_timer(AUTO_CONTINUAR_ARCADE).timeout
+	if is_inside_tree() and not transicion_en_curso:
+		_continuar_arcade()
 
 func mostrar_campeon() -> void:
 	etiqueta("¡CAMPEÓN!", 150, 72, Color(1.0,0.62,0.08))
@@ -111,13 +129,28 @@ func mostrar_victoria_rapida() -> void:
 	boton("MENÚ PRINCIPAL", Vector2(500,555), _menu)
 	b1.grab_focus()
 
+func _continuar_arcade() -> void:
+	if transicion_en_curso:
+		return
+	transicion_en_curso = true
+	get_tree().change_scene_to_file("res://scenes/PresentacionVS.tscn")
+
 func _reintentar() -> void:
+	if transicion_en_curso:
+		return
+	transicion_en_curso = true
 	estado.reiniciar_combate_actual()
 	get_tree().change_scene_to_file("res://scenes/PresentacionVS.tscn")
 
 func _selector() -> void:
+	if transicion_en_curso:
+		return
+	transicion_en_curso = true
 	get_tree().change_scene_to_file("res://scenes/SelectorPersonajes.tscn")
 
 func _menu() -> void:
+	if transicion_en_curso:
+		return
+	transicion_en_curso = true
 	estado.volver_al_menu()
 	get_tree().change_scene_to_file("res://scenes/MenuPrincipal.tscn")

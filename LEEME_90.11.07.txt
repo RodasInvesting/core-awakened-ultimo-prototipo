@@ -1,0 +1,37 @@
+CORE AWAKENED 90.11.07 — RÁFAGA IA SIN RESPIRO ENTRE IMPACTOS
+
+BASE: 90.11.06.
+
+DIAGNÓSTICO POR VIDEO:
+- Contra IA sí aparecen COMBO x2 y AIR x1/x3: el reconocimiento de cadena funciona.
+- La pérdida de intensidad ocurre porque la CPU puede recuperar su IA básica entre
+  el primer impacto y la confirmación del segundo input.
+- En el video IA se ve un retorno a neutral entre impactos; en Versus Local la cadena
+  permanece compacta.
+
+CAMBIO ÚNICO DE COMBATE:
+- Al abrir una ventana terrestre de Combo Cancel tras un impacto limpio del jugador,
+  si el defensor es CPU se activa inmediatamente su lock interno durante
+  VENTANA_COMBO_CANCEL + 0.04 s.
+- Ese lock ya existía en Fighter 90.11.06, pero antes se activaba recién cuando x2
+  estaba confirmado. Ahora empieza desde el primer impacto.
+- Si el jugador no encadena, el lock vence solo y la IA vuelve a defenderse normal.
+- Cada nuevo impacto limpio refresca la ventana, por lo que x2/x3 mantiene la ráfaga.
+
+NO SE TOCA:
+- Versus Local.
+- startup / activo / recovery de golpes.
+- hitstun global.
+- knockback global.
+- daño.
+- alcance/hitboxes.
+- CORE: CORE I 1.22 / CORE II 0.90 / CORE III 0.90.
+- personajes, sprites, escenarios, coreografía.
+
+ARCHIVO MODIFICADO RESPECTO A 90.11.06:
+- scripts/perfect_block_90_1.gd
+
+PRUEBA CLAVE:
+1) Contra IA, entrar con X-X, X-C y C-X a la misma cadencia de Versus.
+2) Observar si desaparece el retorno a neutral entre hit 1 y hit 2.
+3) Confirmar que COMBO x2/x3 se sienta TA-TA y no golpe-respiro-golpe.

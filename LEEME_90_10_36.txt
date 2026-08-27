@@ -1,0 +1,25 @@
+CORE AWAKENED — 90.10.36
+RESULTADOS / POST-MATCH FLOW
+
+CAMBIOS:
+- Arcade: pantalla de victoria ahora ofrece CONTINUAR con A / Enter.
+- Arcade conserva avance automático como respaldo después de 5.5 s.
+- Protección contra doble transición por pulsaciones repetidas.
+- Resultado reconoce fondos de Jester y Xenoid.
+- Varkhos queda preparado: si todavía no existe varkhos.png usa fondo seguro de respaldo.
+- Revancha / Selección / Menú mantienen el flujo existente.
+
+ARCHIVO MODIFICADO:
+- scripts/resultado.gd
+
+NO MODIFICA:
+- fighter.gd
+- main.gd
+- IA
+- cámara
+- hitboxes
+- sprites
+- pausa / opciones / tutorial
+
+INSTALACIÓN:
+Copiar el contenido del ZIP sobre la raíz del proyecto y reemplazar cuando se solicite.

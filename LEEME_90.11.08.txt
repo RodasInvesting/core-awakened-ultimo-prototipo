@@ -1,0 +1,48 @@
+CORE AWAKENED 90.11.08 — CORE II / CORE III TRIFÁSICO
+
+BASE: 90.11.07.
+
+OBJETIVO DE ESTA PRUEBA:
+- Dar al combo automático de CORE II y CORE III una progresión más agresiva y legible,
+  inspirada en la sensación espectacular de presión cuando un rival queda acorralado.
+
+NUEVA COREOGRAFÍA CORE II / CORE III:
+1) PRIMERA PASADA — SOLO PUÑOS
+   - Recorre todos los puños disponibles del personaje, en orden.
+
+2) SEGUNDA PASADA — SOLO PATADAS
+   - Recorre todas las patadas disponibles del personaje, en orden.
+   - Si un personaje tiene combo_auto_incluye_patada=false, se conserva esa excepción.
+
+3) TERCERA PASADA — MIXTA / INTERCALADA
+   - Recorre nuevamente TODO el repertorio normal/Furia disponible.
+   - Distribuye puños y patadas proporcionalmente a lo largo de toda la pasada
+     (ejemplo 10 puños / 5 patadas: P-P-K / P-P-K / ...).
+
+4) REMATE
+   - CORE II termina con su rematador/gigantografía actual.
+   - CORE III termina con su finalización absoluta/gigantografía actual.
+
+SE CONSERVA EXACTAMENTE:
+- Cadencia uniforme de la ráfaga: startup 0.012 / activo 0.065 / recovery 0.010.
+- Combo cage / anclaje del receptor durante CORE II/III.
+- CORE I = 1.22.
+- CORE II = 0.90.
+- CORE III = 0.90.
+- Daño, hitstun, knockback y alcance.
+- Versus Local.
+- Combo Cancel manual X-X / X-C / C-X.
+- Lock IA de 90.11.07.
+- Sprites, personajes, escenarios y remates.
+
+IMPORTANTE:
+- Esta versión NO intenta resolver todavía el exceso de defensa de IA en Combo Cancel.
+  Esa investigación queda separada para no contaminar la prueba de coreografía CORE.
+
+ARCHIVO MODIFICADO RESPECTO A 90.11.07:
+- scripts/fighter.gd
+
+PRUEBA RECOMENDADA:
+- Activar CORE II y observar claramente: PUÑOS -> PATADAS -> MIXTA -> REMATE.
+- Activar CORE III y verificar la misma estructura usando el repertorio Furia.
+- Confirmar que no aparecen pausas entre el final de una fase y el inicio de la siguiente.

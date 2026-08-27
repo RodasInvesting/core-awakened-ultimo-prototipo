@@ -1,0 +1,34 @@
+CORE AWAKENED — 90.10.33
+OPTIONS / SETTINGS + GUARDADO PERSISTENTE
+
+NUEVO:
+- SettingsManager global con archivo user://core_awakened_settings.cfg
+- Volumen general persistente
+- Música persistente
+- Efectos persistentes
+- Voces persistentes
+- Pantalla completa persistente
+- VSync persistente
+- Sacudida de cámara ON/OFF persistente
+- Restaurar predeterminados
+- Las opciones se aplican inmediatamente y se conservan al cerrar/abrir el juego
+- Buses de audio Música / Efectos / Voces creados y clasificados automáticamente
+- Xbox A ahora también permite saltar IntroHistoria e IntroBatalla
+
+NO MODIFICA:
+- Fighter / hitboxes / daño
+- IA
+- dash / saltos
+- cámara dinámica / zoom normal
+- gigantografías
+- Fang
+
+ARCHIVOS:
+- project.godot
+- scripts/settings_manager.gd (nuevo)
+- scripts/pause_manager.gd
+- scripts/gamepad_ui_bootstrap.gd
+- scripts/main.gd (sólo respeta el toggle de shake)
+
+INSTALACIÓN:
+Cerrar Godot, extraer sobre la raíz del proyecto y aceptar reemplazar.

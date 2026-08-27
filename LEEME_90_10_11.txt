@@ -1,0 +1,35 @@
+CORE AWAKENED 90.10.11 — COMBAT CONTACT FIX
+
+Objetivo:
+- Corregir patadas/puños que visualmente atraviesan al rival sin registrar impacto.
+- Evitar que un rival caminando empuje al atacante mientras su golpe todavía está en curso.
+
+Cambios SOLO en scripts/fighter.gd:
+1. Ventana ACTIVA ampliada (timing, no alcance):
+   - Puños: startup 18%, activo 32%, recovery 50% aprox.
+   - Patadas: startup 14%, activo 40%, recovery 46% aprox.
+2. Segundo chequeo de hitbox después de move_and_slide().
+   Si el rival entra caminando en el golpe en ese mismo frame, ahora se detecta.
+3. Prioridad corporal del ataque durante STARTUP + ACTIVO + RECOVERY.
+   Un rival que solo camina ya no debe empujar al atacante atravesando el sprite del golpe.
+4. NO se agrandaron las hitboxes. Primero corregimos timing/contacto para no crear golpes fantasma.
+5. fighter.gd original incluido por separado en el ZIP de rollback.
+
+INSTALACION:
+- Cerrar Godot.
+- Extraer este ZIP sobre la carpeta raiz del proyecto.
+- Aceptar reemplazar scripts/fighter.gd.
+- Abrir Godot y esperar importacion.
+
+PRUEBA PRINCIPAL:
+- Fang vs Kai.
+- Dejar a Kai avanzar caminando.
+- Lanzar patadas cuando Kai entra en el alcance visual.
+- Debe impactar si toca visualmente durante la ventana del golpe.
+- Kai NO debe empujar a Fang hacia atras solo caminando mientras Fang golpea.
+
+Tambien probar:
+- Puños Fang vs Kai.
+- Patadas desde un poco mas lejos: NO deben pegar si no hay contacto visual.
+- Bloqueo de Kai: debe registrar bloqueo, no daño limpio.
+- Borde izquierdo/derecho del escenario.

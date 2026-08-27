@@ -1,0 +1,221 @@
+--- fighter.gd 90.10.2
++++ fighter.gd 90.10.3
+@@ -1,5 +1,5 @@
+ class_name Fighter
+-# CORE AWAKENED 90.10.2 — escalas corregidas + compatibilidad Magnus.
++# CORE AWAKENED 90.10.3 — distancia física + CORE knockback + piso final.
+ extends CharacterBody2D
+ 
+ signal impacto(fuerza: float)
+@@ -52,8 +52,8 @@
+ # Distancia objetivo para los combos automáticos: el atacante se acerca
+ # físicamente antes de lanzar cada golpe para no perder la secuencia por
+ # estar unos píxeles fuera de rango.
+-const DISTANCIA_COMBO_AUTO_OBJETIVO := 82.0
+-const DISTANCIA_COMBO_AUTO_MAX := 250.0
++const DISTANCIA_COMBO_AUTO_OBJETIVO := 112.0
++const DISTANCIA_COMBO_AUTO_MAX := 285.0
+ # Compatibilidad con los personajes actuales:
+ # algunos (Magnus) pueden desactivar las patadas del combo automático.
+ var combo_auto_incluye_patada := true
+@@ -61,7 +61,7 @@
+ # transferencia de peso automática hacia el rival para que los golpes no
+ # parezcan "anclados" al piso cuando el jugador pulsa X/C cerca del objetivo.
+ const DISTANCIA_LUNGE_ATAQUE := 240.0
+-const DISTANCIA_LUNGE_MINIMA := 74.0
++const DISTANCIA_LUNGE_MINIMA := 100.0
+ const VELOCIDAD_LUNGE_PUNETAZO := 118.0
+ const VELOCIDAD_LUNGE_PATADA := 104.0
+ 
+@@ -484,13 +484,16 @@
+ var _rect_visual_cache: Dictionary = {}
+ # FASE 90.10 — separación física más legible.
+ # Los cuerpos nunca deben fundirse visualmente cuando están cuerpo a cuerpo.
+-const DISTANCIA_MINIMA_LUCHADORES := 62.0
++# FASE 90.10.3 — lectura corporal limpia.
++# La distancia se mide entre los ORÍGENES físicos, no entre bordes del PNG.
++# Los brazos/piernas pueden entrar en la hurtbox, pero los torsos ya no se montan.
++const DISTANCIA_MINIMA_LUCHADORES := 92.0
+ const ARENA_LIMITE_IZQUIERDO := 58.0
+ const ARENA_LIMITE_DERECHO := 1222.0
+ const FUERZA_REBOTE_MURO_ESPECIAL := 0.42
+-const DISTANCIA_MINIMA_CONTACTO := 82.0
+-const DISTANCIA_MINIMA_CONTACTO_BLOQUEO := 88.0
+-const DISTANCIA_MINIMA_CONTACTO_PESADO := 96.0
++const DISTANCIA_MINIMA_CONTACTO := 112.0
++const DISTANCIA_MINIMA_CONTACTO_BLOQUEO := 120.0
++const DISTANCIA_MINIMA_CONTACTO_PESADO := 128.0
+ const Z_BASE_Y_DIVISOR := 12.0
+ var ciclo_caminata := 0.0
+ var ciclo_reposo := 0.0
+@@ -1436,7 +1439,7 @@
+ 	# más marcada; si ya están relativamente cerca, el avance es mínimo.
+ 	var distancia_objetivo: float = DISTANCIA_COMBO_AUTO_OBJETIVO
+ 	if distancia > DISTANCIA_COMBO_AUTO_MAX:
+-		distancia_objetivo = 96.0
++		distancia_objetivo = 122.0
+ 	var destino_x: float = objetivo.global_position.x - lado * distancia_objetivo
+ 	var duracion: float = clampf(distancia / 900.0, 0.08, 0.20)
+ 	var tween := create_tween()
+@@ -1656,8 +1659,9 @@
+ 	if puede_conectar and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+ 		var dano: float = dano_patada * MULT_DANO_GLOBAL * mult_dano_fase * 2.4
+ 		objetivo.recibir_dano(dano, 520.0, 0.75, direccion, "rematador")
+-		# CORE 2: remate con desplazamiento mucho más visible.
+-		objetivo.recibir_derribo_especial(direccion, 900.0 if not bloqueado else 500.0, 470.0 if not bloqueado else 290.0, 1.05 if not bloqueado else 0.50, true)
++		# CORE 2: vuelo largo y legible. Los pesos pesados siguen resistiendo más,
++		# pero incluso Magnus debe desplazarse varios cuerpos antes de caer.
++		objetivo.recibir_derribo_especial(direccion, 1250.0 if not bloqueado else 650.0, 530.0 if not bloqueado else 330.0, 1.10 if not bloqueado else 0.55, true)
+ 		_efecto_chispas(bloqueado, objetivo.global_position)
+ 		await get_tree().create_timer(0.10, true, false, true).timeout
+ 	rematador_conectado.emit()
+@@ -1700,27 +1704,129 @@
+ 	bloqueo_cinematico = true
+ 	velocity = Vector2.ZERO
+ 	_pose_final_especial(3.0)
+-	finalizacion_absoluta.emit()
++
++	# IMPORTANTE 90.10.3:
++	# NO avisamos todavía a main.gd que terminó la partida.
++	# Primero mostramos el Absoluto, lanzamos al rival, dejamos que recorra
++	# el escenario y aterrice. Recién después se dispara la victoria.
+ 	_congelar_rival(true)
+ 	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+ 		var dir_previa: float = signf(objetivo.global_position.x - global_position.x)
+ 		if dir_previa == 0.0:
+ 			dir_previa = mirando
+ 		objetivo.preparar_impacto_cinematico(2.95, dir_previa, "absoluto")
++
+ 	await _mostrar_poder_reemplazando(textura_absoluto, 2.80, 430.0)
+ 	_congelar_rival(false)
++
+ 	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+ 		var direccion: float = signf(objetivo.global_position.x - global_position.x)
+ 		if direccion == 0.0:
+ 			direccion = mirando
++
+ 		objetivo.recibir_dano(999.0, 980.0, 1.2, direccion, "absoluto")
+-		# CORE 3 ABSOLUTO: lanzamiento extremo. Con el slow-motion del cierre
+-		# este impulso permite recorrer aproximadamente media arena o más.
+-		objetivo.recibir_derribo_especial(direccion, 2850.0, 610.0, 99.0, false)
+ 		_efecto_chispas(false, objetivo.global_position)
+ 		_onda_impacto_local(objetivo.global_position, color_energia_poder(), 1.6)
+ 		impulso_visual = 1.3
+ 		hitstop_timer = 0.08
++
++		# Vuelo cinematográfico garantizado: no depende del timing del final de
++		# partida ni de Engine.time_scale. Si hay espacio, recorre ~760 px.
++		await _vuelo_absoluto_cinematico(direccion)
++
++	# Ahora el rival ya terminó el vuelo y está físicamente apoyado.
++	# main.gd puede cerrar la pelea sin cortar la reacción.
++	finalizacion_absoluta.emit()
++
++
++func _vuelo_absoluto_cinematico(direccion: float) -> void:
++	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
++		return
++
++	var rival: Fighter = objetivo
++	if direccion == 0.0:
++		direccion = mirando if mirando != 0.0 else 1.0
++
++	var suelo_y: float = rival.global_position.y
++	var inicio_x: float = rival.global_position.x
++	var distancia_vuelo: float = 760.0
++	var destino_x: float = clampf(
++		inicio_x + direccion * distancia_vuelo,
++		ARENA_LIMITE_IZQUIERDO + 26.0,
++		ARENA_LIMITE_DERECHO - 26.0
++	)
++
++	# Bloqueamos su input/física normal durante este único vuelo. El tween
++	# controla la parábola y evita que otro timer o la gravedad la corte.
++	rival.bloqueo_cinematico = true
++	rival.congelado_por_rival = true
++	rival.velocity = Vector2.ZERO
++	rival.empuje_timer = 0.0
++	rival.empuje_x = 0.0
++	rival.empuje_pendiente_timer = 0.0
++	rival.empuje_pendiente_fuerza = 0.0
++	rival.derribo_especial_activo = true
++	rival.derribo_especial_esperando_aterrizar = true
++	rival.derribo_especial_se_levanta = false
++	rival.pose_timer = 0.0
++
++	var tex_golpe: Texture2D = rival._tex_golpe_recibido()
++	if tex_golpe:
++		rival._actualizar_textura(tex_golpe)
++
++	# X recorre el escenario; Y sube y baja formando un arco.
++	var tw_x := rival.create_tween()
++	tw_x.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
++	tw_x.set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
++	tw_x.tween_property(rival, "global_position:x", destino_x, 0.82)
++
++	var tw_y := rival.create_tween()
++	tw_y.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
++	tw_y.tween_property(rival, "global_position:y", suelo_y - 185.0, 0.31).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
++	tw_y.tween_property(rival, "global_position:y", suelo_y, 0.51).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
++
++	await tw_y.finished
++	if is_instance_valid(tw_x):
++		await tw_x.finished
++
++	if not rival or not is_instance_valid(rival):
++		return
++
++	rival.global_position.y = suelo_y
++	rival.velocity = Vector2.ZERO
++	rival.derribo_especial_esperando_aterrizar = false
++	rival.derribo_especial_activo = false
++	rival.bloqueo_cinematico = false
++	rival.congelado_por_rival = false
++	rival.pose_timer = 0.0
++
++	var tex_piso: Texture2D = rival._tex_derribado()
++	if tex_piso:
++		rival._actualizar_textura(tex_piso)
++		rival._ajustar_derribado_al_piso()
++	rival._efecto_golpe_suelo(620.0)
++	rival.aterrizaje_hecho.emit(620.0, true)
++
++
++func _ajustar_derribado_al_piso() -> void:
++	if not sprite or not sprite.texture:
++		return
++	var rect: Rect2 = _obtener_rect_visual(sprite.texture)
++	if rect.size.x <= 1.0 or rect.size.y <= 1.0:
++		return
++
++	# Solo se corrige una pose claramente horizontal. Las poses de rodillas o
++	# verticales conservan el anclaje normal.
++	var relacion: float = rect.size.x / maxf(rect.size.y, 1.0)
++	if relacion < 1.12:
++		return
++
++	var alto_visible_px: float = rect.size.y * absf(sprite.scale.y)
++	# Entre 14 y 34 px visuales: suficiente para apoyar el cuerpo sin enterrarlo.
++	var ajuste: float = clampf(alto_visible_px * 0.15, 14.0, 34.0)
++	sprite_base_y += ajuste
++	sprite.position.y = sprite_base_y
++
+ 
+ func _resolver_aterrizaje_derribo_especial() -> void:
+ 	derribo_especial_esperando_aterrizar = false
+@@ -1729,6 +1835,7 @@
+ 	velocity.x *= 0.42 if derribo_especial_se_levanta else 0.56
+ 	pose_timer = 0.0
+ 	_actualizar_textura(_tex_derribado())
++	_ajustar_derribado_al_piso()
+ 	var fuerza_caida: float = 430.0 if derribo_especial_se_levanta else 560.0
+ 	_efecto_golpe_suelo(fuerza_caida)
+ 	aterrizaje_hecho.emit(fuerza_caida, true)
+@@ -2012,6 +2119,7 @@
+ 	if sprite:
+ 		sprite.visible = true
+ 		_actualizar_textura(_tex_derribado())
++		_ajustar_derribado_al_piso()
+ 	derrotado.emit()
+ 
+ func reiniciar_para_ronda() -> void:

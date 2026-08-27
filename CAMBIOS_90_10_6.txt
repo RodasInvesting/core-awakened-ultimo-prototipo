@@ -1,0 +1,161 @@
+--- fighter.gd 90.10.5
++++ fighter.gd 90.10.6
+@@ -1,5 +1,5 @@
+ class_name Fighter
+-# CORE AWAKENED 90.10.5 — estabilización: carrera + combo + CORE final.
++# CORE AWAKENED 90.10.6 — orientación + línea de combate + KO al piso.
+ extends CharacterBody2D
+ 
+ signal impacto(fuerza: float)
+@@ -614,6 +614,12 @@
+ const CARRERA_POLVO_INTERVALO := 0.12
+ var asentamiento_aterrizaje: float = 0.0
+ const SUELO_REFERENCIA_Y := 560.0
++# Ajuste visual global de la línea de combate. La física del escenario sigue
++# en Y=560, pero sprites, sombras y cajas de golpe se presentan más abajo.
++const OFFSET_VISUAL_LINEA_COMBATE_Y := 28.0
++# Ajuste adicional exclusivo de la pose horizontal de K.O.
++const OFFSET_DERRIBADO_FINAL_Y := 22.0
++const DISTANCIA_FINAL_GANADOR_DERRIBADO := 190.0
+ 
+ func _ready() -> void:
+ 	# FASE 85: si más adelante se agrega assets/<personaje>/victoria.png, se
+@@ -657,6 +663,23 @@
+ 
+ 	ciclo_reposo = randf_range(0.0, TAU)
+ 	parpadeo_timer = randf_range(2.0, 4.2)
++
++func _actualizar_orientacion_hacia_rival() -> void:
++	# Al comenzar una pelea ambos scripts arrancan con mirando=1.0. Una vez que
++	# main asigna `objetivo`, corregimos automáticamente la orientación.
++	# También mantiene la regla de juego: aun retrocediendo/evasionando, el
++	# luchador sigue mirando al contrincante.
++	if not objetivo or not is_instance_valid(objetivo):
++		return
++	if esta_derrotado or bloqueo_cinematico or en_secuencia_especial:
++		return
++	if fase_ataque != FaseAtaque.NINGUNA:
++		return
++
++	var dx: float = objetivo.global_position.x - global_position.x
++	if absf(dx) > 1.0:
++		mirando = signf(dx)
++
+ 
+ func _crear_capa_estela() -> void:
+ 	if capa_estela or not sprite:
+@@ -767,6 +790,7 @@
+ 
+ 	_actualizar_carrera_visual(delta)
+ 	_actualizar_fase_ataque(delta)
++	_actualizar_orientacion_hacia_rival()
+ 
+ 	# Profundidad dinámica: un luchador más bajo en pantalla queda delante
+ 	# de uno que está saltando. Durante un impacto, el que recibe queda un
+@@ -1305,7 +1329,10 @@
+ 		maxf(alto_fisico, alto_visible_contacto)
+ 	)
+ 	return Rect2(
+-		personaje.global_position + Vector2(-size.x * 0.5, -size.y),
++		personaje.global_position + Vector2(
++			-size.x * 0.5,
++			-size.y + personaje.OFFSET_VISUAL_LINEA_COMBATE_Y
++		),
+ 		size
+ 	)
+ 
+@@ -1324,7 +1351,10 @@
+ 	var avance_inicial: float = cuerpo_ancho * 0.10
+ 	var izquierda: float = avance_inicial if mirando > 0.0 else -avance_inicial - ancho_hit
+ 	return Rect2(
+-		global_position + Vector2(izquierda, centro_y - alto_hit * 0.5),
++		global_position + Vector2(
++			izquierda,
++			centro_y - alto_hit * 0.5 + OFFSET_VISUAL_LINEA_COMBATE_Y
++		),
+ 		Vector2(ancho_hit, alto_hit)
+ 	)
+ 
+@@ -2024,7 +2054,46 @@
+ 	if sprite:
+ 		sprite.visible = true
+ 		_actualizar_textura(_tex_derribado())
++
++		# La pose horizontal suele tener pelo, aura o extremidades que alteran el
++		# used_rect. La bajamos un poco más para que el cuerpo real quede apoyado.
++		sprite_base_y += OFFSET_DERRIBADO_FINAL_Y
++		sprite.position.y = sprite_base_y
++
++	# El derrotado no puede terminar atravesando la silueta del ganador.
++	# Conservamos el lado donde cayó si hay espacio; si está contra un borde,
++	# usamos el lado con más espacio disponible.
++	_asegurar_separacion_ko_final()
+ 	derrotado.emit()
++
++func _asegurar_separacion_ko_final() -> void:
++	if not objetivo or not is_instance_valid(objetivo):
++		return
++
++	var distancia_actual: float = absf(global_position.x - objetivo.global_position.x)
++	if distancia_actual >= DISTANCIA_FINAL_GANADOR_DERRIBADO:
++		return
++
++	var lado_actual: float = signf(global_position.x - objetivo.global_position.x)
++	var espacio_izq: float = objetivo.global_position.x - ARENA_LIMITE_IZQUIERDO
++	var espacio_der: float = ARENA_LIMITE_DERECHO - objetivo.global_position.x
++
++	var lado: float = lado_actual
++	if lado == 0.0:
++		lado = -objetivo.mirando if objetivo.mirando != 0.0 else 1.0
++
++	# Si el lado actual no permite la distancia completa, elegimos el otro.
++	if lado < 0.0 and espacio_izq < DISTANCIA_FINAL_GANADOR_DERRIBADO:
++		lado = 1.0
++	elif lado > 0.0 and espacio_der < DISTANCIA_FINAL_GANADOR_DERRIBADO:
++		lado = -1.0
++
++	global_position.x = clampf(
++		objetivo.global_position.x + lado * DISTANCIA_FINAL_GANADOR_DERRIBADO,
++		ARENA_LIMITE_IZQUIERDO,
++		ARENA_LIMITE_DERECHO
++	)
++
+ 
+ func reiniciar_para_ronda() -> void:
+ 	vida = vida_maxima
+@@ -2416,7 +2485,7 @@
+ 		Vector2(-10, 5), Vector2(-21, 3)
+ 	])
+ 	sombra.color = Color(0.01, 0.01, 0.015, 0.34)
+-	sombra.position = Vector2(0, 3)
++	sombra.position = Vector2(0, 3 + OFFSET_VISUAL_LINEA_COMBATE_Y)
+ 	sombra.z_index = -5
+ 	add_child(sombra)
+ 
+@@ -2686,7 +2755,7 @@
+ 	aura_core = Polygon2D.new()
+ 	aura_core.name = "AuraCore"
+ 	aura_core.polygon = _crear_elipse_local(46.0, 12.0)
+-	aura_core.position = Vector2(0.0, -2.0)
++	aura_core.position = Vector2(0.0, -2.0 + OFFSET_VISUAL_LINEA_COMBATE_Y)
+ 	aura_core.z_index = -3
+ 	aura_core.color = Color(color_energia_poder().r, color_energia_poder().g, color_energia_poder().b, 0.0)
+ 	add_child(aura_core)
+@@ -2705,7 +2774,7 @@
+ func _crear_luz_contacto() -> void:
+ 	luz_contacto = Polygon2D.new()
+ 	luz_contacto.polygon = _crear_elipse_local(44.0, 10.0)
+-	luz_contacto.position = Vector2(0.0, 1.0)
++	luz_contacto.position = Vector2(0.0, 1.0 + OFFSET_VISUAL_LINEA_COMBATE_Y)
+ 	luz_contacto.z_index = -4
+ 	luz_contacto.color = Color(color_base.r, color_base.g, color_base.b, 0.045)
+ 	add_child(luz_contacto)
+@@ -2846,6 +2915,8 @@
+ 	# El borde visible inferior sigue anclado al piso. En derribado usamos
+ 	# una escala por ancho para que el cuerpo tumbado no crezca de golpe.
+ 	sprite_base_y = tex.get_height() * 0.5 * escala_efectiva - (rect.position.y + rect.size.y) * escala_efectiva
++	# La línea visual se baja sin alterar la colisión física del escenario.
++	sprite_base_y += OFFSET_VISUAL_LINEA_COMBATE_Y
+ 	sprite.position.y = sprite_base_y
+ 	sprite.position.x = _sprite_ancla_x()
+ 

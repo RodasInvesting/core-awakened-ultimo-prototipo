@@ -1,0 +1,12 @@
+CORE AWAKENED 90.10.70 — corrección focalizada
+
+Cambios reales:
+1) fighter.gd — pushbox compacto durante CORE II/III para evitar superposición de torsos.
+2) fighter.gd — K.O. limpia estados cinematográficos residuales.
+3) fighter.gd — apoyo visual dinámico del sprite derribado para evitar apariencia flotante.
+4) fighter.gd — separación final inmediata entre ganador y derrotado; sin Tween/deslizamiento.
+
+main.gd fue auditado contra la 90.10.69 y no necesita modificación para estos dos bugs.
+Se incluye una copia idéntica por comodidad de reemplazo/verificación.
+
+Prueba recomendada: repetir Kali vs Helena con la misma secuencia del video anterior.

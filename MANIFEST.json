@@ -1,0 +1,236 @@
+{
+  "patch": "CORE AWAKENED XENOID V3",
+  "purpose": "Prueba de Xenoid con combo completo y gigantografia del Absoluto arriba del personaje",
+  "files": [
+    {
+      "path": "APLICAR_PATCH_XENOID_V3.bat",
+      "size": 103,
+      "sha256": "9b7d8d4d2d8a6e7a09095532f81d5d4a425e18ca06bf02f6b0a00c1ab61464ba"
+    },
+    {
+      "path": "APLICAR_PATCH_XENOID_V3.ps1",
+      "size": 7901,
+      "sha256": "0ffc0064435444390ed54afaace7a76248ac07d51d9ff4418752c7ca628d56e9"
+    },
+    {
+      "path": "LEEME_PRIMERO.txt",
+      "size": 1643,
+      "sha256": "34e0fb20127aadb4311beecc272959957f446968568bb2b617ec74f3be1e5f00"
+    },
+    {
+      "path": "patch_payload/assets/ui/selector_personajes_nuevo.png",
+      "size": 1745709,
+      "sha256": "3673e4d07df0af7f309e850d3809b6736f03c6a469c9b526550324576004079e"
+    },
+    {
+      "path": "patch_payload/assets/vs/xenoid_vs.png",
+      "size": 1553297,
+      "sha256": "ab57eb7ce5e28b28fe2c3fbf0c48e93944dcd052a02a1ab83dd5a4bcfaa45c77"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/absoluto.png",
+      "size": 3164753,
+      "sha256": "4f4f7fa39ffd19d5fd716e9ad6dd5c80f47f4effaabefef8e823c664d2e01fda"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/aceleracion_combo.png",
+      "size": 2554304,
+      "sha256": "328c9a7a23cef9f71b8bb4dc35710f6fd7172d0a15182d4d37b3aa23112f6746"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/bloqueo.png",
+      "size": 1470571,
+      "sha256": "f20410e856e0962a73a580e1d02da4bc647669c83e011f7d8890f759354efbfe"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/caminata_1.png",
+      "size": 1388509,
+      "sha256": "5b91724ea58d43f95ea17f9663d360d1558f7b01b767caa45b39af341400bfac"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/caminata_2.png",
+      "size": 1306977,
+      "sha256": "391304574b37b5873e77af594b031ad4a676f219e8d3bae801a29a208df1244a"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/carrera.png",
+      "size": 1523697,
+      "sha256": "7fe86a61b75f29c2bf6b60e4fa049440742181ae7ed69e3fd2bfb59bff40d77a"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/combo_1.png",
+      "size": 1783352,
+      "sha256": "685afd8f48e7be83623565f681283b964f5e572321dc9084e09ee86d72d76e73"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/combo_2.png",
+      "size": 1614150,
+      "sha256": "c0d51a4d0660e3e0cacdf629e5001758bebf8fbe1034700af77159a19e5a824e"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/combo_3.png",
+      "size": 1793416,
+      "sha256": "0823a3faa79408e803e4f7cf4195f00f1bc3455dde241da34297e2041e329dbf"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/combo_4.png",
+      "size": 1388834,
+      "sha256": "4598a8da0e69c6b5dc2243f68b62309e9ce010aa122768349744964451a54a89"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/combo_5.png",
+      "size": 1473737,
+      "sha256": "169e56aeafd9de046b485298b8cdb426e01cd1459fc5ac4337f0368d817d7efa"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/combo_6.png",
+      "size": 1608492,
+      "sha256": "3bfb9acc0dfadacc7bcb7ee68bb1e4915e98e4f23697dc716d3fbbe6a766d66d"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/derribado.png",
+      "size": 787833,
+      "sha256": "07a95764f944bddcc55f868937362d5e90df30cc55455672c304619bc922f1d7"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/descenso.png",
+      "size": 1312906,
+      "sha256": "9dc60c3efcfa20e80d856d85a7669b85d814fabb5bdd8a77ac7c4484163c8aec"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/doble_salto.png",
+      "size": 1297965,
+      "sha256": "2937c62ba348f608fc6add878b4200732a02a86de575b5fbb37beba1898a1bbd"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/especial.png",
+      "size": 1783352,
+      "sha256": "685afd8f48e7be83623565f681283b964f5e572321dc9084e09ee86d72d76e73"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/furia_parado.png",
+      "size": 2106463,
+      "sha256": "118a30fe906bb240adc082da056bb91220dcae7c5c272f9bc7e98b5fc204e860"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/furia_patada_1.png",
+      "size": 1608492,
+      "sha256": "3bfb9acc0dfadacc7bcb7ee68bb1e4915e98e4f23697dc716d3fbbe6a766d66d"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/furia_punetazo_1.png",
+      "size": 1783352,
+      "sha256": "685afd8f48e7be83623565f681283b964f5e572321dc9084e09ee86d72d76e73"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/gigantografia_absoluto.png",
+      "size": 3164753,
+      "sha256": "4f4f7fa39ffd19d5fd716e9ad6dd5c80f47f4effaabefef8e823c664d2e01fda"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/golpe_recibido.png",
+      "size": 1283652,
+      "sha256": "56c7769aaa5704347be280aedf97c8e5095029307ec80a2b29f8a56b900266f9"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/golpe_recibido_2.png",
+      "size": 1327806,
+      "sha256": "a42337ea75f430e2ff66ae461e37a7d25735e94258c0f7182aa3da7fcb0b0d51"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/golpe_recibido_3.png",
+      "size": 1266944,
+      "sha256": "a00ea8a1f26c70d9fdf9ad09d4038064660f722b37c7b4a46ceca9c5e298db07"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/golpe_recibido_4.png",
+      "size": 1409640,
+      "sha256": "4b0e64d0163166e892b4d9a1e592b2757f611898f68b603c2b4195e68f1a1a46"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/parado.png",
+      "size": 1553297,
+      "sha256": "ab57eb7ce5e28b28fe2c3fbf0c48e93944dcd052a02a1ab83dd5a4bcfaa45c77"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/patada_1.png",
+      "size": 1320986,
+      "sha256": "8c6139c172a12b22b102e06d386d76592d093d697387bb81bb44ab039c374d78"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/patada_2.png",
+      "size": 1332749,
+      "sha256": "5b304df972cf25d844b35074dc7a014f4a960097cbf3a607eeee10e7e733d643"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/patada_3.png",
+      "size": 1456755,
+      "sha256": "c29c82926127cd82478b678b5aa3fe3de4b0098cd162314311137550195e1334"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/patada_4.png",
+      "size": 1372381,
+      "sha256": "eaa5c3b27840efdda8138bef39fa9e117a1d3ccd70f6f325431e8368e132104e"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/patada_5.png",
+      "size": 1393705,
+      "sha256": "ee23f88959f18a82deb630c6ae5b281efbc882edb276fdf7109089509f5e0d6a"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/punetazo_1.png",
+      "size": 1552265,
+      "sha256": "c88c6d47f4676c7a2bcd1523b08aa37841c5b98c56bb0a07e8d19a1a8c71e4f9"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/punetazo_2.png",
+      "size": 1591325,
+      "sha256": "a09ecbf8cfebe6e2d4e95a470a80563381df091983e747fb21a33c9c613641b1"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/punetazo_3.png",
+      "size": 1547857,
+      "sha256": "1cd03d96f5fcc398abe653f5c6761e9682d8871952254c1518236a7d5f5b3aa3"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/punetazo_4.png",
+      "size": 1552265,
+      "sha256": "c88c6d47f4676c7a2bcd1523b08aa37841c5b98c56bb0a07e8d19a1a8c71e4f9"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/recarga.png",
+      "size": 3164753,
+      "sha256": "4f4f7fa39ffd19d5fd716e9ad6dd5c80f47f4effaabefef8e823c664d2e01fda"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/rematador.png",
+      "size": 2003388,
+      "sha256": "c8956141463bb109ac5825747c362eab653751239483d4d23312c2debbc07f20"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/remate_final_cuerpo.png",
+      "size": 2003388,
+      "sha256": "c8956141463bb109ac5825747c362eab653751239483d4d23312c2debbc07f20"
+    },
+    {
+      "path": "patch_payload/assets/xenoid/salto.png",
+      "size": 1297965,
+      "sha256": "2937c62ba348f608fc6add878b4200732a02a86de575b5fbb37beba1898a1bbd"
+    },
+    {
+      "path": "patch_payload/scripts/game_state.gd",
+      "size": 3042,
+      "sha256": "630330840fb0c34473379f258e26b31012a732433b77449a407fb60eaf2b0de5"
+    },
+    {
+      "path": "patch_payload/scripts/selector_personajes.gd",
+      "size": 5049,
+      "sha256": "fb9c5882e5e9bf60ebe05456e56eadbb9749507b2647055903738ba8ecce69ba"
+    },
+    {
+      "path": "patch_payload/scripts/xenoid.gd",
+      "size": 5675,
+      "sha256": "ac5dadc0bf205e21654f42cbc68b6ee829800485e90a5d0cf6bd867da4307786"
+    }
+  ]
+}

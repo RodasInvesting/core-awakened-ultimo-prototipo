@@ -4,18 +4,12 @@ extends Node2D
 # estudio y el menú principal. 8 láminas ya armadas (arte + texto + marco,
 # todo en el PNG) que se muestran una por vez con fundido cruzado, sobre
 # el tema musical que definió su duración total. Se puede saltar en
-# cualquier momento con cualquier tecla, click o toque.
+# cualquier momento con cualquier tecla, click, toque o botón de mando.
 const SIGUIENTE_ESCENA := "res://scenes/MenuPrincipal.tscn"
 const TAMANO_PANTALLA := Vector2(1280.0, 720.0)
 const FADE := 0.7
 const RETRASO_ANTES_DE_PODER_SALTAR := 0.3
 const FADE_SALIDA := 0.5
-
-# Tiempo que queda cada lámina en pantalla (incluye su propio fundido de
-# entrada). Calibrado contra la duración real del tema (33.7s), estirada
-# un ~8.7% porque el audio corre a pitch_scale 0.92 (ver más abajo): la
-# música se escucha casi igual pero dura más, y las láminas la acompañan
-# sin sentirse apuradas.
 const DURACIONES: Array[float] = [4.3, 3.9, 4.1, 4.9, 2.4, 5.2, 5.8, 6.0]
 
 var laminas: Array[Sprite2D] = []
@@ -39,9 +33,6 @@ func _ready() -> void:
 		spr.centered = true
 		spr.position = TAMANO_PANTALLA * 0.5
 		var tex_size: Vector2 = spr.texture.get_size()
-		# "Cover": llena toda la pantalla sin dejar bordes, aunque recorte
-		# un pelo de sobra a los costados -- el aspecto ya es casi idéntico
-		# (1672x941 vs 1280x720) así que el recorte es mínimo.
 		var escala: float = maxf(TAMANO_PANTALLA.x / tex_size.x, TAMANO_PANTALLA.y / tex_size.y)
 		spr.scale = Vector2.ONE * escala
 		spr.modulate = Color(1.0, 1.0, 1.0, 0.0)
@@ -58,7 +49,7 @@ func _ready() -> void:
 	add_child(overlay_negro)
 
 	var ayuda := Label.new()
-	ayuda.text = "Toca o presioná cualquier tecla para saltar"
+	ayuda.text = "A / tecla / toque para saltar"
 	ayuda.position = Vector2(0.0, 688.0)
 	ayuda.size = Vector2(TAMANO_PANTALLA.x, 26.0)
 	ayuda.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -71,9 +62,6 @@ func _ready() -> void:
 	audio = AudioStreamPlayer.new()
 	audio.stream = load("res://assets/sonidos/historia_intro.mp3")
 	audio.volume_db = -4.0
-	# FASE 94.1: 8% más lento (baja el tono un poco menos de 1.5 semitonos,
-	# casi imperceptible en un tema instrumental/cinemático) para darle más
-	# aire a cada lámina sin que la música se sienta "arrastrada".
 	audio.pitch_scale = 0.92
 	add_child(audio)
 	audio.play()
@@ -111,6 +99,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var es_toque := false
 	if event is InputEventKey:
 		es_toque = (event as InputEventKey).pressed
+	elif event is InputEventJoypadButton:
+		es_toque = (event as InputEventJoypadButton).pressed
 	elif event is InputEventMouseButton:
 		es_toque = (event as InputEventMouseButton).pressed
 	elif event is InputEventScreenTouch:

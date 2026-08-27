@@ -1,0 +1,11 @@
+CORE AWAKENED 90.10.65 — KAI COMBAT VARIETY PASS
+
+Incluye:
+- 3 golpes normales nuevos para Kai (1 puño + 2 patadas).
+- 3 golpes nuevos para el combo final en Modo Furia (1 puño + 2 patadas).
+- Reordenamiento del repertorio para que los golpes queden más diferidos.
+- No se tocan Core, absoluto ni gigantografías ya cerradas.
+
+Contenido del ZIP:
+- assets/kai_redesign_final/*.png (6 artes nuevas)
+- scripts/kai.gd

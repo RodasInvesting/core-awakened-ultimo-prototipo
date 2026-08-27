@@ -1,0 +1,22 @@
+CORE AWAKENED 90.10.95 — FIX RAÍZ DASH ESPEJO + INPUT TÁCTICO J2
+
+Archivo modificado:
+- scripts/perfect_block_90_1.gd
+
+Causa encontrada en auditoría completa:
+perfect_block_90_1.gd mantenía un segundo sistema de input global independiente de Fighter/Main.
+Leía directamente KEY_LEFT/KEY_RIGHT y, al detectar doble toque, recorría todos los Fighter controlados por jugador para elegir cuál debía hacer backdash. Por eso una flecha de J1 podía activar el backdash de J2.
+
+El mismo módulo leía KEY_X/KEY_C globalmente para Counter/Combo Cancel, por lo que COMBO x2 respondía al teclado pero no al mando de J2.
+
+90.10.95:
+- elimina todas las lecturas Input.* de este módulo para acciones humanas;
+- consume input_frame_enrutado_actual de cada Fighter;
+- mantiene estado previo y doble toque separado por instance_id;
+- Back Dash sólo puede activarse en el Fighter que generó el doble toque;
+- Perfect Block, Counter, Launcher, Quick Recovery y Combo Cancel quedan ligados al input de cada Fighter;
+- el mando puede disparar Combo Cancel/COMBO x2 igual que el teclado.
+
+IMPORTANTE:
+Reemplazar SOLO scripts/perfect_block_90_1.gd sobre la versión actual 90.10.94.
+No reemplazar fighter.gd ni main.gd para esta prueba.

@@ -1,0 +1,16 @@
+CORE AWAKENED 90.11.02 — PROGRESIÓN DE CARGA CORE + REMIX HELENA
+
+Cambios exclusivos de esta versión:
+1) Curva de carga por nivel objetivo:
+   - CORE I: x1.10 (presentación más rápida de la mecánica)
+   - CORE II: x0.72
+   - CORE III: x0.50 (recurso final claramente más costoso)
+   La reducción COMBO x2/x3 de 90.11.01 sigue intacta.
+
+2) Helena CORE II:
+   - Primera pasada intacta: 10/10 puños + 5/5 patadas.
+   - Remix de 5 impactos: prioriza 4 patadas + 1 puño.
+   - No cambia velocidad, duración objetivo, Combo Cage ni CORE III/Furia.
+
+Se conservan: Xenoid 90.11.01, Aethel Air Lock 90.11.00, cámara dinámica,
+Perfect Block/input 90.10.95, coreografía adaptativa y ráfaga continua.

@@ -1,0 +1,16 @@
+CORE AWAKENED 90.10.68 — KALI COMBAT VARIETY PASS
+
+Cambios:
+- Se agregan 2 patadas normales nuevas a Kali.
+- Se intercalan con el repertorio actual para evitar repeticiones visuales.
+- Se agregan 3 sprites nuevos Furia al combo CORE III.
+- Los nuevos Furia se distribuyen como 2 ataques de mano y 1 ataque de pierna.
+- No se toca Fighter, cámara, IA, audio ni otros personajes.
+
+Archivos:
+- scripts/kali.gd
+- assets/kali/patada_5_90_10_68.png
+- assets/kali/patada_6_90_10_68.png
+- assets/kali/furia_punetazo_4_90_10_68.png
+- assets/kali/furia_patada_4_90_10_68.png
+- assets/kali/furia_punetazo_5_90_10_68.png

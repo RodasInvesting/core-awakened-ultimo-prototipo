@@ -1,0 +1,9 @@
+CORE AWAKENED 90.10.64 — CIBOR-X COMBAT VARIETY PASS
+
+- Agrega 2 puños normales, 1 rodillazo y 1 patada baja.
+- Los golpes normales quedan intercalados con los anteriores.
+- Agrega 1 puño Furia y 1 patada Furia al combo CORE III.
+- No reemplaza gigantografía, remate, cámara, Fighter, IA ni audio.
+- Los 6 PNG nuevos tienen canal alfa/transparencia real.
+
+Aplicar descomprimiendo en la raíz del proyecto y aceptando reemplazos.

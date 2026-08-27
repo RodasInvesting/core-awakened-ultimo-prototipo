@@ -1,0 +1,12 @@
+CORE AWAKENED 90.10.43 — KAI + AETHEL BACKDASH FIX
+
+Incluye únicamente las dos evasiones que faltaban:
+- assets/kai/evasion.png
+- assets/aethel/evasion.png
+
+Objetivo:
+- Kai usa su sprite propio de evasión/backdash al retroceder con doble toque.
+- Aethel usa su sprite propio de evasión/backdash al retroceder con doble toque.
+- El dash hacia adelante mantiene su sprite de aceleración/carrera actual.
+
+No modifica scripts ni otros personajes.

@@ -1,0 +1,13 @@
+CORE AWAKENED 90.11.21 — REDISEÑO DE ESCENARIOS
+
+Base: 90.11.20 aprobada.
+
+Reemplazos:
+- Aethel: nuevo escenario celestial. Nombre se mantiene ALTAR CELESTIAL.
+- Cibor-X: nuevo laboratorio/núcleo cibernético. Nombre se mantiene NÚCLEO CIBERNÉTICO.
+- Kali: nuevo escenario colmena/bosque insectoide. Nombre se mantiene COLMENA ESMERALDA.
+- Helena: nuevo santuario del dragón rosa. Nuevo nombre: SANTUARIO DEL DRAGÓN.
+
+Los 4 PNG se normalizaron a 1280x720 y usan overscan 1.08 + compensación Y=-45,
+con límites de cámara adaptados para evitar bordes negros.
+No se modifican Fighter, combate, dash, CORE ni músicas.

@@ -1,0 +1,16 @@
+CORE AWAKENED 90.10.81 — PUSHBOX NEUTRAL SIN DOBLE REDISTRIBUCIÓN
+
+Objetivo:
+Corregir el falso backdash/deslizamiento de J2 observado en Versus Local cuando J1 hace dash hacia un J2 completamente quieto.
+
+Causa confirmada:
+Cada Fighter ejecuta _aplicar_separacion_fisica() desde su propio _physics_process(). La primera pasada podía frenar correctamente al atacante, pero la segunda encontraba a ambos con velocidad neutral y volvía a repartir la penetración según masa, desplazando al rival inmóvil.
+
+Cambio:
+- En neutral, si ninguno de los dos está cerrando distancia, la segunda evaluación no redistribuye posiciones.
+- Si J1 avanza solo contra J2 quieto, J1 absorbe la corrección y se frena.
+- Si ambos avanzan, se conserva el choque frontal repartido.
+- Ataques, hitstun, knockback, CORE, daño, rangos e input no fueron modificados.
+
+Prueba principal:
+Versus Local, J1 Kali teclado + J2 mando. No tocar el mando de J2. Hacer doble toque hacia adelante con Kali repetidas veces contra J2. J2 debe permanecer plantado; Kali debe detenerse al llegar al pushbox.

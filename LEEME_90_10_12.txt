@@ -1,0 +1,36 @@
+CORE AWAKENED 90.10.12 — CONTACTO DE PATADAS V2
+
+OBJETIVO
+- Corregir el caso visto en video donde Fang mantiene la patada dentro de Kai,
+  pero el golpe no registra y la separación corporal empuja al rival.
+
+CAMBIOS
+1. La pose visible de puño/patada dura solamente mientras su hitbox está activa.
+   Ya no queda una pierna visualmente extendida durante una fase sin daño.
+2. Ventana activa ampliada:
+   - puño: 50% del ciclo
+   - patada: 62% del ciclo
+3. Hitbox frontal ajustada a los sprites reales:
+   - patadas con más alcance frontal y más cobertura vertical
+   - puños con ajuste menor
+4. Mientras un ataque todavía no conectó, la separación corporal se vuelve
+   compacta para que no empuje al rival fuera de la hitbox antes del contacto.
+5. Se conserva el segundo chequeo post-movimiento agregado en 90.10.11.
+
+ARCHIVOS MODIFICADOS
+- scripts/fighter.gd
+
+NO SE TOCA
+- fang.gd
+- main.gd
+- GameState
+- escenarios
+- sonidos
+
+PRUEBA PRINCIPAL
+Fang vs Kai:
+- dejar que Kai avance caminando
+- lanzar ambas variantes de patada varias veces
+- si el pie toca el cuerpo, debe registrar impacto
+- si se lanza desde claramente fuera de alcance, no debe pegar
+- Kai no debe empujar a Fang simplemente caminando a través de una patada activa

@@ -1,9 +1,7 @@
 extends Control
 
 const TAMANO := Vector2(1280.0, 720.0)
-const SND_NAVEGACION := preload("res://assets/sonidos/menu/navegacion.wav")
 var musica: AudioStreamPlayer
-var audio_navegacion: AudioStreamPlayer
 var botones: Array[Button] = []
 var _menu_listo := false
 
@@ -13,8 +11,6 @@ func _ready() -> void:
 	crear_audio()
 
 func crear_fondo_centrado() -> void:
-	# Sprite2D centrado matemáticamente en el viewport. Esto evita cualquier
-	# desplazamiento lateral que pueda introducir TextureRect/stretches.
 	var fondo := Sprite2D.new()
 	fondo.texture = load("res://assets/ui/portada_inicio_nueva.png")
 	fondo.centered = true
@@ -25,7 +21,6 @@ func crear_fondo_centrado() -> void:
 	fondo.z_index = -10
 	add_child(fondo)
 
-	# Velo muy suave para que las opciones sean legibles sin apagar el arte.
 	var velo := ColorRect.new()
 	velo.position = Vector2.ZERO
 	velo.size = TAMANO
@@ -54,23 +49,24 @@ func estilo_boton(boton: Button) -> void:
 	boton.add_theme_stylebox_override("hover", hover)
 	boton.add_theme_stylebox_override("focus", hover)
 	boton.add_theme_stylebox_override("pressed", hover)
-	boton.add_theme_font_size_override("font_size", 22)
+	boton.add_theme_font_size_override("font_size", 20)
 	boton.add_theme_color_override("font_color", Color(1.0, 0.93, 0.76))
 	boton.add_theme_color_override("font_hover_color", Color.WHITE)
 	boton.add_theme_color_override("font_focus_color", Color.WHITE)
 
 func crear_menu_centrado() -> void:
-	# Bloque completo centrado a X=640.
+	# 90.10.78: se suma VERSUS LOCAL como modo oficial. El panel crece hacia
+	# arriba para mantener cinco botones completos sin pisar la ayuda inferior.
 	const PANEL_ANCHO := 560.0
-	const PANEL_ALTO := 205.0
+	const PANEL_ALTO := 306.0
 	const PANEL_X := (1280.0 - PANEL_ANCHO) * 0.5
-	const PANEL_Y := 492.0
+	const PANEL_Y := 378.0
 
 	var panel := Panel.new()
 	panel.position = Vector2(PANEL_X, PANEL_Y)
 	panel.size = Vector2(PANEL_ANCHO, PANEL_ALTO)
 	var ps := StyleBoxFlat.new()
-	ps.bg_color = Color(0.015, 0.012, 0.040, 0.80)
+	ps.bg_color = Color(0.015, 0.012, 0.040, 0.82)
 	ps.border_color = Color(0.72, 0.28, 1.0, 0.68)
 	ps.set_border_width_all(2)
 	ps.corner_radius_top_left = 16
@@ -84,8 +80,8 @@ func crear_menu_centrado() -> void:
 	add_child(panel)
 
 	var titulo := Label.new()
-	titulo.text = "SELECCIONA MODO"
-	titulo.position = Vector2(PANEL_X + 60.0, PANEL_Y + 12.0)
+	titulo.text = "MENÚ PRINCIPAL"
+	titulo.position = Vector2(PANEL_X + 60.0, PANEL_Y + 11.0)
 	titulo.size = Vector2(PANEL_ANCHO - 120.0, 24.0)
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	titulo.add_theme_font_size_override("font_size", 18)
@@ -95,16 +91,20 @@ func crear_menu_centrado() -> void:
 	var datos := [
 		["MODO ARCADE", Callable(self, "_arcade")],
 		["BATALLA RÁPIDA", Callable(self, "_rapida")],
+		["VERSUS LOCAL", Callable(self, "_versus_local")],
+		["CÓMO JUGAR", Callable(self, "_como_jugar")],
 		["SALIR", Callable(self, "_salir")],
 	]
 
 	const BTN_X := 410.0
 	const BTN_W := 460.0
 	const BTN_H := 38.0
+	const BTN_Y := 419.0
+	const BTN_SEP := 47.0
 	for i in range(datos.size()):
 		var b := Button.new()
 		b.text = datos[i][0]
-		b.position = Vector2(BTN_X, 532.0 + float(i) * 46.0)
+		b.position = Vector2(BTN_X, BTN_Y + float(i) * BTN_SEP)
 		b.size = Vector2(BTN_W, BTN_H)
 		estilo_boton(b)
 		b.pressed.connect(datos[i][1])
@@ -115,16 +115,14 @@ func crear_menu_centrado() -> void:
 	botones[0].grab_focus()
 
 	var ayuda := Label.new()
-	ayuda.text = "↑ ↓  ELEGIR     •     ENTER / MANDO  CONFIRMAR"
-	ayuda.position = Vector2(PANEL_X + 45.0, 674.0)
+	ayuda.text = "↑ ↓  ELEGIR     •     A / ENTER  CONFIRMAR"
+	ayuda.position = Vector2(PANEL_X + 45.0, 662.0)
 	ayuda.size = Vector2(PANEL_ANCHO - 90.0, 17.0)
 	ayuda.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ayuda.add_theme_font_size_override("font_size", 11)
 	ayuda.add_theme_color_override("font_color", Color(0.86, 0.83, 0.96))
 	add_child(ayuda)
 
-	# El grab_focus() de arriba no debe sonar como si el jugador ya hubiera
-	# navegado -- recién a partir del próximo frame cuenta como movimiento.
 	await get_tree().process_frame
 	_menu_listo = true
 
@@ -136,16 +134,13 @@ func crear_audio() -> void:
 	musica.finished.connect(func(): musica.play())
 	musica.play()
 
-	audio_navegacion = AudioStreamPlayer.new()
-	audio_navegacion.stream = SND_NAVEGACION
-	audio_navegacion.volume_db = -4.0
-	add_child(audio_navegacion)
 
-# Un solo tick al moverse entre MODO ARCADE / BATALLA RÁPIDA / SALIR, ya
-# sea con mouse (hover) o teclado/mando (cambio de foco).
 func _sonido_navegacion() -> void:
-	if audio_navegacion and _menu_listo:
-		audio_navegacion.play()
+	if not _menu_listo:
+		return
+	var estado := get_node_or_null("/root/GameState")
+	if estado and estado.has_method("reproducir_navegacion_ui"):
+		estado.reproducir_navegacion_ui()
 
 func _ir_selector(modo_nuevo: String) -> void:
 	var estado = get_node("/root/GameState")
@@ -154,7 +149,6 @@ func _ir_selector(modo_nuevo: String) -> void:
 	for b in botones:
 		b.disabled = true
 	await get_tree().create_timer(0.72).timeout
-	# FASE 94.2: IntroBatalla también carga varias imágenes grandes.
 	estado.escena_destino_carga = "res://scenes/IntroBatalla.tscn"
 	get_tree().change_scene_to_file("res://scenes/PantallaCarga.tscn")
 
@@ -163,6 +157,27 @@ func _arcade() -> void:
 
 func _rapida() -> void:
 	await _ir_selector("rapida")
+
+func _versus_local() -> void:
+	# El Versus local es un modo de repetición rápida: no reproduce la secuencia
+	# narrativa de Varkhos cada vez que dos personas quieren jugar otra partida.
+	var estado = get_node("/root/GameState")
+	estado.modo = "versus_local"
+	estado.reproducir_sfx_global("res://assets/sonidos/menu/start.mp3", -3.0)
+	for b in botones:
+		b.disabled = true
+	await get_tree().create_timer(0.35).timeout
+	get_tree().change_scene_to_file("res://scenes/SelectorPersonajes.tscn")
+
+func _como_jugar() -> void:
+	if not botones.is_empty():
+		for b in botones:
+			b.disabled = true
+	var estado := get_node_or_null("/root/GameState")
+	if estado and estado.has_method("reproducir_sfx_global"):
+		estado.reproducir_sfx_global("res://assets/sonidos/menu/start.mp3", -5.0)
+	await get_tree().create_timer(0.18).timeout
+	get_tree().change_scene_to_file("res://scenes/ComoJugar.tscn")
 
 func _salir() -> void:
 	get_tree().quit()

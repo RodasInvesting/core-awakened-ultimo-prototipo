@@ -1,5 +1,10 @@
 extends Node2D
 
+# CORE AWAKENED 90.10.96 — CÁMARA DINÁMICA RESTAURADA + INPUT ROUTER CONSERVADO.
+# El dash espejo quedó resuelto en perfect_block_90_1.gd (90.10.95), por lo que
+# ya no necesitamos restricciones artificiales de cámara en Versus Local.
+# Vuelve el seguimiento dinámico por distancia, paneo, zoom y aire de carrera.
+
 const ANCHO_ARENA := 1280.0
 const SUELO_Y := 560.0
 const ANCHO_BARRA := 300.0
@@ -8,8 +13,31 @@ const RONDAS_PARA_GANAR := 2
 const POS_KAI := Vector2(400, 560)
 const POS_RIVAL := Vector2(880, 560)
 
+# 90.10.93 — ROUTER CENTRAL DE INPUT.
+# Estos índices coinciden con SDL/Godot y con Fighter, pero Main es la única
+# capa que toca Input en Versus Local.
+const ROUTER_PAD_A := 0
+const ROUTER_PAD_B := 1
+const ROUTER_PAD_X := 2
+const ROUTER_PAD_Y := 3
+const ROUTER_PAD_RB := 10
+const ROUTER_DPAD_UP := 11
+const ROUTER_DPAD_DOWN := 12
+const ROUTER_DPAD_LEFT := 13
+const ROUTER_DPAD_RIGHT := 14
+const ROUTER_AXIS_LX := 0
+const ROUTER_AXIS_LY := 1
+const ROUTER_AXIS_LT := 4
+const ROUTER_AXIS_RT := 5
+const ROUTER_DEADZONE_X := 0.45
+const ROUTER_DEADZONE_Y := 0.64
+
+
 var kai: Fighter
 var rival: Fighter
+# 90.10.77 — estado local de control. No cambia las reglas del combate; sólo
+# decide si el lado derecho recibe IA o input humano J2.
+var versus_local_activo := false
 var barra_poder_kai: ColorRect
 var barra_poder_rival: ColorRect
 var etiqueta_combo: Label
@@ -45,6 +73,16 @@ var pulso_cam_combate := 0.0
 var foco_impacto_camara_x: float = 0.0
 var foco_impacto_timer: float = 0.0
 var tween_camara_cinematica: Tween
+
+# FASE 90.10.19 — DYNAMIC FIGHT CAMERA
+# La cámara "respira" con la distancia: se abre cuando los luchadores se
+# separan y se acerca de forma progresiva al entrar en cuerpo a cuerpo.
+# La separación se filtra aparte para que el zoom no tiemble con cada paso.
+var camara_separacion_suave: float = 480.0
+const CAM_ZOOM_LEJOS := 0.93
+const CAM_ZOOM_NORMAL := 1.00
+const CAM_ZOOM_CERCA := 1.18
+const CAM_FONDO_OVERSCAN_X := ANCHO_ARENA * 0.09
 
 # --- FASE 44: escenario vivo / profundidad ---
 var escenario_vivo: Node2D
@@ -85,22 +123,26 @@ const AMBIENTE_COLORES := {
 	"Aethel": Color(0.45, 0.85, 1.0),
 	"Magnus": Color(1.0, 0.55, 0.15),
 	"Helena": Color(1.0, 0.25, 0.80),
-	# Jester todavía no tiene fondo propio en FONDOS -- este color queda
-	# listo para cuando se sume assets/fondos/jester.jpg.
+	# Arena propia de Jester integrada en 90.10.10.
 	"Jester": Color(0.85, 0.25, 0.85),
-	# Ídem Varkhos -- listo para cuando exista assets/fondos/varkhos.jpg
-	# (el arena del jefe final, probablemente el propio Núcleo).
-	"Varkhos": Color(0.85, 0.08, 0.16),
+	"Xenoid": Color(0.42, 1.0, 0.08),
+	"Dax": Color(0.96, 0.18, 0.08),
+	# 90.11.15 — arena final violeta de Varkhos / El Ojo del Núcleo.
+	"Varkhos": Color(0.62, 0.18, 1.0),
 }
 
 const FONDOS := {
 	"Kai": "res://assets/fondos/kai.jpg",
 	"Fang": "res://assets/fondos/fang.jpg",
-	"Cibor-X": "res://assets/fondos/cibor-x.jpg",
-	"Kali": "res://assets/fondos/kali.jpg",
-	"Aethel": "res://assets/fondos/aethel.jpg",
+	"Cibor-X": "res://assets/fondos/cibor-x.png",
+	"Kali": "res://assets/fondos/kali.png",
+	"Aethel": "res://assets/fondos/aethel.png",
 	"Magnus": "res://assets/fondos/magnus.jpg",
-	"Helena": "res://assets/fondos/helena.jpg",
+	"Helena": "res://assets/fondos/helena.png",
+	"Jester": "res://assets/fondos/jester.png",
+	"Xenoid": "res://assets/fondos/xenoid.png",
+	"Dax": "res://assets/fondos/dax.png",
+	"Varkhos": "res://assets/fondos/varkhos.png",
 }
 
 const SND_GOLPE := preload("res://assets/sonidos/golpe.wav")
@@ -109,7 +151,7 @@ const SND_KO := preload("res://assets/sonidos/ko.wav")
 const SND_VICTORIA := preload("res://assets/sonidos/cinematicas/finaliza_pelea.mp3")
 const SND_PODER_FINAL_NUEVO := preload("res://assets/sonidos/cinematicas/poder_final.mp3")
 const SND_READY_FIGHT_NUEVO := preload("res://assets/sonidos/cinematicas/ready_fight.mp3")
-const SND_SALTO := preload("res://assets/sonidos/salto.wav")
+const SND_SALTO := preload("res://assets/sonidos/movimiento/salto_nuevo.wav")
 
 # --- FASE 86: banco de impacto premium ---
 const SND_PUNO_1 := preload("res://assets/sonidos/punetazo_1.wav")
@@ -124,7 +166,7 @@ const SND_ATERRIZAJE := preload("res://assets/sonidos/aterrizaje.wav")
 const SND_CAIDA_FUERTE := preload("res://assets/sonidos/caida_fuerte.wav")
 const SND_CORE_CARGA := preload("res://assets/sonidos/core_carga.wav")
 const SND_CORE_CARGA_ABSOLUTA := preload("res://assets/sonidos/core_carga_absoluta.wav")
-const SND_CORE_LISTO := preload("res://assets/sonidos/core_listo.wav")
+const SND_CORE_LISTO := preload("res://assets/sonidos/core/core_listo_unificado.wav")
 const SND_REMATADOR_IMPACTO := preload("res://assets/sonidos/rematador_impacto.wav")
 const SND_ABSOLUTO_IMPACTO := preload("res://assets/sonidos/absoluto_impacto.wav")
 const SND_KAI_OSCURO := preload("res://assets/sonidos/kai_oscuro.wav")
@@ -156,7 +198,7 @@ const SND_VOZ_DOLOR_1 := preload("res://assets/sonidos/voces_reales/dolor_respir
 const SND_VOZ_DOLOR_2 := preload("res://assets/sonidos/voces_reales/dolor_respiro_2.wav")
 const SND_VOZ_DOLOR_3 := preload("res://assets/sonidos/voces_reales/dolor_respiro_3.wav")
 const SND_VOZ_GRITO_PELEA_FUERTE := preload("res://assets/sonidos/voces_reales/grito_pelea_fuerte.wav")
-const PERSONAJES_VOZ_MASCULINA := ["Kai", "Fang", "Aethel", "Magnus"]
+const PERSONAJES_VOZ_MASCULINA := ["Kai", "Fang", "Aethel", "Magnus", "Dax"]
 
 # --- FASE 86.3: pegadas pesadas + ambiente Kai + identidad robótica Cibor-X ---
 # Se retiraron por completo del selector los sonidos derivados de Slap/Hard Slap.
@@ -165,13 +207,17 @@ const PERSONAJES_VOZ_MASCULINA := ["Kai", "Fang", "Aethel", "Magnus"]
 const SND_PUNO_BOXING_FUERTE := preload("res://assets/sonidos/impactos_pesados/boxing_strong_punch.wav")
 const SND_PUNO_TOUGH_FUERTE := preload("res://assets/sonidos/impactos_pesados/tough_fighter_punch.wav")
 const SND_THUMP_GRAVE := preload("res://assets/sonidos/impactos_pesados/thump_grave.wav")
-const SND_KAI_AMBIENTE := preload("res://assets/sonidos/ambientes/kai_human_pain.ogg")
+const SND_KAI_AMBIENTE := preload("res://assets/sonidos/escenarios/kai_nuevo.mp3")
 const SND_AETHEL_AMBIENTE := preload("res://assets/sonidos/escenarios/aethel.mp3")
 const SND_CIBOR_AMBIENTE := preload("res://assets/sonidos/escenarios/cibor-x.mp3")
 const SND_MAGNUS_AMBIENTE := preload("res://assets/sonidos/escenarios/magnus.mp3")
 const SND_HELENA_AMBIENTE := preload("res://assets/sonidos/escenarios/helena.mp3")
 const SND_KALI_AMBIENTE := preload("res://assets/sonidos/escenarios/kali.mp3")
 const SND_FANG_AMBIENTE := preload("res://assets/sonidos/escenarios/fang.mp3")
+const SND_JESTER_AMBIENTE := preload("res://assets/sonidos/escenarios/jester.wav")
+const SND_XENOID_AMBIENTE := preload("res://assets/sonidos/escenarios/xenoid.mp3")
+const SND_DAX_AMBIENTE := preload("res://assets/sonidos/escenarios/dax.mp3")
+const SND_VARKHOS_AMBIENTE := preload("res://assets/sonidos/escenarios/varkhos.mp3")
 const SND_CIBOR_STUN := preload("res://assets/sonidos/cibor_real/stun_intermitente.wav")
 const SND_CIBOR_STUN_BURST := preload("res://assets/sonidos/cibor_real/stun_burst.wav")
 const SND_CIBOR_BLASTER := preload("res://assets/sonidos/cibor_real/space_blaster.wav")
@@ -192,7 +238,15 @@ const SND_KALI_ATAQUE_1 := preload("res://assets/sonidos/voces_kali/kali_ataque_
 # --- FASE 86.5: voces dedicadas de recarga de energía ---
 const SND_VOZ_RECARGA_MASC_A := preload("res://assets/sonidos/voces_recarga/recarga_masculina_a.wav")
 const SND_VOZ_RECARGA_MASC_B := preload("res://assets/sonidos/voces_recarga/recarga_masculina_b.wav")
-const PERSONAJES_VOZ_RECARGA_MASC := ["Kai", "Fang", "Aethel", "Magnus"]
+# 90.10.48 — aporte de audio: aura universal, impactos cortos y grito de recarga.
+const SND_AURA_RECARGA_CORE2 := preload("res://assets/sonidos/aporte_90_10_48/aura_recarga_core2.wav")
+const SND_AURA_RECARGA_CORE3 := preload("res://assets/sonidos/aporte_90_10_48/aura_recarga_core3.wav")
+const SND_PUNO_USUARIO_SUAVE := preload("res://assets/sonidos/aporte_90_10_48/weakpunch_usuario.wav")
+const SND_PATADA_USUARIO_SUAVE := preload("res://assets/sonidos/aporte_90_10_48/weakkick_usuario.wav")
+const SND_VOZ_RECARGA_GENERICA := preload("res://assets/sonidos/aporte_90_10_48/grito_recarga_hombre.wav")
+# 90.10.49 — sting cinematográfico dedicado al instante en que aparece la gigantografía CORE III.
+const SND_GIGANTOGRAFIA_FINAL_USUARIO := preload("res://assets/sonidos/aporte_90_10_49/gigantografia_final_usuario.wav")
+const PERSONAJES_VOZ_RECARGA_MASC := ["Kai", "Fang", "Aethel", "Magnus", "Jester", "Xenoid", "Kali", "Dax"]
 
 var audio_golpe: AudioStreamPlayer
 var audio_especial: AudioStreamPlayer
@@ -203,6 +257,9 @@ var audio_salto: AudioStreamPlayer
 var audio_musica_batalla: AudioStreamPlayer
 var audio_ambiente_escenario: AudioStreamPlayer
 var ambiente_escenario_actual := ""
+# 90.10.50 — al entrar el cierre de partida bloqueamos el loop del escenario
+# para que gigantografía y victoria tengan espacio sonoro limpio.
+var audio_escenario_bloqueado_final := false
 # Evita una pared de gritos cuando conecta un combo de muchos impactos.
 var ultima_voz_reaccion_ms: Dictionary = {}
 var ultimo_grito_ataque_ms: Dictionary = {}
@@ -226,6 +283,11 @@ func _ready() -> void:
 	_crear_ui()
 	_crear_capa_destello()
 	call_deferred("_presentar_ready_fight")
+
+# 90.10.94 — Main sigue siendo el único lector de dispositivos en Versus Local.
+# Al ser el padre de los Fighter, inyecta el frame antes de sus physics ticks.
+func _physics_process(_delta: float) -> void:
+	_inyectar_inputs_versus_local()
 
 # FASE 92: capa de destello de pantalla completa para golpes fuertes. Va en
 # una CanvasLayer bien arriba (por encima incluso de la UI) para que un
@@ -377,6 +439,7 @@ func _reproducir_sfx(stream: AudioStream, volumen_db: float = 0.0, pitch: float 
 func _actualizar_audio_escenario(nombre_luchador: String) -> void:
 	if not audio_ambiente_escenario:
 		return
+	audio_escenario_bloqueado_final = false
 	ambiente_escenario_actual = nombre_luchador
 	audio_ambiente_escenario.stop()
 	audio_ambiente_escenario.stream = null
@@ -386,13 +449,25 @@ func _actualizar_audio_escenario(nombre_luchador: String) -> void:
 	match nombre_luchador:
 		"Kai":
 			audio_ambiente_escenario.stream = SND_KAI_AMBIENTE
-			audio_ambiente_escenario.volume_db = -8.0
+			audio_ambiente_escenario.volume_db = -11.0
 		"Aethel":
 			audio_ambiente_escenario.stream = SND_AETHEL_AMBIENTE
 			audio_ambiente_escenario.volume_db = -6.5
 		"Cibor-X":
 			audio_ambiente_escenario.stream = SND_CIBOR_AMBIENTE
 			audio_ambiente_escenario.volume_db = -13.0
+		"Jester":
+			audio_ambiente_escenario.stream = SND_JESTER_AMBIENTE
+			audio_ambiente_escenario.volume_db = -13.0
+		"Xenoid":
+			audio_ambiente_escenario.stream = SND_XENOID_AMBIENTE
+			audio_ambiente_escenario.volume_db = -13.5
+		"Dax":
+			audio_ambiente_escenario.stream = SND_DAX_AMBIENTE
+			audio_ambiente_escenario.volume_db = -15.0
+		"Varkhos":
+			audio_ambiente_escenario.stream = SND_VARKHOS_AMBIENTE
+			audio_ambiente_escenario.volume_db = -14.0
 		"Magnus":
 			audio_ambiente_escenario.stream = SND_MAGNUS_AMBIENTE
 			audio_ambiente_escenario.volume_db = -13.0
@@ -411,9 +486,22 @@ func _actualizar_audio_escenario(nombre_luchador: String) -> void:
 
 func _al_ambiente_escenario_finalizado() -> void:
 	# Loop universal: al terminar la pista vuelve a comenzar mientras la escena
-	# de combate siga viva. Al cambiar de escena el AudioStreamPlayer desaparece.
+	# de combate siga viva. En el cierre final 90.10.50 queda bloqueado para que
+	# la música del escenario no reaparezca encima de gigantografía/victoria.
+	if audio_escenario_bloqueado_final:
+		return
 	if audio_ambiente_escenario and audio_ambiente_escenario.stream != null and ambiente_escenario_actual != "":
 		audio_ambiente_escenario.play()
+
+# 90.10.50 — corte cinematográfico del escenario al entrar el final.
+# No toca SFX, voces ni audio de victoria; sólo las capas musicales/ambientales
+# persistentes que podrían competir con el golpe final.
+func _detener_audio_escenario_final() -> void:
+	audio_escenario_bloqueado_final = true
+	if audio_ambiente_escenario and audio_ambiente_escenario.playing:
+		audio_ambiente_escenario.stop()
+	if audio_musica_batalla and audio_musica_batalla.playing:
+		audio_musica_batalla.stop()
 
 func _elegir_sfx(pool: Array) -> AudioStream:
 	if pool.is_empty():
@@ -427,12 +515,12 @@ func _sfx_puno_real(fuerza: float) -> AudioStream:
 		return _elegir_sfx([SND_PUNO_BOXING_FUERTE, SND_PUNO_TOUGH_FUERTE, SND_REAL_PUNO_CRUNCH_A, SND_REAL_PUNO_CRUNCH_B])
 	if fuerza >= 13.0:
 		return _elegir_sfx([SND_PUNO_BOXING_FUERTE, SND_PUNO_TOUGH_FUERTE, SND_REAL_PUNO_CRUNCH_A, SND_REAL_PUNO_CRUNCH_B, SND_REAL_PUNO_SECO_A])
-	return _elegir_sfx([SND_PUNO_TOUGH_FUERTE, SND_PUNO_BOXING_FUERTE, SND_REAL_PUNO_SECO_A])
+	return _elegir_sfx([SND_PUNO_TOUGH_FUERTE, SND_PUNO_BOXING_FUERTE, SND_REAL_PUNO_SECO_A, SND_PUNO_USUARIO_SUAVE])
 
 func _sfx_patada_real(fuerza: float) -> AudioStream:
 	if fuerza >= 18.0:
 		return _elegir_sfx([SND_REAL_PATADA_B, SND_REAL_IMPACTO_MIXTO_B, SND_REAL_PATADA_A, SND_PUNO_TOUGH_FUERTE])
-	return _elegir_sfx([SND_REAL_PATADA_CORTA, SND_REAL_PATADA_A, SND_REAL_PATADA_B, SND_REAL_IMPACTO_MIXTO_A, SND_REAL_IMPACTO_MIXTO_B])
+	return _elegir_sfx([SND_REAL_PATADA_CORTA, SND_REAL_PATADA_A, SND_REAL_PATADA_B, SND_REAL_IMPACTO_MIXTO_A, SND_REAL_IMPACTO_MIXTO_B, SND_PATADA_USUARIO_SUAVE])
 
 func _sfx_pesado_real() -> AudioStream:
 	return _elegir_sfx([SND_PUNO_BOXING_FUERTE, SND_PUNO_TOUGH_FUERTE, SND_REAL_PUNO_CRUNCH_A, SND_REAL_PUNO_CRUNCH_B])
@@ -450,8 +538,9 @@ func _pitch_voz(personaje: Fighter) -> float:
 		_: return randf_range(0.96, 1.03)
 
 func _reproducir_voz_recarga(personaje: Fighter, absoluta: bool) -> bool:
-	# Voces específicas para el beat cinematográfico de carga. No se usan
-	# como gritos de impacto y nunca se aplican a Helena, Kali o Cibor-X.
+	# 90.10.48 — Kai/Fang/Aethel conservan identidad existente. Jester,
+	# Xenoid, Kali y Magnus comparten el nuevo grito masculino de recarga.
+	# Helena queda fuera y Cibor-X conserva exclusivamente su identidad robótica.
 	if not is_instance_valid(personaje) or not (personaje.nombre_luchador in PERSONAJES_VOZ_RECARGA_MASC):
 		return false
 	var stream: AudioStream = SND_VOZ_RECARGA_MASC_A
@@ -468,8 +557,21 @@ func _reproducir_voz_recarga(personaje: Fighter, absoluta: bool) -> bool:
 			stream = SND_VOZ_RECARGA_MASC_A
 			pitch = randf_range(1.035, 1.075)
 		"Magnus":
-			stream = SND_VOZ_RECARGA_MASC_B
-			pitch = randf_range(0.76, 0.82)
+			stream = SND_VOZ_RECARGA_GENERICA
+			pitch = 0.88
+			volumen = -5.0 if absoluta else -6.0
+		"Jester":
+			stream = SND_VOZ_RECARGA_GENERICA
+			pitch = 0.98
+			volumen = -5.2 if absoluta else -6.2
+		"Xenoid":
+			stream = SND_VOZ_RECARGA_GENERICA
+			pitch = 1.04
+			volumen = -5.6 if absoluta else -6.5
+		"Kali":
+			stream = SND_VOZ_RECARGA_GENERICA
+			pitch = 0.96
+			volumen = -5.5 if absoluta else -6.4
 	_reproducir_sfx(stream, volumen, pitch)
 	return true
 
@@ -551,6 +653,7 @@ func _sfx_elemento(personaje: Fighter) -> AudioStream:
 		"Kali": return SND_KALI_ACIDO
 		"Aethel": return SND_AETHEL_VIENTO
 		"Magnus": return SND_MAGNUS_PIEDRA
+		"Dax": return SND_FANG_FUEGO
 		_: return SND_ESPECIAL
 
 func _crear_onda_impacto_premium(tipo: String, bloqueado: bool, intensidad: float) -> void:
@@ -605,13 +708,13 @@ func _crear_camara() -> void:
 	camara = Camera2D.new()
 	camara.position = Vector2(ANCHO_ARENA / 2.0, 360.0)
 	camara.enabled = true
-	# Límites duros: la cámara nunca puede mostrar más allá del escenario,
-	# así el zoom dramático no deja ver espacio vacío ni "descuadra" a
-	# ninguno de los dos personajes por acercarse demasiado a un borde.
-	camara.limit_left = 0
-	camara.limit_right = int(ANCHO_ARENA)
-	camara.limit_top = 0
-	camara.limit_bottom = 760
+	# FASE 90.10.19: el fondo base tiene 18 % de overscan (escala 1.18).
+	# Aprovechamos una parte de ese margen para que la cámara pueda acompañar
+	# una pelea cerca de los extremos sin mostrar vacío fuera de la ilustración.
+	camara.limit_left = -110
+	camara.limit_right = int(ANCHO_ARENA + 110.0)
+	camara.limit_top = -12
+	camara.limit_bottom = 836
 	add_child(camara)
 
 # FASE 98 — Glow/Bloom. Godot aplica esto sobre TODO lo que se vea más
@@ -757,15 +860,113 @@ func _actualizar_iluminacion_luchadores(delta: float) -> void:
 	if halo_luchador_rival and is_instance_valid(rival):
 		_actualizar_halo_luchador(halo_luchador_rival, rival, delta)
 
+func _obtener_brillo_base_escenario(nombre_luchador: String) -> float:
+	match nombre_luchador:
+		# 90.11.24 — Helena y Aethel ya usan PNGs oscurecidos de origen;
+		# Kali y Cibor-X conservan la atenuación suave por código.
+		"Helena":
+			# 90.11.24 — nuevo PNG ya viene oscurecido; se usa sin atenuación extra.
+			return 1.0
+		"Kali":
+			return 0.76
+		"Aethel":
+			# 90.11.24 — nuevo PNG ya viene oscurecido; se usa sin atenuación extra.
+			return 1.0
+		"Cibor-X":
+			return 0.80
+		"Xenoid":
+			# 90.11.25 — leve rebaja para que el escenario no compita con el luchador.
+			return 0.84
+		_:
+			return 1.0
+
+func _obtener_tono_base_escenario(nombre_luchador: String) -> Color:
+	var b: float = _obtener_brillo_base_escenario(nombre_luchador)
+	return Color(b, b, b, 1.0)
+
+func _obtener_tono_base_suelo(nombre_luchador: String) -> Color:
+	var b: float = _obtener_brillo_base_escenario(nombre_luchador)
+	# El suelo queda apenas más claro que el fondo para que la línea de apoyo
+	# siga leyendo bien y no se apaguen demasiado las plataformas.
+	var bs: float = minf(b + 0.08, 1.0)
+	return Color(bs, bs, bs, 1.0)
+
+func _escenario_redisenado(nombre_luchador: String) -> bool:
+	return nombre_luchador in ["Varkhos", "Aethel", "Cibor-X", "Helena", "Kali"]
+
+func _zoom_base_escenario(nombre_luchador: String) -> float:
+	return 1.08 if _escenario_redisenado(nombre_luchador) else 1.18
+
+func _transform_fondo(nombre_luchador: String, zoom_fondo_actual: float) -> Dictionary:
+	var sobrante_x_actual: float = ANCHO_ARENA * (zoom_fondo_actual - 1.0)
+	var sobrante_y_actual: float = 720.0 * (zoom_fondo_actual - 1.0)
+	var fondo_y_base: float = -sobrante_y_actual * 0.1
+	if nombre_luchador == "Dax":
+		# Coliseo Rojo aprobado: conserva su calibración específica.
+		fondo_y_base = 14.0
+	elif _escenario_redisenado(nombre_luchador):
+		# El piso diseñado de los rediseños está compuesto para quedar sobre la
+		# línea física Y=560. Recalculamos el offset según el zoom actual.
+		fondo_y_base = 560.0 - (560.0 * zoom_fondo_actual)
+	return {
+		"scale": Vector2(zoom_fondo_actual, zoom_fondo_actual),
+		"position": Vector2(-sobrante_x_actual / 2.0, fondo_y_base)
+	}
+
+func _aplicar_transform_fondo(nombre_luchador: String, zoom_fondo_actual: float, duracion: float = 0.0) -> void:
+	if not fondo_sprite:
+		return
+	var datos := _transform_fondo(nombre_luchador, zoom_fondo_actual)
+	var escala: Vector2 = datos.get("scale", Vector2.ONE)
+	var posicion: Vector2 = datos.get("position", Vector2.ZERO)
+	if duracion <= 0.0:
+		fondo_sprite.scale = escala
+		fondo_sprite.position = posicion
+	else:
+		var tw := create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(fondo_sprite, "scale", escala, duracion).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.tween_property(fondo_sprite, "position", posicion, duracion).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func _ajustar_overscan_cinematico(activo: bool, duracion: float) -> void:
+	if not fondo_sprite:
+		return
+	if not _escenario_redisenado(escenario_nombre_actual):
+		return
+	var zoom_objetivo: float = _zoom_base_escenario(escenario_nombre_actual)
+	if activo:
+		# 90.11.23 — en las cinemáticas de poder la cámara panea fuerte.
+		# Aumentamos cobertura temporal del fondo para que no entren bordes negros.
+		zoom_objetivo = maxf(zoom_objetivo, 1.18)
+	_aplicar_transform_fondo(escenario_nombre_actual, zoom_objetivo, duracion)
+
 func _actualizar_fondo(nombre_luchador: String) -> void:
 	escenario_nombre_actual = nombre_luchador
 	var ruta: String = FONDOS.get(nombre_luchador, "")
 	if ruta == "":
 		return
 	fondo_sprite.texture = load(ruta)
+	# 90.11.23 — base por escenario: los rediseños usan 1.08 en juego normal
+	# y suben temporalmente a 1.18 durante cinemáticas de poder para que la
+	# cámara no muestre bordes negros al panear.
+	var zoom_fondo_actual: float = _zoom_base_escenario(nombre_luchador)
+	_aplicar_transform_fondo(nombre_luchador, zoom_fondo_actual)
 	var c: Color = AMBIENTE_COLORES.get(nombre_luchador, Color(0.8, 0.8, 0.9))
 	_aplicar_color_ambiente(c)
 	_configurar_escenario_vivo(nombre_luchador, c)
+	# Brillo base del escenario ya estructurado. Se aplica al fondo y a sus
+	# capas vivas para que los luchadores resalten más.
+	var tono_base := _obtener_tono_base_escenario(nombre_luchador)
+	var tono_suelo_base := _obtener_tono_base_suelo(nombre_luchador)
+	fondo_sprite.modulate = tono_base
+	if escenario_vivo:
+		escenario_vivo.modulate = tono_base
+	if ambiente_particulas:
+		ambiente_particulas.modulate = tono_base
+	if ambiente_particulas_delante:
+		ambiente_particulas_delante.modulate = tono_base
+	if piso_overlay:
+		piso_overlay.modulate = tono_suelo_base
 	_actualizar_audio_escenario(nombre_luchador)
 
 func _crear_ambiente() -> void:
@@ -971,6 +1172,7 @@ func _tipo_escenario(nombre: String) -> String:
 		"Magnus": return "tierra"
 		"Helena": return "luz"
 		"Jester": return "veneno"
+		"Xenoid": return "electrico"
 		_: return "oscuro"
 
 func _crear_poligono_elipse(rx: float, ry: float) -> PackedVector2Array:
@@ -1199,7 +1401,7 @@ func _crear_detalle_dragon_helena(c: Color) -> void:
 	# PNG completo: animamos ojos/aura/aliento sobre la cabeza del dragón.
 	helena_aura_cabeza = Polygon2D.new()
 	helena_aura_cabeza.polygon = _crear_poligono_elipse(56.0, 38.0)
-	helena_aura_cabeza.position = Vector2(350.0, 145.0)
+	helena_aura_cabeza.position = Vector2(680.0, 158.0)
 	helena_aura_cabeza.color = Color(1.0, 0.20, 0.72, 0.035)
 	helena_aura_cabeza.z_index = -2
 	escenario_mid.add_child(helena_aura_cabeza)
@@ -1207,11 +1409,11 @@ func _crear_detalle_dragon_helena(c: Color) -> void:
 	ta.set_loops()
 	ta.set_parallel(true)
 	ta.tween_property(helena_aura_cabeza, "scale", Vector2(1.16, 1.10), 1.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	ta.tween_property(helena_aura_cabeza, "position", Vector2(352.0, 142.5), 1.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	ta.tween_property(helena_aura_cabeza, "position", Vector2(683.0, 155.5), 1.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	ta.chain().tween_property(helena_aura_cabeza, "scale", Vector2(0.96, 0.98), 1.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	ta.parallel().tween_property(helena_aura_cabeza, "position", Vector2(348.5, 146.0), 1.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	ta.parallel().tween_property(helena_aura_cabeza, "position", Vector2(677.5, 161.0), 1.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
-	for pos in [Vector2(339.0, 129.0), Vector2(353.0, 132.0)]:
+	for pos in [Vector2(674.0, 149.0), Vector2(687.0, 151.0)]:
 		var ojo := Polygon2D.new()
 		ojo.polygon = _crear_poligono_elipse(3.8, 2.1)
 		ojo.position = pos
@@ -1264,7 +1466,7 @@ func _emitir_aliento_helena(intensidad: float = 1.0) -> void:
 		var vapor := Polygon2D.new()
 		var rx := randf_range(8.0, 18.0)
 		vapor.polygon = _crear_poligono_elipse(rx, rx * 0.42)
-		vapor.position = Vector2(365.0, 168.0) + Vector2(randf_range(-4.0, 4.0), randf_range(-4.0, 5.0))
+		vapor.position = Vector2(754.0, 205.0) + Vector2(randf_range(-4.0, 4.0), randf_range(-4.0, 5.0))
 		vapor.color = Color(1.0, 0.30, 0.80, randf_range(0.05, 0.12) * intensidad)
 		vapor.z_index = 3
 		escenario_front.add_child(vapor)
@@ -1525,11 +1727,136 @@ func _crear_luchador(nombre: String) -> Fighter:
 		"Magnus": return Magnus.new()
 		"Helena": return Helena.new()
 		"Jester": return Jester.new()
+		"Xenoid": return Xenoid.new()
+		"Dax": return Dax.new()
 		"Varkhos": return Varkhos.new()
 		_: return Kai.new()
 
+func _detectar_modo_versus_local() -> bool:
+	var estado = get_node_or_null("/root/GameState")
+	if not estado:
+		return false
+	var modo_actual: String = str(estado.get("modo")).to_lower()
+	return modo_actual in ["versus", "versus_local", "pvp_local", "local_vs"]
+
+func _gamepad_para_jugador_local(indice_jugador: int) -> int:
+	# Se conserva para compatibilidad fuera del router. En Versus Local 90.10.93
+	# la asignación real ocurre exclusivamente en _inyectar_inputs_versus_local().
+	var pads := Input.get_connected_joypads()
+	if pads.size() >= 2:
+		return int(pads[indice_jugador])
+	if pads.size() == 1:
+		return -2 if indice_jugador == 0 else int(pads[0])
+	return -2
+
+func _teclado_habilitado_para_jugador_local(indice_jugador: int) -> bool:
+	var cantidad_pads: int = Input.get_connected_joypads().size()
+	if cantidad_pads >= 2:
+		return false
+	if cantidad_pads == 1:
+		return indice_jugador == 0
+	return true
+
+
+func _router_frame_neutro() -> Dictionary:
+	return {
+		"izquierda": false,
+		"derecha": false,
+		"salto": false,
+		"bloqueo": false,
+		"puno": false,
+		"patada": false,
+		"especial": false,
+	}
+
+func _router_frame_teclado_j1() -> Dictionary:
+	return {
+		"izquierda": Input.is_physical_key_pressed(KEY_LEFT),
+		"derecha": Input.is_physical_key_pressed(KEY_RIGHT),
+		"salto": Input.is_physical_key_pressed(KEY_UP),
+		"bloqueo": Input.is_physical_key_pressed(KEY_DOWN),
+		"puno": Input.is_physical_key_pressed(KEY_X),
+		"patada": Input.is_physical_key_pressed(KEY_C),
+		"especial": Input.is_physical_key_pressed(KEY_Z),
+	}
+
+func _router_frame_teclado_j2() -> Dictionary:
+	return {
+		"izquierda": Input.is_physical_key_pressed(KEY_A),
+		"derecha": Input.is_physical_key_pressed(KEY_D),
+		"salto": Input.is_physical_key_pressed(KEY_W),
+		"bloqueo": Input.is_physical_key_pressed(KEY_S),
+		"puno": Input.is_physical_key_pressed(KEY_F),
+		"patada": Input.is_physical_key_pressed(KEY_G),
+		"especial": Input.is_physical_key_pressed(KEY_H),
+	}
+
+func _router_pad_boton(id: int, boton: int) -> bool:
+	return id >= 0 and Input.is_joy_button_pressed(id, boton)
+
+func _router_pad_eje(id: int, eje: int) -> float:
+	if id < 0:
+		return 0.0
+	return Input.get_joy_axis(id, eje)
+
+func _router_frame_mando(id: int) -> Dictionary:
+	if id < 0:
+		return _router_frame_neutro()
+	var lx := _router_pad_eje(id, ROUTER_AXIS_LX)
+	var ly := _router_pad_eje(id, ROUTER_AXIS_LY)
+	return {
+		"izquierda": _router_pad_boton(id, ROUTER_DPAD_LEFT) or lx < -ROUTER_DEADZONE_X,
+		"derecha": _router_pad_boton(id, ROUTER_DPAD_RIGHT) or lx > ROUTER_DEADZONE_X,
+		"salto": _router_pad_boton(id, ROUTER_PAD_A) or _router_pad_boton(id, ROUTER_DPAD_UP) or ly < -ROUTER_DEADZONE_Y,
+		"bloqueo": _router_pad_boton(id, ROUTER_PAD_B) or _router_pad_boton(id, ROUTER_DPAD_DOWN) or ly > ROUTER_DEADZONE_Y or _router_pad_eje(id, ROUTER_AXIS_LT) > 0.55,
+		"puno": _router_pad_boton(id, ROUTER_PAD_X),
+		"patada": _router_pad_boton(id, ROUTER_PAD_Y),
+		"especial": _router_pad_boton(id, ROUTER_PAD_RB) or _router_pad_eje(id, ROUTER_AXIS_RT) > 0.55,
+	}
+
+func _inyectar_inputs_versus_local() -> void:
+	if not versus_local_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var pads := Input.get_connected_joypads()
+	var frame_j1 := _router_frame_neutro()
+	var frame_j2 := _router_frame_neutro()
+
+	if pads.size() >= 2:
+		# Dos mandos: J1 = mando 1, J2 = mando 2. Teclado queda fuera del combate.
+		frame_j1 = _router_frame_mando(int(pads[0]))
+		frame_j2 = _router_frame_mando(int(pads[1]))
+	elif pads.size() == 1:
+		# Configuración objetivo del usuario: J1 teclado, J2 mando.
+		frame_j1 = _router_frame_teclado_j1()
+		frame_j2 = _router_frame_mando(int(pads[0]))
+	else:
+		# Sin mando: dos jugadores en un teclado, layouts totalmente separados.
+		frame_j1 = _router_frame_teclado_j1()
+		frame_j2 = _router_frame_teclado_j2()
+
+	kai.inyectar_input_frame(frame_j1)
+	rival.inyectar_input_frame(frame_j2)
+
+func _configurar_control_lado(personaje: Fighter, es_lado_kai: bool) -> void:
+	if es_lado_kai:
+		if versus_local_activo:
+			personaje.configurar_control_enrutado(0)
+		else:
+			# Fuera de Versus conservamos exactamente el fallback histórico de J1.
+			personaje.configurar_control_local(0, -1, true)
+	else:
+		if versus_local_activo:
+			personaje.configurar_control_enrutado(1)
+		else:
+			personaje.configurar_control_ia(0)
+
 func _conectar_luchador(personaje: Fighter, es_jugador: bool) -> void:
-	personaje.controlado_por_jugador = es_jugador
+	# 90.10.84 — lado estable para que el pushbox se resuelva una sola vez.
+	personaje.configurar_lado_combate(0 if es_jugador else 1)
+	_configurar_control_lado(personaje, es_jugador)
 	personaje.impacto_detallado.connect(_al_impactar_detallado.bind(personaje))
 	personaje.ataque_lanzado.connect(_al_ataque_lanzado.bind(personaje))
 	personaje.aterrizaje_hecho.connect(_al_aterrizaje_hecho)
@@ -1552,6 +1879,7 @@ func _crear_personajes() -> void:
 	var nombre_rival := "Cibor-X"
 	var nombre_escenario := "Cibor-X"
 	var estado = get_node_or_null("/root/GameState")
+	versus_local_activo = _detectar_modo_versus_local()
 	if estado and estado.flujo_menu_activo:
 		nombre_jugador = estado.personaje_jugador
 		nombre_rival = estado.rival_actual
@@ -1592,10 +1920,11 @@ func _al_impactar(fuerza: float) -> void:
 		_crear_estallido_ambiental(intensidad)
 		if fuerza >= 18.0:
 			_rafaga_escenario(0.30 + intensidad * 0.22)
-	if fuerza >= 10.0:
-		var pausa_real: float = lerpf(0.025, 0.052, intensidad)
-		var escala_tiempo: float = lerpf(0.16, 0.07, intensidad)
-		_congelar_un_instante(pausa_real, escala_tiempo)
+	# 90.10.73 — los impactos normales ya NO alteran Engine.time_scale.
+	# Fighter maneja el hit-stop de atacante/receptor localmente y Main conserva
+	# cámara, audio, destello y reacción del escenario. Esto elimina micro-cámara
+	# lenta repetitiva entre golpes y deja el slow-motion global reservado para
+	# secuencias verdaderamente cinematográficas (KO/Absoluto).
 
 func _al_impactar_detallado(fuerza: float, tipo: String, bloqueado: bool, victima: Fighter) -> void:
 	_al_impactar(fuerza)
@@ -1708,7 +2037,7 @@ func _al_aterrizaje_hecho(fuerza: float, derribo: bool) -> void:
 		_reproducir_sfx(SND_ATERRIZAJE, vol, randf_range(0.93, 1.08))
 
 func _al_core_listo(personaje: Fighter) -> void:
-	_reproducir_sfx(SND_CORE_LISTO, -2.5, 1.0)
+	_reproducir_sfx(SND_CORE_LISTO, -4.0, 1.0)
 	_reaccion_escenario_poder(personaje, 0.34)
 
 func _al_activar_fase(personaje: Fighter) -> void:
@@ -1743,6 +2072,9 @@ func _al_recarga_iniciada(camara_lenta: bool, personaje: Fighter) -> void:
 		return
 	_reaccion_escenario_poder(personaje, 0.85 if camara_lenta else 0.58)
 	_reproducir_sfx(SND_CORE_CARGA_ABSOLUTA if camara_lenta else SND_CORE_CARGA, -2.5 if camara_lenta else -4.0, 1.0)
+	# Nueva capa energética universal aportada por el creador. Está recortada a
+	# la duración visual real de cada carga para que no invada el combo posterior.
+	_reproducir_sfx(SND_AURA_RECARGA_CORE3 if camara_lenta else SND_AURA_RECARGA_CORE2, -4.0 if camara_lenta else -5.0, 1.0)
 	if personaje.nombre_luchador == "Cibor-X":
 		_reproducir_sfx(SND_CIBOR_STUN, -12.0 if camara_lenta else -15.0, 1.0)
 	# Kai/Fang/Aethel/Magnus usan una voz dedicada de carga tanto en CORE 2
@@ -1758,20 +2090,50 @@ func _al_recarga_iniciada(camara_lenta: bool, personaje: Fighter) -> void:
 	_zoom_dramatico(personaje, 1.24 if camara_lenta else 1.18, 0.14, duracion - 0.18, true)
 	sacudir_camara(4.0, 0.16)
 	if camara_lenta and not congelando_ko:
+		# 90.10.47 — la pose real de recarga CORE III en Fighter dura 1.55 s.
+		# Antes Main sostenía time_scale/cámara durante 1.75 s, de modo que el
+		# homing ya había empezado mientras la cámara seguía en la cinemática lenta.
 		Engine.time_scale = 0.32
-		var t := get_tree().create_timer(duracion, true, false, true)
+		var t_camara := get_tree().create_timer(1.50, true, false, true)
+		t_camara.timeout.connect(_entregar_camara_core3_al_combate.bind(personaje))
+		var t := get_tree().create_timer(1.55, true, false, true)
 		t.timeout.connect(func():
 			if not congelando_ko:
 				Engine.time_scale = 1.0
 		)
+
+func _entregar_camara_core3_al_combate(personaje: Fighter) -> void:
+	# 90.10.47 — handoff explícito entre la recarga lenta y el homing rápido.
+	# Se ejecuta apenas antes de que Fighter termine su recarga de 1.55 s.
+	if not camara or not is_instance_valid(personaje):
+		return
+	if not personaje.en_secuencia_especial or personaje.veces_fase_absoluta < 3:
+		return
+	if tween_camara_cinematica and is_instance_valid(tween_camara_cinematica):
+		tween_camara_cinematica.kill()
+	tween_camara_cinematica = null
+	camara_cinematica_activa = false
+
+	# Entregamos la cámara ya orientada hacia el encuadre de ambos luchadores,
+	# sin teletransportarla por completo. El seguimiento rápido de _process()
+	# termina el movimiento durante el dash/homing del CORE III.
+	if is_instance_valid(kai) and is_instance_valid(rival):
+		camara_separacion_suave = absf(kai.global_position.x - rival.global_position.x)
+		var datos := _objetivo_camara_combate(camara_separacion_suave)
+		var centro: Vector2 = datos.get("centro", camara.position)
+		var nivel: float = float(datos.get("zoom", camara.zoom.x))
+		camara.position = camara.position.lerp(centro, 0.50)
+		camara.zoom = camara.zoom.lerp(Vector2.ONE * nivel, 0.35)
 
 # Atenúa fondo, capas del escenario y al rival (nunca al que está cargando)
 # para que la pose de recarga sea la que brille en pantalla.
 func _oscurecer_escenario(fuerza: float, tiempo_total: float, personaje_a_atenuar: Fighter) -> void:
 	var tw := create_tween()
 	tw.set_parallel(true)
-	var tono_fondo := Color(1.0 - fuerza, 1.0 - fuerza, 1.0 - fuerza, 1.0)
-	var tono_suelo := Color(1.0 - fuerza * 0.75, 1.0 - fuerza * 0.75, 1.0 - fuerza * 0.75, 1.0)
+	var base_fondo := _obtener_tono_base_escenario(escenario_nombre_actual)
+	var base_suelo := _obtener_tono_base_suelo(escenario_nombre_actual)
+	var tono_fondo := Color(base_fondo.r * (1.0 - fuerza), base_fondo.g * (1.0 - fuerza), base_fondo.b * (1.0 - fuerza), 1.0)
+	var tono_suelo := Color(base_suelo.r * (1.0 - fuerza * 0.75), base_suelo.g * (1.0 - fuerza * 0.75), base_suelo.b * (1.0 - fuerza * 0.75), 1.0)
 	if fondo_sprite:
 		tw.tween_property(fondo_sprite, "modulate", tono_fondo, 0.18)
 	if escenario_vivo:
@@ -1788,15 +2150,15 @@ func _oscurecer_escenario(fuerza: float, tiempo_total: float, personaje_a_atenua
 	tw.chain().tween_interval(maxf(tiempo_total - 0.45, 0.05))
 	tw.chain().set_parallel(true)
 	if fondo_sprite:
-		tw.tween_property(fondo_sprite, "modulate", Color.WHITE, 0.32)
+		tw.tween_property(fondo_sprite, "modulate", base_fondo, 0.32)
 	if escenario_vivo:
-		tw.tween_property(escenario_vivo, "modulate", Color.WHITE, 0.32)
+		tw.tween_property(escenario_vivo, "modulate", base_fondo, 0.32)
 	if ambiente_particulas:
-		tw.tween_property(ambiente_particulas, "modulate", Color.WHITE, 0.32)
+		tw.tween_property(ambiente_particulas, "modulate", base_fondo, 0.32)
 	if ambiente_particulas_delante:
-		tw.tween_property(ambiente_particulas_delante, "modulate", Color.WHITE, 0.32)
+		tw.tween_property(ambiente_particulas_delante, "modulate", base_fondo, 0.32)
 	if piso_overlay:
-		tw.tween_property(piso_overlay, "modulate", Color.WHITE, 0.32)
+		tw.tween_property(piso_overlay, "modulate", base_suelo, 0.32)
 	if is_instance_valid(personaje_a_atenuar) and personaje_a_atenuar.sprite:
 		tw.tween_property(personaje_a_atenuar.sprite, "modulate", Color.WHITE, 0.32)
 
@@ -1880,10 +2242,17 @@ func _reaccion_ambiente_al_impacto(fuerza: float) -> void:
 		tw_onda.chain().tween_callback(onda_suelo.queue_free)
 
 func _al_saltar() -> void:
-	audio_salto.pitch_scale = randf_range(0.95, 1.08)
+	audio_salto.pitch_scale = randf_range(0.97, 1.05)
 	audio_salto.play()
 
 func sacudir_camara(fuerza: float, duracion: float) -> void:
+	var ajustes := get_node_or_null("/root/SettingsManager")
+	if ajustes and not bool(ajustes.get("shake_camara")):
+		shake_fuerza = 0.0
+		shake_tiempo = 0.0
+		if camara:
+			camara.offset = Vector2.ZERO
+		return
 	shake_fuerza = max(shake_fuerza, fuerza)
 	shake_tiempo = max(shake_tiempo, duracion)
 
@@ -1905,15 +2274,32 @@ func _zoom_dramatico(personaje: Fighter, nivel: float, entrada: float, sostener:
 		nivel_final = minf(nivel, float(datos.get("zoom", nivel)))
 	if tween_camara_cinematica and is_instance_valid(tween_camara_cinematica):
 		tween_camara_cinematica.kill()
+	_ajustar_overscan_cinematico(true, entrada)
 	tween_camara_cinematica = create_tween()
 	tween_camara_cinematica.set_parallel(true)
 	tween_camara_cinematica.tween_property(camara, "zoom", Vector2(nivel_final, nivel_final), entrada)
 	tween_camara_cinematica.tween_property(camara, "position", centro, entrada)
 	tween_camara_cinematica.chain().tween_interval(sostener)
-	tween_camara_cinematica.chain().set_parallel(true)
-	tween_camara_cinematica.tween_property(camara, "zoom", Vector2.ONE, 0.4)
-	tween_camara_cinematica.tween_property(camara, "position", Vector2(ANCHO_ARENA / 2.0, 360.0), 0.4)
-	tween_camara_cinematica.chain().tween_callback(func():
+	# Al terminar una cinemática no volvemos obligatoriamente al centro/zoom 1.
+	# Reingresamos al encuadre dinámico correspondiente a la posición ACTUAL
+	# de los luchadores para evitar un pequeño salto visual al recuperar control.
+	tween_camara_cinematica.chain().tween_callback(_restaurar_camara_dinamica)
+
+func _restaurar_camara_dinamica() -> void:
+	if not camara:
+		camara_cinematica_activa = false
+		tween_camara_cinematica = null
+		return
+	var datos := _objetivo_camara_combate()
+	var centro: Vector2 = datos.get("centro", Vector2(ANCHO_ARENA * 0.5, 360.0))
+	var nivel: float = float(datos.get("zoom", 1.0))
+	var tw_regreso := create_tween()
+	tween_camara_cinematica = tw_regreso
+	tw_regreso.set_parallel(true)
+	_ajustar_overscan_cinematico(false, 0.38)
+	tw_regreso.tween_property(camara, "zoom", Vector2.ONE * nivel, 0.38).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw_regreso.tween_property(camara, "position", centro, 0.38).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw_regreso.chain().tween_callback(func():
 		camara_cinematica_activa = false
 		tween_camara_cinematica = null
 	)
@@ -1981,6 +2367,14 @@ func _al_finalizacion_absoluta(personaje: Fighter) -> void:
 	congelando_ko = true
 	sacudir_camara(26.0, 0.5)
 	_zoom_dramatico(personaje, 1.22, 0.22, 2.6, true)
+	# 90.10.50 — en el instante exacto del reveal se corta el audio del escenario.
+	# Desde acá quedan sólo impacto, energía, gigantografía y luego victoria.
+	_detener_audio_escenario_final()
+	# 90.10.49 — entrada sonora sincronizada con el reveal de la gigantografía.
+	# El clip dura 2.76 s, prácticamente lo mismo que el póster absoluto (2.80 s),
+	# y su golpe principal cae ~0.21 s después del inicio, justo cuando termina
+	# de entrar el arte grande. No reemplaza el impacto físico final existente.
+	_reproducir_sfx(SND_GIGANTOGRAFIA_FINAL_USUARIO, -1.2, 1.0)
 	_reproducir_sfx(_sfx_elemento(personaje), -1.0, 0.84)
 	# Grito propio de Aethel en SU poder final -- capa extra sobre el
 	# elemento (viento), no lo reemplaza.
@@ -2044,7 +2438,13 @@ func _procesar_fin_de_ronda(ganador: Fighter, _perdedor: Fighter) -> void:
 	_actualizar_marcador()
 
 	if rondas_kai >= RONDAS_PARA_GANAR or rondas_rival >= RONDAS_PARA_GANAR:
+		# 90.10.15 — cualquier forma de ganar la partida termina en pose de
+		# victoria bloqueada, no solamente el Golpe Absoluto.
+		ganador.mostrar_pose_victoria()
 		etiqueta_resultado.text = "¡%s GANA LA PARTIDA!" % ganador.nombre_luchador.to_upper()
+		# 90.10.50 — una victoria normal también cierra la música del escenario
+		# antes del sting de victoria, para evitar dos pistas simultáneas.
+		_detener_audio_escenario_final()
 		audio_victoria.play()
 		var t := get_tree().create_timer(9.20)
 		t.timeout.connect(_finalizar_partida_flujo.bind(ganador))
@@ -2092,7 +2492,7 @@ func _cambiar_rival(nuevo: Fighter) -> void:
 	kai.objetivo = rival
 	rival.objetivo = kai
 	_conectar_luchador(rival, false)
-	etiqueta_rival.text = rival.nombre_luchador + " (IA)"
+	etiqueta_rival.text = rival.nombre_luchador + (" (J2)" if versus_local_activo else " (IA)")
 	barra_poder_rival.color = rival.color_base.lightened(0.2)
 	fondo_rival.color = rival.color_base.darkened(0.75)
 	_actualizar_fondo(rival.nombre_luchador)
@@ -2198,6 +2598,9 @@ func _crear_ui() -> void:
 	etiqueta_resultado = Label.new()
 	etiqueta_resultado.text = ""
 	etiqueta_resultado.add_theme_font_size_override("font_size", 40)
+	# 90.10.15 — el texto de victoria se perdía sobre escenarios muy luminosos.
+	etiqueta_resultado.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.92))
+	etiqueta_resultado.add_theme_constant_override("outline_size", 8)
 	etiqueta_resultado.position = Vector2(300, 200)
 	etiqueta_resultado.size = Vector2(680, 60)
 	etiqueta_resultado.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -2224,22 +2627,34 @@ func _crear_ui() -> void:
 	fondo_rival = fondo_poder_rival
 
 	etiqueta_rival = Label.new()
-	etiqueta_rival.text = rival.nombre_luchador + " (IA)"
+	etiqueta_rival.text = rival.nombre_luchador + (" (J2)" if versus_local_activo else " (IA)")
 	etiqueta_rival.position = Vector2(ANCHO_ARENA - 40 - ANCHO_BARRA, 4)
 	capa.add_child(etiqueta_rival)
 
 	var ayuda := Label.new()
-	ayuda.text = "Flechas: mover/saltar   Abajo: bloquear   X: puñetazo   C: patada   Z: poder especial"
+	var pads_ui := Input.get_connected_joypads()
+	if versus_local_activo:
+		if pads_ui.size() >= 2:
+			ayuda.text = "VERSUS LOCAL   •   J1 MANDO 1   •   J2 MANDO 2"
+		elif pads_ui.size() == 1:
+			ayuda.text = "VERSUS LOCAL   •   J1 TECLADO: Flechas/X/C/Z   •   J2 MANDO"
+		else:
+			ayuda.text = "VERSUS LOCAL   •   J1 Flechas/X/C/Z   •   J2 WASD/F/G/H"
+	else:
+		if not pads_ui.is_empty():
+			ayuda.text = "MANDO: Stick/D-Pad mover   A: salto   B/LT: bloqueo   X: puño   Y: patada   RB/RT: CORE"
+		else:
+			ayuda.text = "J1 Flechas: mover/saltar/bloquear   •   X: puño   C: patada   Z: CORE"
 	ayuda.position = Vector2(40, 660)
 	capa.add_child(ayuda)
 
 	var ayuda2 := Label.new()
-	ayuda2.text = "Rival: 1 Fang  2 Cibor-X  3 Kali  4 Aethel  5 Magnus  6 Helena  7 Jester  8 Varkhos"
+	ayuda2.text = "Rival: 1 Fang  2 Cibor-X  3 Kali  4 Aethel  5 Magnus  6 Helena  7 Jester  8 Varkhos  9 Xenoid  0 Dax"
 	ayuda2.position = Vector2(40, 684)
 	capa.add_child(ayuda2)
 
 	seleccion_jugador_label = Label.new()
-	seleccion_jugador_label.text = "J1: Q Kai  W Fang  E Cibor-X  R Kali  T Aethel  Y Magnus  U Helena  I Jester"
+	seleccion_jugador_label.text = "J1: Q Kai  W Fang  E Cibor-X  R Kali  T Aethel  Y Magnus  U Helena  I Jester  O Xenoid  P Dax"
 	seleccion_jugador_label.position = Vector2(650, 684)
 	capa.add_child(seleccion_jugador_label)
 	var estado_ui = get_node_or_null("/root/GameState")
@@ -2269,7 +2684,28 @@ func _actualizar_cores(celdas: Array[ColorRect], cargas: int, listo: bool, color
 			celdas[i].color = color_base.darkened(0.55)
 			celdas[i].scale = Vector2.ONE
 
+func _aplicar_modo_versus_local_runtime(activar: bool) -> void:
+	versus_local_activo = activar
+	if is_instance_valid(kai):
+		_configurar_control_lado(kai, true)
+	if is_instance_valid(rival):
+		_configurar_control_lado(rival, false)
+	if etiqueta_rival and is_instance_valid(rival):
+		etiqueta_rival.text = rival.nombre_luchador + (" (J2)" if activar else " (IA)")
+	if etiqueta_resultado:
+		if activar:
+			etiqueta_resultado.text = "VERSUS LOCAL — J2 LISTO"
+		else:
+			etiqueta_resultado.text = "CPU — DIFICULTAD FÁCIL"
+		var t := get_tree().create_timer(1.15)
+		t.timeout.connect(func():
+			if etiqueta_resultado:
+				etiqueta_resultado.text = ""
+		)
+
 func _unhandled_input(event: InputEvent) -> void:
+	# 90.10.78: Versus local ya no necesita el puente F10; el modo llega
+	# oficialmente desde GameState y los dos lados se configuran al crear Fighter.
 	var estado_input = get_node_or_null("/root/GameState")
 	if estado_input and estado_input.flujo_menu_activo:
 		return
@@ -2291,6 +2727,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				_cambiar_rival(Jester.new())
 			KEY_8:
 				_cambiar_rival(Varkhos.new())
+			KEY_9:
+				_cambiar_rival(Xenoid.new())
+			KEY_0:
+				_cambiar_rival(Dax.new())
 			KEY_Q:
 				_cambiar_jugador(_crear_luchador("Kai"))
 			KEY_W:
@@ -2307,6 +2747,94 @@ func _unhandled_input(event: InputEvent) -> void:
 				_cambiar_jugador(_crear_luchador("Helena"))
 			KEY_I:
 				_cambiar_jugador(_crear_luchador("Jester"))
+			KEY_O:
+				_cambiar_jugador(_crear_luchador("Xenoid"))
+			KEY_P:
+				_cambiar_jugador(_crear_luchador("Dax"))
+
+# FASE 90.10.22 — DYNAMIC FIGHT CAMERA CLOSE COMBAT FINAL.
+# Conserva EXACTAMENTE la apertura a distancia de 90.10.21 y añade sólo un
+# toque extra de acercamiento cuando los luchadores ya están cuerpo a cuerpo.
+# La distancia media y lejana no cambian.
+func _zoom_camara_por_separacion(separacion: float) -> float:
+	if separacion <= 160.0:
+		return CAM_ZOOM_CERCA
+	if separacion <= 300.0:
+		return lerpf(CAM_ZOOM_CERCA, 1.075, (separacion - 160.0) / 140.0)
+	if separacion <= 500.0:
+		return lerpf(1.075, CAM_ZOOM_NORMAL, (separacion - 300.0) / 200.0)
+	if separacion <= 760.0:
+		return lerpf(CAM_ZOOM_NORMAL, CAM_ZOOM_LEJOS, (separacion - 500.0) / 260.0)
+	return CAM_ZOOM_LEJOS
+
+# Calcula un encuadre seguro para la pelea normal. Importante: el centro se
+# obtiene a partir de los DOS luchadores, no del jugador, y los límites X se
+# adaptan al zoom para aprovechar el overscan del fondo sin enseñar bordes.
+func _objetivo_camara_combate(separacion_filtrada: float = -1.0) -> Dictionary:
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return {"centro": Vector2(ANCHO_ARENA * 0.5, 360.0), "zoom": 1.0}
+
+	var medio: Vector2 = (kai.global_position + rival.global_position) * 0.5
+	var separacion_real: float = absf(kai.global_position.x - rival.global_position.x)
+	var separacion: float = separacion_real if separacion_filtrada < 0.0 else separacion_filtrada
+	var zoom_objetivo: float = _zoom_camara_por_separacion(separacion)
+
+	# Cuando empiezan a repartir golpes hacemos un punch-in moderado sobre el
+	# zoom de distancia. Se nota más que en 90.10.19, pero sigue siendo cámara
+	# de combate y no una mini-cinemática por cada puño.
+	var ataques_activos := 0
+	var foco_ataque_x := 0.0
+	for luchador in [kai, rival]:
+		if is_instance_valid(luchador) and luchador.fase_ataque != Fighter.FaseAtaque.NINGUNA:
+			ataques_activos += 1
+			foco_ataque_x += float(luchador.mirando) * 26.0
+	if ataques_activos > 0:
+		zoom_objetivo += 0.015
+	if ataques_activos > 1:
+		zoom_objetivo += 0.006
+
+	if pulso_cam_combate > 0.0:
+		zoom_objetivo += 0.010 + pulso_cam_combate * 0.018
+
+	# En dash/carrera abrimos apenas para que el movimiento rápido tenga aire
+	# por delante y no se sienta como si chocara contra el borde del encuadre.
+	if absf(kai.velocity.x) > 280.0 or absf(rival.velocity.x) > 280.0:
+		zoom_objetivo -= 0.018
+	zoom_objetivo = clampf(zoom_objetivo, CAM_ZOOM_LEJOS, 1.205)
+
+	# Arrastre conjunto: si ambos se desplazan hacia el mismo lado, el centro
+	# de cámara anticipa unos píxeles la dirección general de la acción.
+	var velocidad_conjunta: float = (kai.velocity.x + rival.velocity.x) * 0.5
+	# Arrastre conjunto: la cámara anticipa levemente la dirección general
+	# de la acción, también en Versus Local.
+	var arrastre_x: float = clampf(velocidad_conjunta * 0.045, -30.0, 30.0)
+	var objetivo_x: float = medio.x + foco_ataque_x * 0.38 + arrastre_x
+
+	if foco_impacto_timer > 0.0:
+		objetivo_x = lerpf(objetivo_x, foco_impacto_camara_x, 0.30)
+
+	# Calculamos cuánto puede desplazarse la cámara sin mostrar vacío lateral.
+	# Los fondos normales usan 1.18x; TRONO DEL NÚCLEO usa 1.08x, por lo que
+	# necesita límites de cámara basados en su overscan real y no en el global.
+	var mitad_vista_x: float = 640.0 / maxf(zoom_objetivo, 0.01)
+	var overscan_x_actual: float = CAM_FONDO_OVERSCAN_X
+	if _escenario_redisenado(escenario_nombre_actual):
+		overscan_x_actual = ANCHO_ARENA * 0.04 # (1.08 - 1.0) / 2
+	var limite_x_min: float = -overscan_x_actual + mitad_vista_x + 8.0
+	var limite_x_max: float = ANCHO_ARENA + overscan_x_actual - mitad_vista_x - 8.0
+	if limite_x_min <= limite_x_max:
+		objetivo_x = clampf(objetivo_x, limite_x_min, limite_x_max)
+	else:
+		objetivo_x = ANCHO_ARENA * 0.5
+
+	# Seguimiento vertical deliberadamente más sutil que el horizontal. Si uno
+	# o ambos saltan, la cámara acompaña un poco hacia arriba pero mantiene el
+	# suelo como referencia para evitar mareo.
+	var altura_accion: float = clampf(SUELO_Y - medio.y, 0.0, 220.0)
+	var objetivo_y: float = 360.0 - altura_accion * 0.15
+	objetivo_y = clampf(objetivo_y, 332.0, 372.0)
+
+	return {"centro": Vector2(objetivo_x, objetivo_y), "zoom": zoom_objetivo}
 
 func _process(delta: float) -> void:
 	escenario_tiempo += delta
@@ -2336,35 +2864,45 @@ func _process(delta: float) -> void:
 		_actualizar_cores(cores_rival, mini(rival.veces_fase_absoluta, 3), rival.poder >= PODER_MAXIMO and not rival.en_fase_absoluta, rival.color_base)
 
 	if is_instance_valid(kai) and is_instance_valid(rival) and not camara_cinematica_activa and not congelando_ko:
-		var medio := (kai.global_position + rival.global_position) * 0.5
-		var separacion := absf(kai.global_position.x - rival.global_position.x)
-		# La cámara anticipa ligeramente la dirección de la acción: cuando uno
-		# está atacando, el encuadre se corre unos píxeles hacia el atacante y
-		# hacia su rival. Evita que los golpes rápidos se sientan fuera de cuadro.
-		var foco_ataque := Vector2.ZERO
-		for luchador in [kai, rival]:
-			if is_instance_valid(luchador) and luchador.fase_ataque != Fighter.FaseAtaque.NINGUNA:
-				foco_ataque.x += luchador.mirando * 28.0
-		var objetivo_x_base := clampf(medio.x + foco_ataque.x * 0.45, 420.0, ANCHO_ARENA - 420.0)
-		if foco_impacto_timer > 0.0:
-			objetivo_x_base = lerpf(objetivo_x_base, clampf(foco_impacto_camara_x, 420.0, ANCHO_ARENA - 420.0), 0.34)
-		var objetivo_y := 355.0 + clampf((560.0 - medio.y) * 0.12, -25.0, 25.0)
-		var alpha_camara := 1.0 - exp(-7.0 * delta)
-		camara.position.x = lerpf(camara.position.x, objetivo_x_base, alpha_camara)
-		camara.position.y = lerpf(camara.position.y, objetivo_y, alpha_camara)
-		var zoom_objetivo: float = clampf(1.03 - (separacion - 360.0) / 1800.0, 0.95, 1.03)
-		if pulso_cam_combate > 0.0:
-			zoom_objetivo += 0.010 + pulso_cam_combate * 0.018
-		if absf(kai.velocity.x) > 280.0 or absf(rival.velocity.x) > 280.0:
-			zoom_objetivo = minf(zoom_objetivo, 1.015)
-		var alpha_zoom := 1.0 - exp(-5.0 * delta)
+		# Filtramos la distancia antes de transformarla en zoom. Esto evita el
+		# efecto acordeón cuando un knockback separa a los luchadores de golpe.
+		var separacion_real: float = absf(kai.global_position.x - rival.global_position.x)
+		var alpha_separacion: float = 1.0 - exp(-4.2 * delta)
+		camara_separacion_suave = lerpf(camara_separacion_suave, separacion_real, alpha_separacion)
+		var datos_camara := _objetivo_camara_combate(camara_separacion_suave)
+		var centro_objetivo: Vector2 = datos_camara.get("centro", Vector2(ANCHO_ARENA * 0.5, 360.0))
+		var zoom_objetivo: float = float(datos_camara.get("zoom", 1.0))
+		# El paneo responde un poco más rápido que el zoom: la cámara sigue la
+		# acción sin retraso, pero el acercamiento/alejamiento se siente pesado y
+		# cinematográfico en vez de nervioso.
+		# CORE III puede recorrer gran parte de la arena en unas décimas. Durante
+		# esa secuencia el paneo debe acompañar al luchador, no perseguirlo tarde.
+		# CORE I/II y la cámara normal conservan exactamente su respuesta previa.
+		var core3_en_secuencia: bool = \
+			(kai.en_secuencia_especial and kai.veces_fase_absoluta >= 3) or \
+			(rival.en_secuencia_especial and rival.veces_fase_absoluta >= 3)
+		var velocidad_paneo: float = 15.0 if core3_en_secuencia else 6.2
+		var alpha_camara: float = 1.0 - exp(-velocidad_paneo * delta)
+		camara.position = camara.position.lerp(centro_objetivo, alpha_camara)
+		# 90.10.21: se conserva la respuesta asimétrica de V2; sólo ajustamos amplitud.
+		# Así el cuerpo a cuerpo gana presencia, mientras que al separarse la
+		# cámara recupera aire con suavidad y sin efecto acordeón.
+		var zoom_actual: float = camara.zoom.x
+		var velocidad_zoom: float = 5.2 if zoom_objetivo > zoom_actual else 3.0
+		var alpha_zoom: float = 1.0 - exp(-velocidad_zoom * delta)
 		camara.zoom = camara.zoom.lerp(Vector2.ONE * zoom_objetivo, alpha_zoom)
 
 	if foco_impacto_timer > 0.0:
 		foco_impacto_timer = maxf(0.0, foco_impacto_timer - delta)
 	pulso_cam_combate = move_toward(pulso_cam_combate, 0.0, 7.5 * delta)
 
-	if shake_tiempo > 0.0:
+	var ajustes_shake := get_node_or_null("/root/SettingsManager")
+	var shake_habilitado: bool = ajustes_shake == null or bool(ajustes_shake.get("shake_camara"))
+	if not shake_habilitado:
+		shake_tiempo = 0.0
+		shake_fuerza = 0.0
+		camara.offset = Vector2.ZERO
+	elif shake_tiempo > 0.0:
 		shake_tiempo -= delta
 		shake_reloj -= delta
 		if shake_reloj <= 0.0:

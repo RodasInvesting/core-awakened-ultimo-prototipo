@@ -1,0 +1,19 @@
+CORE AWAKENED 90.10.76 — BASE DE DIFICULTADES + ARQUITECTURA DE INPUT
+
+REEMPLAZAR:
+  scripts/fighter.gd
+  scripts/main.gd
+
+CAMBIOS:
+- La IA 90.10.75 aprobada queda fijada como dificultad FÁCIL.
+- Se agregan perfiles internos FÁCIL / MEDIA / DIFÍCIL sin aumentar daño, velocidad ni alcance.
+- Main configura explícitamente al rival en FÁCIL por ahora.
+- El Fighter incorpora una fuente de control IA / LOCAL / EXTERNA.
+- El control local se captura en un Input Frame común.
+- Se puede asignar un gamepad concreto a un Fighter.
+- Se agrega la API inyectar_input_frame() para futura entrada J2/red/rollback.
+
+IMPORTANTE:
+- Esta versión NO activa todavía un menú de dificultad.
+- Esta versión NO activa todavía multijugador online.
+- La jugabilidad actual debe sentirse igual que 90.10.75 en modo Fácil.

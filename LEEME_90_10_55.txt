@@ -1,0 +1,6 @@
+CORE AWAKENED 90.10.55 — XENOID CORE III TRANSPARENT FINAL
+
+Este parche reemplaza únicamente la gigantografía final de Xenoid usada por el tercer CORE/Absoluto.
+Ruta: res://assets/xenoid/gigantografia_90_10_45.png
+
+No toca scripts, VS, audio, cámara, IA ni otros personajes.

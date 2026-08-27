@@ -1,0 +1,20 @@
+CORE AWAKENED 90.10.49 — AUDIO GIGANTOGRAFÍA FINAL
+
+Objetivo:
+- Agregar una entrada sonora cinematográfica al instante en que aparece la gigantografía del CORE III / Absoluto.
+- No reemplaza el audio del impacto físico final; es una capa distinta para el reveal del póster.
+
+Audio aportado por el creador:
+- Fuente: powerful-start.mp3
+- Recorte usado: 4.34 s → 7.10 s
+- Duración final: 2.76 s
+- Pico normalizado aprox.: -3 dBFS
+- Fade in: 15 ms
+- Fade out: 360 ms
+- El golpe principal del audio cae aprox. 0.21 s después de comenzar, sincronizado con la entrada visual del póster.
+
+Archivos:
+- scripts/main.gd
+- assets/sonidos/aporte_90_10_49/gigantografia_final_usuario.wav
+
+No modifica Fighter, cámara, IA, hitboxes, daño, movimiento, CORE I/II ni sprites.

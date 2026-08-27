@@ -1,0 +1,39 @@
+CORE AWAKENED 90.11.10 — DAX INTEGRACIÓN
+
+Incluye:
+- scripts/dax.gd
+- assets/dax/ (sprites Dax)
+- assets/fondos/dax.png (arena UFC/octágono)
+- assets/ui/selector_personajes_nuevo.png (selector actualizado con Dax)
+- ajustes en scripts/main.gd, game_state.gd, selector_personajes.gd, selector_escenarios.gd
+
+Puntos aplicados:
+- Dax queda integrado como luchador jugable.
+- Varkhos vuelve a quedar visible como jefe final y ya no se confirma desde el selector.
+- El selector de escenarios se reacomoda para mostrar 10 arenas.
+- La recarga de energía de Dax se agranda un poco por código para emparejar con los otros PNG.
+
+
+90.11.11 — AJUSTES DAX
+- postura de pelea normal de Dax reemplazada por guardia correcta (se quita la pose de codazo).
+- selector de personajes cambia al arte corregido y se ajustan los bordes de selección.
+- presentación VS ya usa gigantografía de Dax en lugar de caer al póster por defecto de Kai.
+
+
+90.11.13 — selector limpio sin controles integrados, selector de escenarios rectangular y más compacto, ajuste adicional de encuadre del octágono de Dax.
+
+90.11.16 — Ajuste exclusivo del piso visual del escenario de Varkhos para eliminar la sensación de flotación.
+
+90.11.17 — Reajuste fuerte del offset vertical del fondo de Varkhos para subir la línea visual del piso y eliminar la flotación.
+
+90.11.18 — Varkhos: menos zoom para recuperar calidad y nuevo offset vertical para acercar el piso visual a los pies.
+
+90.11.20 — TRONO DEL NÚCLEO: zoom 1.08x, piso compensado y cámara limitada al overscan real para eliminar franjas negras laterales.
+
+90.11.22 — Rediseños brillantes (Helena, Kali, Aethel, Cibor-X) con brillo base reducido para que los luchadores destaquen más sobre el fondo.
+
+90.11.23 — Helena/Aethel mucho más oscuros; Kali/Cibor-X también rebajados. Overscan cinemático temporal en escenarios rediseñados para evitar bordes negros durante zoom/paneo de poderes.
+
+90.11.24 — Sustitución de Helena y Aethel por nuevos fondos más oscuros de origen. Se elimina la atenuación por código para esos dos escenarios y se mantiene el overscan cinemático.
+
+90.11.25 — Nuevo roster HD aplicado al selector de personajes. Ajuste de brillo leve para el escenario de Xenoid.

@@ -1,0 +1,15 @@
+CORE AWAKENED 90.10.60 — XENOID AIR CORE TARGET LOCK FIX
+
+Corrige exclusivamente el acercamiento de Xenoid en CORE II/III desde salto o doble salto.
+
+Antes:
+- Xenoid corregía sólo X y mantenía la altura del salto.
+- Podía pasar por encima del rival y ejecutar el combo en el aire.
+
+Ahora:
+- Persigue X + Y hasta quedar alineado con el rival.
+- Conserva su sprite de aceleración propio.
+- Mantiene todos los golpes nuevos de 90.10.59.
+- No modifica CORE I, cámara, daño, hitboxes ni otros personajes.
+
+Aplicar sobre 90.10.59.

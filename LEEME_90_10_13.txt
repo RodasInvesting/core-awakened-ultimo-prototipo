@@ -1,0 +1,35 @@
+CORE AWAKENED 90.10.13 — DERRIBO SIN CUERPO FANTASMA
+
+OBJETIVO
+- Mantener la mejora de contacto de patadas de 90.10.12.
+- Corregir el caso visto con Cibor-X: cae junto al borde/fuera de la zona visible,
+  pero su cuerpo físico sigue bloqueando o empujando al otro luchador.
+
+CAMBIOS
+1. Un luchador que está bajo derribo especial deja temporalmente de colisionar
+   físicamente SOLAMENTE con su rival. Sigue colisionando con suelo/escenario.
+2. Al levantarse se restaura automáticamente la colisión entre luchadores.
+3. Un luchador en KO definitivo tampoco puede quedar como una pared invisible.
+4. La separación procedural entre cuerpos se desactiva mientras cualquiera de
+   los dos está derribado o derrotado.
+5. Las poses horizontales de caída/KO ahora usan límites calculados según el
+   alfa visible real del PNG, para que el cuerpo no desaparezca fuera de pantalla
+   aunque su pivote físico todavía esté dentro de la arena.
+6. Al cambiar a la textura de derribado se corrige el borde en el mismo frame.
+
+SE CONSERVA DE 90.10.12
+- timing mejorado de patadas
+- rango/cobertura ajustados de patadas
+- prioridad del ataque frente al empuje corporal
+- segundo chequeo de impacto post-movimiento
+
+ARCHIVOS MODIFICADOS
+- scripts/fighter.gd
+
+PRUEBA PRINCIPAL
+1. Repetir Fang vs Cibor-X.
+2. Golpear/derribar a Cibor-X contra ambos extremos del escenario.
+3. Cibor-X debe seguir siendo visible durante la caída o quedar reencuadrado.
+4. Mientras está en el piso no debe empujar ni bloquear a Fang invisiblemente.
+5. Si Cibor-X se levanta, el contacto corporal normal debe volver a funcionar.
+6. Confirmar que las patadas de Fang siguen entrando como en 90.10.12.

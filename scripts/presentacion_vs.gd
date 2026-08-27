@@ -1,47 +1,49 @@
 extends Control
 
+# 90.10.53 — VS CLASH SCREEN
+# Las gigantografias oficiales apuntan hacia el centro: jugador normal a la
+# izquierda, rival reflejado horizontalmente a la derecha.
 const POSTERS := {
-	"Kai": "kai_vs.png",
-	"Cibor-X": "cibor-x_vs.png",
-	"Fang": "fang_vs.png",
-	"Kali": "kali_vs.png",
-	"Aethel": "aethel_vs.png",
-	"Magnus": "magnus_vs.png",
-	"Helena": "helena_vs.png",
-	# WIP: todavía no hay un póster VS cinematográfico propio para Jester
-	# (los otros son ilustraciones dedicadas más grandes). Por ahora usa
-	# directamente su pose de inicio de batalla como resguardo.
-	"Jester": "jester_vs.png",
-	# Varkhos usa directamente su ilustración de Modo Furia como resguardo
-	# -- no tiene un póster VS dedicado tampoco.
+	"Kai": "gigantografias/kai.png",
+	"Cibor-X": "gigantografias/cibor-x.png",
+	"Fang": "gigantografias/fang.png",
+	"Kali": "gigantografias/kali.png",
+	"Aethel": "gigantografias/aethel.png",
+	"Magnus": "gigantografias/magnus.png",
+	"Helena": "gigantografias/helena.png",
+	"Jester": "gigantografias/jester.png",
+	"Xenoid": "gigantografias/xenoid.png",
+	"Dax": "gigantografias/dax.png",
+	# Varkhos queda con su VS anterior hasta completar su arte final.
 	"Varkhos": "varkhos_vs.png"
 }
 
-# Ajustes finos para que en el VS siempre se lea la CARA y el nombre.
-# Ya no usamos solo "cover" porque algunas ilustraciones quedaban demasiado
-# cerca y cortaban ojos/rostro. Ahora cada mitad tiene:
-# 1) fondo cubierto y oscurecido para llenar limpio la pantalla
-# 2) póster principal completo, centrado y con zoom controlado.
 const POSTER_FIT_SCALE := {
-	"Kai": 0.96,
-	"Cibor-X": 0.94,
-	"Fang": 0.93,
-	"Kali": 0.84,
-	"Aethel": 0.95,
-	"Magnus": 0.88,
-	"Helena": 0.94,
-	"Jester": 0.80,
+	"Kai": 1.16,
+	"Cibor-X": 1.14,
+	"Fang": 1.12,
+	"Kali": 1.13,
+	"Aethel": 1.12,
+	"Magnus": 1.14,
+	"Helena": 1.13,
+	"Jester": 1.12,
+	"Xenoid": 1.12,
 	"Varkhos": 0.78
 }
 
+# X positivo significa acercar el foco/poder al centro. Para el rival se
+# invierte automaticamente luego del flip horizontal.
 const POSTER_OFFSET := {
-	"Kai": Vector2(-10.0, 0.0),
-	"Cibor-X": Vector2(0.0, 0.0),
-	"Fang": Vector2(-8.0, 6.0),
-	"Kali": Vector2(0.0, -4.0),
-	"Aethel": Vector2(0.0, 0.0),
-	"Magnus": Vector2(0.0, 0.0),
-	"Helena": Vector2(-6.0, 0.0)
+	"Kai": Vector2(34.0, 0.0),
+	"Cibor-X": Vector2(30.0, 0.0),
+	"Fang": Vector2(34.0, 4.0),
+	"Kali": Vector2(36.0, -2.0),
+	"Aethel": Vector2(32.0, 0.0),
+	"Magnus": Vector2(38.0, 0.0),
+	"Helena": Vector2(36.0, 0.0),
+	"Jester": Vector2(34.0, 0.0),
+	"Xenoid": Vector2(32.0, 0.0),
+	"Varkhos": Vector2.ZERO
 }
 
 func _ready() -> void:
@@ -53,33 +55,30 @@ func crear_pantalla_vs(estado) -> void:
 	var fondo := ColorRect.new()
 	fondo.position = Vector2.ZERO
 	fondo.size = Vector2(1280, 720)
-	fondo.color = Color(0.01, 0.01, 0.02, 1.0)
+	fondo.color = Color(0.006, 0.006, 0.014, 1.0)
 	add_child(fondo)
 
 	crear_panel_poster(estado.personaje_jugador, Rect2(0, 0, 640, 720), true)
 	crear_panel_poster(estado.rival_actual, Rect2(640, 0, 640, 720), false)
 
-	var linea := ColorRect.new()
-	linea.position = Vector2(637, 0)
-	linea.size = Vector2(6, 720)
-	linea.color = Color(1.0, 1.0, 1.0, 0.18)
-	linea.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(linea)
-
+	# Centro oscuro fino: deja que las dos energias lleguen visualmente hasta
+	# el VS, pero mantiene legible el logo.
 	var velo_centro := ColorRect.new()
-	velo_centro.position = Vector2(520, 0)
-	velo_centro.size = Vector2(240, 720)
-	velo_centro.color = Color(0.0, 0.0, 0.0, 0.22)
+	velo_centro.position = Vector2(566, 0)
+	velo_centro.size = Vector2(148, 720)
+	velo_centro.color = Color(0.0, 0.0, 0.0, 0.16)
 	velo_centro.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(velo_centro)
 
+	crear_choque_centro()
 	crear_info_superior(estado)
 	crear_vs_centro()
 	crear_nombres(estado)
 
 func crear_panel_poster(nombre: String, area: Rect2, es_jugador: bool) -> void:
 	var cont := Panel.new()
-	cont.position = area.position
+	var entrada_x: float = -74.0 if es_jugador else 74.0
+	cont.position = area.position + Vector2(entrada_x, 0.0)
 	cont.size = area.size
 	cont.clip_contents = true
 	var style := StyleBoxFlat.new()
@@ -87,13 +86,13 @@ func crear_panel_poster(nombre: String, area: Rect2, es_jugador: bool) -> void:
 	cont.add_theme_stylebox_override("panel", style)
 	add_child(cont)
 
-	var archivo: String = str(POSTERS.get(nombre, "kai_vs.png"))
+	var archivo: String = str(POSTERS.get(nombre, "gigantografias/kai.png"))
 	var tex: Texture2D = load("res://assets/vs/" + archivo)
 	if tex == null:
 		return
 
-	# Capa de relleno cinematográfica: cubre toda la mitad para que nunca
-	# queden huecos, pero muy oscurecida para que no compita con el arte frontal.
+	# Fondo lleno, oscuro y ligeramente ampliado. Da continuidad visual a la
+	# mitad de pantalla sin quitar protagonismo a la gigantografia frontal.
 	var fondo_poster := TextureRect.new()
 	fondo_poster.texture = tex
 	fondo_poster.position = Vector2.ZERO
@@ -101,11 +100,12 @@ func crear_panel_poster(nombre: String, area: Rect2, es_jugador: bool) -> void:
 	fondo_poster.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	fondo_poster.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	fondo_poster.flip_h = not es_jugador
-	fondo_poster.modulate = Color(1, 1, 1, 0.26)
+	fondo_poster.modulate = Color(0.66, 0.66, 0.72, 0.34)
 	fondo_poster.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cont.add_child(fondo_poster)
 
-	# Póster principal: se ajusta entero, centrado, con zoom fino por personaje.
+	# Gigantografia principal completa. La derecha se refleja para que el poder
+	# apunte hacia el centro; la izquierda conserva la orientacion original.
 	var poster := TextureRect.new()
 	poster.texture = tex
 	poster.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -113,25 +113,53 @@ func crear_panel_poster(nombre: String, area: Rect2, es_jugador: bool) -> void:
 	poster.flip_h = not es_jugador
 	poster.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var base_scale: float = minf(area.size.x / float(tex.get_width()), area.size.y / float(tex.get_height()))
-	var escala: float = base_scale * float(POSTER_FIT_SCALE.get(nombre, 0.94))
+	var escala: float = base_scale * float(POSTER_FIT_SCALE.get(nombre, 1.12))
 	poster.size = Vector2(float(tex.get_width()) * escala, float(tex.get_height()) * escala)
 	var offset: Vector2 = POSTER_OFFSET.get(nombre, Vector2.ZERO)
+	if not es_jugador:
+		offset.x = -offset.x
 	poster.position = Vector2((area.size.x - poster.size.x) * 0.5, (area.size.y - poster.size.y) * 0.5) + offset
 	cont.add_child(poster)
 
-	var gradiente_lados := ColorRect.new()
-	gradiente_lados.position = Vector2.ZERO
-	gradiente_lados.size = area.size
-	gradiente_lados.color = Color(0, 0, 0, 0.12)
-	gradiente_lados.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cont.add_child(gradiente_lados)
+	# Viñeta sutil para que el centro y los nombres sigan leyendo sobre artes
+	# extremadamente luminosas.
+	var velo := ColorRect.new()
+	velo.position = Vector2.ZERO
+	velo.size = area.size
+	velo.color = Color(0, 0, 0, 0.08)
+	velo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cont.add_child(velo)
 
-	var borde := ColorRect.new()
-	borde.position = Vector2(0, 0)
-	borde.size = Vector2(area.size.x, 14)
-	borde.color = Color(0.78, 0.32, 1.0, 0.30) if es_jugador else Color(1.0, 0.55, 0.12, 0.30)
-	borde.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cont.add_child(borde)
+	# Entrada simultanea desde los extremos hasta el choque central.
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tween.tween_property(cont, "position", area.position, 0.42)
+
+func crear_choque_centro() -> void:
+	# Núcleo luminoso que representa el choque de las dos gigantografias.
+	var impacto := Panel.new()
+	impacto.position = Vector2(588, 292)
+	impacto.size = Vector2(104, 104)
+	impacto.pivot_offset = impacto.size * 0.5
+	impacto.scale = Vector2(0.42, 0.42)
+	impacto.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(1.0, 0.96, 0.82, 0.34)
+	st.border_color = Color(0.96, 0.58, 1.0, 0.90)
+	st.set_border_width_all(5)
+	st.corner_radius_top_left = 54
+	st.corner_radius_top_right = 54
+	st.corner_radius_bottom_left = 54
+	st.corner_radius_bottom_right = 54
+	st.shadow_color = Color(0.68, 0.24, 1.0, 0.72)
+	st.shadow_size = 28
+	impacto.add_theme_stylebox_override("panel", st)
+	add_child(impacto)
+
+	var t := create_tween()
+	t.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(impacto, "scale", Vector2(1.24, 1.24), 0.36)
+	t.tween_property(impacto, "scale", Vector2.ONE, 0.18)
 
 func crear_info_superior(estado) -> void:
 	var info_panel := Panel.new()
@@ -168,7 +196,9 @@ func crear_vs_centro() -> void:
 	vs_shadow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vs_shadow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	vs_shadow.add_theme_font_size_override("font_size", 116)
-	vs_shadow.add_theme_color_override("font_color", Color(0.05, 0.0, 0.08, 0.72))
+	vs_shadow.add_theme_color_override("font_color", Color(0.04, 0.0, 0.06, 0.86))
+	vs_shadow.add_theme_constant_override("outline_size", 12)
+	vs_shadow.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.90))
 	add_child(vs_shadow)
 
 	var vs := Label.new()
@@ -178,7 +208,9 @@ func crear_vs_centro() -> void:
 	vs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vs.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	vs.add_theme_font_size_override("font_size", 116)
-	vs.add_theme_color_override("font_color", Color(1.0, 0.65, 0.12))
+	vs.add_theme_color_override("font_color", Color(1.0, 0.72, 0.18))
+	vs.add_theme_constant_override("outline_size", 5)
+	vs.add_theme_color_override("font_outline_color", Color(0.55, 0.10, 0.78, 0.96))
 	add_child(vs)
 
 func crear_nombres(estado) -> void:
@@ -224,9 +256,6 @@ func crear_audio_y_transicion() -> void:
 	add_child(sfx)
 	sfx.play()
 	await get_tree().create_timer(3.2).timeout
-	# FASE 94.2: acá es donde más se sentía la espera -- Main.tscn carga
-	# TODO el set de texturas de los dos personajes de la pelea. Pasa por
-	# la pantalla de carga en vez de trabarse en seco.
 	var estado := get_node("/root/GameState")
 	estado.escena_destino_carga = "res://scenes/Main.tscn"
 	get_tree().change_scene_to_file("res://scenes/PantallaCarga.tscn")

@@ -1,0 +1,18 @@
+CORE AWAKENED 90.10.91 — DASH ESPEJO VISUAL FIX
+
+Diagnóstico confirmado con 90.10.90:
+- Durante el supuesto backdash de J2, el estado lógico de J2 permanecía:
+  input horizontal = 0, carrera_activa = false, velocity.x = 0 y X mundial estable.
+- Sin embargo, el sprite mostraba temporalmente la textura de evasión/backdash.
+
+Corrección 90.10.91:
+1) Fighter aplica una invariancia visual al final del frame: un Fighter local neutral
+   no puede renderizar textura de carrera/evasión si su estado lógico no está en dash.
+2) En Versus Local, durante un dash unilateral la cámara congela también el zoom,
+   no sólo el centro X, para evitar un falso retroceso visual por cambio de encuadre.
+
+Archivos a reemplazar:
+- scripts/fighter.gd
+- scripts/main.gd
+
+No se modifican menús, selectores, daño, golpes, CORE ni controles.

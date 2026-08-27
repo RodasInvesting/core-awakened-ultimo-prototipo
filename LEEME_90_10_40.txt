@@ -1,0 +1,49 @@
+CORE AWAKENED 90.10.40 — CORE II NORMAL COMBO + REMATE
+
+CORE AWAKENED — 90.10.39
+CORE HIERARCHY / NORMAL COMBO / FURY FINAL
+
+CAMBIO DE DISEÑO OFICIAL:
+
+CORE I — PODER
+- Se conserva exactamente el especial actual.
+- Modo normal.
+- Gigantografía actual.
+
+CORE II — COMBO NORMAL
+- Ya NO entra en Furia.
+- Ya NO usa aura/Furia.
+- Ya NO repite la gigantografía del CORE I.
+- Ejecuta una secuencia automática usando TODAS las variantes normales
+  disponibles de puños y patadas del personaje.
+- Los golpes del combo van ~28% más rápidos que los golpes manuales,
+  conservando las mismas proporciones startup/activo/recovery.
+- Si un personaje no usa patadas en combo (ej. configuración especial),
+  completa sólo sus puños.
+
+CORE III — FURIA FINAL
+- Entra directamente en Furia/Aura.
+- No repite el especial normal del CORE I.
+- Ejecuta TODAS las variantes Furia disponibles una vez.
+- Termina con el Absoluto + gigantografía final.
+- Arquitectura preparada para sumar 8/9/10+ sprites Furia más adelante:
+  al agregarlos a las listas del personaje, el combo puede reproducirlos
+  sin cambiar nuevamente el sistema base.
+
+SEGURIDAD:
+- Se amplió el watchdog de secuencia a 18 s para permitir combos futuros
+  más largos sin cortar una cinemática legítima.
+- No se tocaron hitboxes, daño base, IA, cámara, movilidad, KO ni VFX de
+  gigantografía.
+
+ARCHIVO MODIFICADO:
+- scripts/fighter.gd
+
+INSTALACIÓN:
+Copiar la carpeta scripts en la raíz del proyecto y reemplazar fighter.gd.
+
+
+AJUSTE 90.10.40:
+- CORE II vuelve a incluir su remate y gigantografia.
+- La secuencia previa del combo sigue siendo exclusivamente en modo normal.
+- CORE III se mantiene como Furia/Aura + combo final + gigantografia absoluta.

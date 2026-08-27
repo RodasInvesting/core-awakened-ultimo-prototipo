@@ -1,0 +1,12 @@
+CORE AWAKENED 90.10.21 — DYNAMIC FIGHT CAMERA FINAL TUNING
+
+Reemplazar únicamente:
+  scripts/main.gd
+
+Cambios respecto a 90.10.20:
+- Zoom muy lejos: 0.94 -> 0.93
+- Zoom cuerpo a cuerpo: 1.14 -> 1.16
+- Techo durante ataque/impacto: 1.165 -> 1.185
+- Sin cambios en fighter.gd, hitboxes, físicas, paneo, velocidades ni cinemáticas.
+
+Objetivo: más contraste visual entre distancia larga y cuerpo a cuerpo sin cortar personajes grandes.

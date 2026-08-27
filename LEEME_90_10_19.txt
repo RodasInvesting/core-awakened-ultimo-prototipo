@@ -1,0 +1,35 @@
+CORE AWAKENED 90.10.19 — DYNAMIC FIGHT CAMERA
+
+REEMPLAZA:
+  scripts/main.gd
+
+NO MODIFICA:
+  scripts/fighter.gd
+  hitboxes / hurtboxes
+  timing de golpes o patadas
+  separación corporal
+  límites físicos de los luchadores
+
+CAMBIOS:
+- Zoom dinámico por distancia:
+  * lejos: aprox. 0.96
+  * distancia normal: aprox. 1.00
+  * cuerpo a cuerpo: aprox. 1.10
+- El zoom cambia de forma progresiva y filtrada para evitar efecto acordeón.
+- La cámara sigue el punto medio real entre ambos luchadores.
+- Anticipa ligeramente la dirección si ambos se desplazan juntos.
+- Durante ataques aplica un punch-in muy pequeño sin convertirse en cinemática.
+- En carrera/dash se abre apenas para conservar espacio delante de la acción.
+- Sigue saltos de forma vertical MUY sutil manteniendo visible el piso.
+- Aprovecha el overscan existente del fondo 1.18 para acompañar peleas cerca de bordes.
+- Especiales / recargas / Absolutos mantienen prioridad sobre la cámara normal.
+- Al terminar una cámara cinematográfica vuelve suavemente al encuadre dinámico actual.
+
+PRUEBA RECOMENDADA:
+1. Separar a los luchadores al máximo y observar apertura suave.
+2. Acercarse caminando y observar zoom progresivo.
+3. Pelear cuerpo a cuerpo: el zoom debe estar más cerca sin cortar personajes.
+4. Mover la pelea hacia ambos extremos: la cámara debe acompañar sin mostrar vacío.
+5. Saltar y doble-saltar: seguimiento vertical leve, sin mareo.
+6. Ejecutar Especial / Furia / Absoluto y comprobar que la cámara dinámica no interfiere.
+7. Revisar K.O. y pose final: el comportamiento corregido de 90.10.18 no cambia.

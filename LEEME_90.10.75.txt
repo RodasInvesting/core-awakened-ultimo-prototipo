@@ -1,0 +1,30 @@
+CORE AWAKENED 90.10.75 — IA POR DISTANCIAS / TOMA DE DECISIONES
+
+MODIFICADO:
+- scripts/fighter.gd
+
+SIN CAMBIOS:
+- scripts/main.gd (idéntico a 90.10.74)
+
+OBJETIVO:
+- Zona corta: atacar/defender/retroceder en ventanas de decisión.
+- Zona media: medir distancia, avanzar, saltar, dash o sostener neutral.
+- Zona lejana: perseguir con decisión para conservar el ritmo.
+- Evitar que la CPU reintente un golpe cada frame al terminar recovery.
+
+NO SE MODIFICÓ:
+- daño
+- velocidad general
+- alcance de golpes
+- hitboxes
+- CORE
+- pushbox 2.1
+- KO
+- sprites
+- escenarios
+
+PRUEBA RECOMENDADA:
+1. Permanecer cerca de la CPU y observar si intercala ataque/defensa/retroceso.
+2. Separarse a media pantalla y observar si no corre siempre recto encima del jugador.
+3. Probar varios personajes para confirmar que mantienen su personalidad.
+4. Confirmar que la CPU sigue siendo activa y no queda esperando demasiado.

@@ -1,0 +1,10 @@
+CORE AWAKENED — HOTFIX URGENTE DE TAMAÑO
+
+1. Cerrar Godot.
+2. Copiar la carpeta scripts sobre el proyecto.
+3. Aceptar reemplazar SOLO scripts/fighter.gd.
+4. Abrir Godot y probar una pelea.
+
+Este archivo restaura fighter.gd a la versión estable anterior al parche COMBAT FEEL V1.
+No reemplaza personajes, imágenes, selector, Jester, Xenoid ni assets.
+El objetivo es recuperar inmediatamente las escalas/tamaños que estaban funcionando.

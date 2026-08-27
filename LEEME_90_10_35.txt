@@ -1,0 +1,20 @@
+CORE AWAKENED — 90.10.35
+CÓMO JUGAR — RETURN CRASH FIX
+
+CORRECCIÓN:
+- Soluciona el cierre/detención del juego al volver al menú desde CÓMO JUGAR.
+- El input A/B/Enter/Esc ahora se marca como consumido ANTES de cambiar de escena.
+- Se agrega protección contra doble regreso al menú.
+
+ARCHIVO MODIFICADO:
+- scripts/como_jugar.gd
+
+NO MODIFICA:
+- combate
+- gamepad
+- pausa
+- opciones
+- cámara
+- IA
+- sprites
+- tutorial visual

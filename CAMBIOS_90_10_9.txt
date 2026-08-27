@@ -1,0 +1,98 @@
+--- fighter.gd 90.10.8
++++ fighter.gd 90.10.9
+@@ -1,5 +1,5 @@
+ class_name Fighter
+-# CORE AWAKENED 90.10.8 — combo limpio: sin retroceso preventivo.
++# CORE AWAKENED 90.10.9 — prioridad de ataque + contacto fiel.
+ extends CharacterBody2D
+ 
+ signal impacto(fuerza: float)
+@@ -1059,7 +1059,10 @@
+ 	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+ 		var dx_actual: float = objetivo.global_position.x - global_position.x
+ 		var separacion: float = absf(dx_actual)
+-		var distancia_objetivo: float = maxf(_distancia_minima_contextual(objetivo) + 4.0, 62.0)
++		# Durante un ataque NO usamos el radio visual adaptativo para frenar,
++		# porque cabello/alas/poses anchas pueden detener al atacante antes de
++		# que el pie o puño entre en la hurtbox real.
++		var distancia_objetivo: float = 68.0 if _atk_tipo == "punetazo" else 74.0
+ 		if separacion <= distancia_objetivo and hacia_rival:
+ 			velocity.x = 0.0
+ 
+@@ -1117,7 +1120,10 @@
+ 
+ func mover(direccion: float, vel_actual: float) -> void:
+ 	if direccion != 0.0:
+-		mirando = sign(direccion)
++		# Fuera de un ataque el input puede orientar; durante STARTUP/ACTIVO
++		# la orientación queda fijada hacia el golpe/rival.
++		if fase_ataque == FaseAtaque.NINGUNA or fase_ataque == FaseAtaque.RECOVERY:
++			mirando = sign(direccion)
+ 		velocity.x = move_toward(velocity.x, direccion * vel_actual, aceleracion * _delta_actual)
+ 	else:
+ 		var friccion: float = friccion_suelo if is_on_floor() else friccion_aire
+@@ -1244,6 +1250,11 @@
+ 			if timer_fase_ataque <= 0.0:
+ 				fase_ataque = FaseAtaque.ACTIVO
+ 				timer_fase_ataque = _atk_dur_activo
++				# 90.10.9: resolver el contacto EN EL MISMO FRAME en que el golpe
++				# entra a ACTIVO. Antes se esperaba un frame más; la separación/marcha
++				# del rival podía sacar los cuerpos del rango antes del chequeo.
++				if not _atk_ya_conecto:
++					_chequear_impacto_ataque()
+ 		FaseAtaque.ACTIVO:
+ 			if not _atk_ya_conecto:
+ 				_chequear_impacto_ataque()
+@@ -1345,7 +1356,9 @@
+ 	var mult_cuerpo := _mult_cuerpo_actual()
+ 	var cuerpo_ancho := ancho_cuerpo * mult_cuerpo
+ 	var cuerpo_alto := alto_cuerpo * mult_cuerpo
+-	var alcance: float = _atk_rango + (12.0 if _atk_tipo == "patada" else 6.0)
++	# Margen visual frontal: varios sprites extienden el pie/puño mucho más allá
++	# del cuerpo físico. La patada recibe más margen porque es el caso más notorio.
++	var alcance: float = _atk_rango + (26.0 if _atk_tipo == "patada" else 12.0)
+ 	# Puño: tronco/cabeza. Patada: una ventana algo más baja y más alta.
+ 	var alto_hit: float = 46.0 if _atk_tipo == "punetazo" else 58.0
+ 	var centro_y: float = -cuerpo_alto * (0.52 if _atk_tipo == "punetazo" else 0.42)
+@@ -3187,18 +3200,35 @@
+ 	var suma_masa: float = masa_yo + masa_otro
+ 	var factor_yo: float = masa_otro / suma_masa
+ 	var factor_objetivo: float = masa_yo / suma_masa
+-	if fase_ataque == FaseAtaque.ACTIVO and objetivo.hitstun_timer > 0.0:
+-		factor_yo = minf(0.28, factor_yo)
+-		factor_objetivo = 1.0 - factor_yo
+-	elif objetivo.fase_ataque == FaseAtaque.ACTIVO and hitstun_timer > 0.0:
+-		factor_objetivo = minf(0.28, factor_objetivo)
+-		factor_yo = 1.0 - factor_objetivo
++
++	# 90.10.9 — prioridad del ataque sobre una caminata.
++	# Si uno ya está en STARTUP/ACTIVO y el otro simplemente avanza contra él,
++	# el atacante se planta y quien invade el espacio es el que cede.
++	var yo_atacando: bool = fase_ataque == FaseAtaque.STARTUP or fase_ataque == FaseAtaque.ACTIVO
++	var otro_atacando: bool = objetivo.fase_ataque == FaseAtaque.STARTUP or objetivo.fase_ataque == FaseAtaque.ACTIVO
++
++	if yo_atacando and not otro_atacando:
++		factor_yo = 0.0
++		factor_objetivo = 1.0
++		# Si el rival caminaba hacia el atacante, cortar ese avance.
++		if signf(objetivo.velocity.x) == -dir:
++			objetivo.velocity.x = 0.0
++	elif otro_atacando and not yo_atacando:
++		factor_yo = 1.0
++		factor_objetivo = 0.0
++		if signf(velocity.x) == dir:
++			velocity.x = 0.0
++	elif yo_atacando and otro_atacando:
++		# Dos golpes simultáneos: dejamos a move_and_slide resolver el contacto
++		# sin añadir un empuje artificial antes de las hitboxes.
++		return
+ 	elif hitstun_timer > 0.0:
+ 		factor_yo = minf(0.78, factor_yo + 0.18)
+ 		factor_objetivo = 1.0 - factor_yo
+ 	elif objetivo.hitstun_timer > 0.0:
+ 		factor_objetivo = minf(0.78, factor_objetivo + 0.18)
+ 		factor_yo = 1.0 - factor_objetivo
++
+ 	global_position.x -= dir * penetracion * factor_yo
+ 	objetivo.global_position.x += dir * penetracion * factor_objetivo
+ 

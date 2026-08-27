@@ -1,0 +1,17 @@
+CORE AWAKENED 90.10.47 — CORE I HOMING + CORE III CAMERA SYNC
+
+CAMBIOS:
+1) CORE I ahora hace target-lock 2D antes del especial:
+   - corrige X + Y hacia el rival;
+   - funciona desde suelo, salto y doble salto;
+   - si existe sprite de carrera/aceleración lo usa durante el cierre de distancia.
+
+2) CORE III — sincronización de cámara:
+   - la cámara cinematográfica se entrega al combate justo antes de terminar la recarga;
+   - la cámara lenta termina a los 1.55 s reales, igual que la recarga de Fighter;
+   - durante la secuencia CORE III el paneo responde más rápido para acompañar el homing;
+   - CORE II no cambia: conserva exactamente el comportamiento aprobado en 90.10.46.
+
+ARCHIVOS:
+- scripts/fighter.gd
+- scripts/main.gd

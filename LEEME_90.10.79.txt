@@ -1,0 +1,16 @@
+CORE AWAKENED 90.10.79 — AISLAMIENTO DE INPUT VERSUS LOCAL
+
+OBJETIVO
+Corregir lectura cruzada entre teclado y mando en Versus Local.
+
+REGLAS DE DISPOSITIVOS
+- 0 mandos: J1 = Flechas/X/C/Z; J2 = WASD/F/G/H.
+- 1 mando: J1 = SOLO teclado (Flechas/X/C/Z); J2 = SOLO mando.
+- 2 mandos: J1 = SOLO mando 1; J2 = SOLO mando 2.
+- Fuera de Versus Local se conserva el control histórico de J1 (teclado + primer mando).
+
+NO MODIFICA
+Combate, IA, daño, velocidad, hitboxes, pushbox, CORE, KO, sprites ni escenarios.
+
+PRUEBA CLAVE
+Con un mando conectado, mover J1 con teclado sin tocar el mando. J2 no debe ejecutar dash/backdash ni ninguna acción por input.

@@ -1,0 +1,7 @@
+CORE AWAKENED 90.11.27
+
+CAMBIOS AISLADOS:
+1) Selector HD recalibrado: marco J1/J2 cubre exactamente cada panel completo del roster.
+2) Guardia de Escape en Esquina (sólo Versus Local): si un jugador está en hitstun, pegado al borde y mantiene BLOQUEO, el siguiente golpe normal entra bloqueado y corta la cadena Combo Cancel.
+3) No permite atacar durante hitstun. No afecta IA, CORE II/III, especiales, dash ni física general.
+4) Incluye la corrección de bloqueo visual de Jester de 90.11.26.

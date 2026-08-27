@@ -1,0 +1,174 @@
+--- fighter.gd 90.10.2
++++ fighter.gd 90.10.5
+@@ -1,5 +1,5 @@
+ class_name Fighter
+-# CORE AWAKENED 90.10.2 — escalas corregidas + compatibilidad Magnus.
++# CORE AWAKENED 90.10.5 — estabilización: carrera + combo + CORE final.
+ extends CharacterBody2D
+ 
+ signal impacto(fuerza: float)
+@@ -31,6 +31,9 @@
+ # Multiplicador global de la barra de poder: bajalo para que tarde más en
+ # llenarse (peleas más largas hasta ver la Fase Absoluta).
+ const MULT_PODER_GLOBAL := 0.55
++
++# Empuje físico estable también durante el combo CORE.
++const MULT_EMPUJE_GLOBAL := 1.35
+ 
+ # FASE 85 — CORE competitivo: todos los luchadores cargan a un ritmo más
+ # parejo por impacto limpio. Las diferencias de personalidad siguen viniendo
+@@ -597,7 +600,7 @@
+ # dentro de una ventana corta activa una carrera breve mientras la tecla se
+ # mantenga presionada. No modifica la escala física ni atraviesa al rival.
+ const VENTANA_DOBLE_PULSO_CARRERA := 0.28
+-const MULT_CARRERA := 1.52
++const MULT_CARRERA := 1.65
+ var doble_pulso_izq_timer: float = 0.0
+ var doble_pulso_der_timer: float = 0.0
+ var tecla_izq_previa: bool = false
+@@ -852,7 +855,10 @@
+ 		# esto es lo que hace que el bloqueo, el salto y la caminata real
+ 		# aparezcan y desaparezcan solos según el estado del personaje.
+ 		if pose_timer <= 0.0 and not esta_derrotado and not derribo_especial_activo:
+-			_actualizar_textura(_tex_reposo())
++			var mantener_reaccion_combo: bool = congelado_por_rival \
++				and objetivo and is_instance_valid(objetivo) and objetivo.en_combo_auto_visual
++			if not mantener_reaccion_combo:
++				_actualizar_textura(_tex_reposo())
+ 
+ 		# Rebote procedural: solo para personajes que todavía no tienen arte
+ 		# real de caminata (así no se rompen). Si ya hay caminata cargada,
+@@ -903,7 +909,10 @@
+ 	if pose_timer > 0.0:
+ 		pose_timer -= delta
+ 		if pose_timer <= 0.0 and not esta_derrotado and not derribo_especial_activo:
+-			_actualizar_textura(_tex_reposo())
++			var mantener_reaccion_combo_timer: bool = congelado_por_rival \
++				and objetivo and is_instance_valid(objetivo) and objetivo.en_combo_auto_visual
++			if not mantener_reaccion_combo_timer:
++				_actualizar_textura(_tex_reposo())
+ 
+ 	# Se ejecuta al final para que squash/impacto no sea pisado por la
+ 	# actualización normal de textura/respiración del cuadro.
+@@ -1238,14 +1247,13 @@
+ 	if en_fase_absoluta:
+ 		dano *= mult_dano_fase
+ 	var bloqueado := objetivo.bloqueando
+-	var empuje_final: float = _atk_empuje_base * peso_golpe + dano * 4.0
++	var empuje_final: float = (_atk_empuje_base * peso_golpe + dano * 4.0) * MULT_EMPUJE_GLOBAL
+ 	# Transferencia de masa: un cuerpo pesado pega con más presencia y un
+ 	# cuerpo pesado también absorbe mejor. El rango es deliberadamente corto
+ 	# para conservar el balance que ya funciona.
+ 	var transferencia_masa: float = clampf((_masa_corporal() * peso_golpe) / maxf(objetivo._masa_corporal(), 0.55), 0.72, 1.32)
+ 	empuje_final *= transferencia_masa
+-	if objetivo.congelado_por_rival:
+-		empuje_final *= 0.22
++	# El combo CORE conserva el empuje real; no lo reducimos artificialmente.
+ 	var hitstun_final: float = _atk_hitstun * peso_golpe * lerpf(0.90, 1.08, clampf((transferencia_masa - 0.72) / 0.60, 0.0, 1.0))
+ 	if objetivo.global_position.y < global_position.y - 25.0:
+ 		hitstun_final *= 0.85
+@@ -1448,6 +1456,9 @@
+ func _congelar_rival(activo: bool) -> void:
+ 	if objetivo and is_instance_valid(objetivo):
+ 		objetivo.congelado_por_rival = activo
++		if not activo and not objetivo.esta_derrotado \
++			and not objetivo.derribo_especial_activo and objetivo.pose_timer <= 0.0:
++			objetivo._actualizar_textura(objetivo._tex_reposo())
+ 
+ # Beat cinematográfico antes del combo automático (cargas 2 y 3): el
+ # personaje pasa a su pose de "recarga de energía" propia, brilla, y le
+@@ -1493,6 +1504,12 @@
+ func _desbloquear_cinematica() -> void:
+ 	bloqueo_cinematico = false
+ 	velocity = Vector2.ZERO
++	carrera_activa = false
++	carrera_direccion = 0.0
++	doble_pulso_izq_timer = 0.0
++	doble_pulso_der_timer = 0.0
++	tecla_izq_previa = false
++	tecla_der_previa = false
+ 
+ func _pose_final_especial(duracion: float) -> void:
+ 	# Usa el último frame de puñetazo como pose de lanzamiento: el cuerpo
+@@ -1656,8 +1673,8 @@
+ 	if puede_conectar and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+ 		var dano: float = dano_patada * MULT_DANO_GLOBAL * mult_dano_fase * 2.4
+ 		objetivo.recibir_dano(dano, 520.0, 0.75, direccion, "rematador")
+-		# CORE 2: remate con desplazamiento mucho más visible.
+-		objetivo.recibir_derribo_especial(direccion, 900.0 if not bloqueado else 500.0, 470.0 if not bloqueado else 290.0, 1.05 if not bloqueado else 0.50, true)
++		# CORE 2: vuelo fuerte dentro del sistema físico normal.
++		objetivo.recibir_derribo_especial(direccion, 1045.0 if not bloqueado else 570.0, 505.0 if not bloqueado else 310.0, 0.95 if not bloqueado else 0.45, true)
+ 		_efecto_chispas(bloqueado, objetivo.global_position)
+ 		await get_tree().create_timer(0.10, true, false, true).timeout
+ 	rematador_conectado.emit()
+@@ -1714,9 +1731,8 @@
+ 		if direccion == 0.0:
+ 			direccion = mirando
+ 		objetivo.recibir_dano(999.0, 980.0, 1.2, direccion, "absoluto")
+-		# CORE 3 ABSOLUTO: lanzamiento extremo. Con el slow-motion del cierre
+-		# este impulso permite recorrer aproximadamente media arena o más.
+-		objetivo.recibir_derribo_especial(direccion, 2850.0, 610.0, 99.0, false)
++		# CORE 3: derribo físico estable, sin Tween ni espera artificial.
++		objetivo.recibir_derribo_especial(direccion, 1550.0, 680.0, 99.0, false)
+ 		_efecto_chispas(false, objetivo.global_position)
+ 		_onda_impacto_local(objetivo.global_position, color_energia_poder(), 1.6)
+ 		impulso_visual = 1.3
+@@ -1762,8 +1778,8 @@
+ 	empuje_pendiente_timer = 0.0
+ 	empuje_pendiente_fuerza = 0.0
+ 	mirando = -signf(direccion)
+-	# Los remates especiales pueden lanzar mucho más lejos que un golpe normal.
+-	velocity.x = clampf((fuerza_x / maxf(_masa_corporal(), 0.65)) * direccion, -1900.0, 1900.0)
++	# Tope exclusivo del vuelo de los remates CORE.
++	velocity.x = clampf((fuerza_x / maxf(_masa_corporal(), 0.65)) * direccion, -1300.0, 1300.0)
+ 	velocity.y = -fuerza_y
+ 	hitstun_timer = maxf(hitstun_timer, 0.9 if se_levanta else 1.35)
+ 	var t: Texture2D = _tex_golpe_recibido()
+@@ -1976,17 +1992,13 @@
+ func _derrotado() -> void:
+ 	esta_derrotado = true
+ 	en_pose_victoria = false
+-	# FASE 90.10 — anclaje final al suelo.
+-	# El Absoluto puede cerrar el K.O. mientras el rival todavía está volando.
+-	# Antes de fijar derribado.png alineamos su origen Y con el del adversario,
+-	# que comparte la misma línea de piso.
++	# K.O. definitivo: fijar el origen sobre la línea física del escenario.
+ 	velocity = Vector2.ZERO
+ 	empuje_timer = 0.0
+ 	empuje_x = 0.0
+ 	empuje_pendiente_timer = 0.0
+ 	empuje_pendiente_fuerza = 0.0
+-	if objetivo and is_instance_valid(objetivo):
+-		global_position.y = objetivo.global_position.y
++	global_position.y = SUELO_REFERENCIA_Y
+ 	if tween_victoria and is_instance_valid(tween_victoria):
+ 		tween_victoria.kill()
+ 	tween_victoria = null
+@@ -3090,9 +3102,13 @@
+ 		return textura_furia_bloqueo
+ 	return textura_bloqueo
+ 
+-# Decide qué textura "de fondo" mostrar cuando no hay un golpe/impacto
+-# puntual en curso. Prioridad: bloqueando > en el aire (salto/doble
+-# salto/descenso según corresponda) > caminando > parado.
++# Pose dedicada para la aceleración por doble toque.
++func _tex_carrera() -> Texture2D:
++	if en_fase_absoluta and textura_furia_carrera:
++		return textura_furia_carrera
++	return textura_carrera
++
++# Prioridad: bloqueo > aire > aceleración > caminata > parado.
+ func _tex_reposo() -> Texture2D:
+ 	if bloqueando:
+ 		var t_bloqueo := _tex_bloqueo()
+@@ -3106,6 +3122,10 @@
+ 			t_aire = _tex_descenso()
+ 		if t_aire:
+ 			return t_aire
++	if carrera_activa and is_on_floor() and not esta_derrotado:
++		var t_carrera := _tex_carrera()
++		if t_carrera:
++			return t_carrera
+ 	if is_on_floor() and absf(velocity.x) > 10.0 and not esta_derrotado:
+ 		var der := _tex_caminata_der()
+ 		if der:

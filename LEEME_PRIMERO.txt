@@ -1,0 +1,38 @@
+CORE AWAKENED — XENOID V3 (PRUEBA)
+===================================
+
+OBJETIVO DE ESTA VERSION
+- Probar Xenoid dentro del juego con las nuevas imágenes recibidas.
+- Mantener Varkhos visible pero BLOQUEADO en el selector.
+- No avanzar todavía con el escenario definitivo de Xenoid ni completar Varkhos.
+
+XENOID V3 INCLUYE
+- Selector nuevo 1280x720.
+- Xenoid seleccionable y disponible en Arcade.
+- Varkhos fuera del ROSTER y reservado como jefe final.
+- Caminata de 2 frames.
+- Bloqueo.
+- Carrera por doble toque.
+- Aceleración especial antes de cerrar distancia en el combo CORE.
+- Recarga de energía verde.
+- Combo CORE de 6 imágenes: 4 puños + 2 patadas.
+- Remate con pequeños Xenoid saliendo de la energía.
+- Gigantografía del tercer CORE / Absoluto.
+- La gigantografía se desplaza 105 px hacia ARRIBA respecto del anclaje normal,
+  para que aparezca claramente por encima/detrás del cuerpo de Xenoid.
+- Derribado, doble salto y descenso actualizados.
+
+COMO APLICAR
+1) Extrae esta carpeta dentro de la RAIZ de CORE AWAKENED (donde está project.godot).
+2) Ejecuta APLICAR_PATCH_XENOID_V3.bat.
+3) El instalador crea un backup automático de los scripts que modifica.
+4) Abre Godot y espera a que termine de importar los PNG.
+
+PRUEBA CORTA RECOMENDADA
+Selector -> elegir Xenoid -> VS -> pelea -> caminar -> doble toque -> bloqueo ->
+llenar CORE -> recarga -> combo -> llegar al tercer CORE -> comprobar remate y
+GIGANTOGRAFIA arriba de Xenoid -> resultado.
+
+NOTA
+Todavía no estamos fijando tamaños/timings finales. Esta V3 es para VERLO EN
+MOVIMIENTO y después ajustar escala, posición, hitboxes y duración si hace falta.

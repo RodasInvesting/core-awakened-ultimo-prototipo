@@ -1,0 +1,23 @@
+CORE AWAKENED 90.10.97 — CORE COMBO CAGE / RECEPTOR ANCLADO
+
+BASE:
+- Parte de 90.10.96.
+- Conserva el fix raíz 90.10.95 en perfect_block_90_1.gd.
+- Conserva la cámara dinámica restaurada en 90.10.96.
+- Conserva CORE II/III con doble pasada y cadencia rápida 0.58.
+
+CAMBIO 90.10.97:
+- Durante la ráfaga INTERMEDIA de CORE II y CORE III, el receptor queda anclado horizontalmente.
+- Los impactos siguen mostrando pose de golpe, hit-stop, partículas, audio y daño.
+- Se cancela el knockback intermedio y cualquier empuje pendiente del receptor.
+- El pushbox de la ráfaga ya no desplaza al defensor: cualquier corrección la absorbe el atacante.
+- El atacante se mantiene a la distancia adaptativa correcta para que los golpes encadenen sin perseguir al rival.
+- La doble pasada sigue siendo continua.
+- Al terminar la ráfaga se libera el anclaje ANTES del remate.
+- CORE II Rematador y CORE III Absoluto conservan su knockback/derribo fuerte completo.
+
+PRUEBA RECOMENDADA:
+1. Confirmar que el dash espejo sigue solucionado.
+2. Ejecutar CORE II en el centro del escenario: el rival debe permanecer prácticamente clavado durante la doble ráfaga.
+3. El Rematador final sí debe lanzar al rival.
+4. Ejecutar CORE III: mismo comportamiento en la ráfaga Furia y knockback fuerte sólo en Absoluto.

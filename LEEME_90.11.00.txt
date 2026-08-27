@@ -1,0 +1,31 @@
+CORE AWAKENED 90.11.00 — COREOGRAFÍA ADAPTATIVA + AETHEL AIR LOCK
+
+Base: 90.10.99.
+
+CAMBIOS
+1) COREOGRAFÍA 1.5 ADAPTATIVA
+- La primera pasada sigue usando TODOS los sprites disponibles exactamente una vez.
+- Repertorios menores a 15 ataques: remix 50% (sin cambios).
+- Repertorios de 15 o más ataques: remix 30%.
+- Helena normal: 15 + 5 = 20 impactos antes del remate (antes 23).
+- Xenoid normal: 16 + 5 = 21 impactos antes del remate (antes 24).
+- No cambia la velocidad continua de 90.10.98.
+- No cambia el Combo Cage/receptor anclado de 90.10.97.
+
+2) AETHEL — CORE DESDE EL AIRE
+- Se reemplaza su antiguo acercamiento sólo-X por Target Lock 2D (X+Y).
+- Conserva la pose aceleracion_combo.png.
+- Usa distancia adaptativa del Fighter moderno.
+- Al terminar el acercamiento cancela velocity completa para evitar deriva aérea.
+
+SE CONSERVA
+- Fix raíz de dash espejo 90.10.95.
+- Cámara dinámica.
+- Versus Local.
+- Perfect Block/Counter/Combo Cancel por input individual.
+- Magnus mantiene combo_auto_incluye_patada=false.
+
+PRUEBAS RECOMENDADAS
+A) Helena CORE 2 en centro del escenario: verificar 15 poses diferentes + remix corto + remate.
+B) Xenoid CORE 2: verificar duración algo menor sin perder repertorio.
+C) Aethel: saltar/doble saltar y activar CORE 2/3; debe buscar al rival también en Y y conectar la ráfaga.

@@ -1,0 +1,37 @@
+CORE AWAKENED - COMBAT FEEL V1
+===============================
+
+INSTALACION
+1) Cerra Godot.
+2) Hace una copia de seguridad de tu proyecto actual.
+3) Copia la carpeta "scripts" de este paquete dentro de la raiz del proyecto.
+4) Acepta reemplazar solamente: scripts/fighter.gd
+5) Abri el proyecto en Godot y proba una pelea.
+
+QUE CAMBIA ESTA VERSION
+- Hit-stop afinado para que puños, patadas y golpes fuertes tengan mas peso.
+- Knockback diferenciado: patadas empujan un poco mas; puños mantienen presion.
+- Flash visual muy breve al recibir impacto/bloqueo.
+- Carrera hacia el rival sigue usando doble toque.
+- NUEVO: doble toque ALEJANDOSE del rival ejecuta Back Dash.
+- Back Dash conserva la mirada hacia el rival y tiene una ventana MUY breve de evasion contra golpes normales.
+- Recuperacion corta al terminar el Back Dash para evitar spam.
+- Si el personaje dispone de sprite de carrera, puede aprovecharlo durante la carrera hacia delante.
+
+NO SE TOCA
+- Sprites/personajes.
+- CORE / sistema de cargas.
+- Gigantografias.
+- Remates/cinematicas.
+- Selector de personajes.
+- Assets de Jester o Xenoid.
+
+PRUEBA RECOMENDADA
+A) X varias veces: sentir el peso del puno.
+B) C varias veces: comparar patada y retroceso.
+C) Doble toque hacia el rival: carrera normal.
+D) Doble toque alejandose: Back Dash.
+E) Intentar esquivar un puno/patada normal justo al iniciar el Back Dash.
+F) Probar bloqueo, salto, CORE y remate para confirmar que siguen funcionando igual.
+
+Si el Back Dash queda demasiado rapido/lento o la invulnerabilidad demasiado permisiva, se ajusta con numeros sin cambiar sprites.

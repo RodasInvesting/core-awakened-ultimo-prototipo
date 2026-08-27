@@ -1,0 +1,27 @@
+CORE AWAKENED 90.10.45 — XENOID CONTENT FIX
+
+CAMBIOS:
+1. Golpes recibidos:
+   - 4 sprites espejados píxel por píxel.
+   - Xenoid ahora debe reaccionar visualmente hacia atrás al recibir impactos.
+2. Nuevo puño normal:
+   - Se agrega una quinta variante visual a la rotación normal de puños.
+3. Victoria:
+   - Nueva pose de victoria conectada explícitamente.
+4. Gigantografía:
+   - Nueva gigantografía conectada al Absoluto de Xenoid.
+
+SEGURIDAD:
+- No se sobrescriben los PNG anteriores de Xenoid.
+- Todos los assets nuevos usan nombres versionados 90_10_45.
+- El rollback restaura solamente scripts/xenoid.gd; los PNG nuevos pueden permanecer sin afectar el juego.
+
+ARCHIVOS MODIFICADOS/AGREGADOS:
+- scripts/xenoid.gd
+- assets/xenoid/gigantografia_90_10_45.png
+- assets/xenoid/victoria_90_10_45.png
+- assets/xenoid/punetazo_nuevo_90_10_45.png
+- assets/xenoid/golpe_recibido_espejo_1_90_10_45.png
+- assets/xenoid/golpe_recibido_espejo_2_90_10_45.png
+- assets/xenoid/golpe_recibido_espejo_3_90_10_45.png
+- assets/xenoid/golpe_recibido_espejo_4_90_10_45.png

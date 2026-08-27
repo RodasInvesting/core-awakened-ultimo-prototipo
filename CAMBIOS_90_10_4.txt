@@ -1,0 +1,88 @@
+--- fighter.gd 90.10.3
++++ fighter.gd 90.10.4
+@@ -1,5 +1,5 @@
+ class_name Fighter
+-# CORE AWAKENED 90.10.3 — distancia física + CORE knockback + piso final.
++# CORE AWAKENED 90.10.4 — hotfix vuelo Absoluto sin bloqueo.
+ extends CharacterBody2D
+ 
+ signal impacto(fuerza: float)
+@@ -1756,8 +1756,6 @@
+ 		ARENA_LIMITE_DERECHO - 26.0
+ 	)
+ 
+-	# Bloqueamos su input/física normal durante este único vuelo. El tween
+-	# controla la parábola y evita que otro timer o la gravedad la corte.
+ 	rival.bloqueo_cinematico = true
+ 	rival.congelado_por_rival = true
+ 	rival.velocity = Vector2.ZERO
+@@ -1774,24 +1772,28 @@
+ 	if tex_golpe:
+ 		rival._actualizar_textura(tex_golpe)
+ 
+-	# X recorre el escenario; Y sube y baja formando un arco.
+-	var tw_x := rival.create_tween()
+-	tw_x.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+-	tw_x.set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
+-	tw_x.tween_property(rival, "global_position:x", destino_x, 0.82)
+-
+-	var tw_y := rival.create_tween()
+-	tw_y.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+-	tw_y.tween_property(rival, "global_position:y", suelo_y - 185.0, 0.31).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+-	tw_y.tween_property(rival, "global_position:y", suelo_y, 0.51).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+-
+-	await tw_y.finished
+-	if is_instance_valid(tw_x):
+-		await tw_x.finished
++	# 90.10.4:
++	# UN SOLO tween controla toda la trayectoria. La versión anterior usaba
++	# dos tweens paralelos y podía empezar a esperar el segundo DESPUÉS de que
++	# su señal finished ya hubiera ocurrido, quedando colgado para siempre.
++	#
++	# Además ignora Engine.time_scale: el CORE 3 mantiene su cámara lenta,
++	# pero el rival completa el vuelo en ~0.82 s reales.
++	var tw_vuelo := rival.create_tween()
++	tw_vuelo.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
++	tw_vuelo.set_ignore_time_scale(true)
++	tw_vuelo.tween_method(
++		_actualizar_vuelo_absoluto.bind(rival, inicio_x, destino_x, suelo_y),
++		0.0,
++		1.0,
++		0.82
++	)
++	await tw_vuelo.finished
+ 
+ 	if not rival or not is_instance_valid(rival):
+ 		return
+ 
++	rival.global_position.x = destino_x
+ 	rival.global_position.y = suelo_y
+ 	rival.velocity = Vector2.ZERO
+ 	rival.derribo_especial_esperando_aterrizar = false
+@@ -1806,6 +1808,26 @@
+ 		rival._ajustar_derribado_al_piso()
+ 	rival._efecto_golpe_suelo(620.0)
+ 	rival.aterrizaje_hecho.emit(620.0, true)
++
++
++func _actualizar_vuelo_absoluto(
++	progreso: float,
++	rival: Fighter,
++	inicio_x: float,
++	destino_x: float,
++	suelo_y: float
++) -> void:
++	if not rival or not is_instance_valid(rival):
++		return
++
++	var t: float = clampf(progreso, 0.0, 1.0)
++	# Avance rápido al principio y desaceleración cerca del extremo.
++	var avance: float = 1.0 - pow(1.0 - t, 2.15)
++	rival.global_position.x = lerpf(inicio_x, destino_x, avance)
++
++	# Parábola real: 0 en ambos extremos, máxima altura en el centro.
++	var arco: float = sin(PI * t)
++	rival.global_position.y = suelo_y - arco * 185.0
+ 
+ 
+ func _ajustar_derribado_al_piso() -> void:

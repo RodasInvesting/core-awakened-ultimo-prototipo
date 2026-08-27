@@ -1,0 +1,26 @@
+CORE AWAKENED 90.10.44 — KAI + AETHEL BACKDASH HARD FIX
+
+CAUSA CORREGIDA:
+Kai y Aethel usan carpetas de rediseño final distintas a assets/kai y assets/aethel.
+Por eso los parches 90.10.42/43 colocaban la evasión en una carpeta que estos personajes no usan.
+
+CAMBIOS:
+- scripts/kai.gd: asigna explícitamente textura_evasion desde kai_redesign_final/evasion.png.
+- scripts/aethel.gd: asigna explícitamente textura_evasion desde aethel_redesign_final/evasion.png.
+- Ambos reutilizan la misma evasión durante Furia si se produce un backdash.
+- Se agregan los PNG a las carpetas correctas del rediseño.
+
+ARCHIVOS:
+- scripts/kai.gd
+- scripts/aethel.gd
+- assets/kai_redesign_final/evasion.png
+- assets/aethel_redesign_final/evasion.png
+
+NO MODIFICA:
+- fighter.gd
+- física del dash/backdash
+- cámara
+- hitboxes
+- IA
+- CORE
+- daño

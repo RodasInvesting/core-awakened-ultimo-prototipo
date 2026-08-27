@@ -1,0 +1,18 @@
+CORE AWAKENED 90.10.67 — MAGNUS COMBAT VARIETY PASS
+
+Cambios:
+- Se agregan 3 ataques normales nuevos a Magnus.
+- Se intercalan con el repertorio existente para evitar repeticiones visuales.
+- Se agregan 4 sprites nuevos Furia al final del repertorio del combo CORE III.
+- Se conserva la gigantografía CORE III actual.
+- No se toca Fighter, cámara, IA, audio ni otros personajes.
+
+Archivos:
+- scripts/magnus.gd
+- assets/magnus/punetazo_6_90_10_67.png
+- assets/magnus/punetazo_7_90_10_67.png
+- assets/magnus/patada_6_90_10_67.png
+- assets/magnus/furia_combo_7_90_10_67.png
+- assets/magnus/furia_combo_8_90_10_67.png
+- assets/magnus/furia_combo_9_90_10_67.png
+- assets/magnus/furia_combo_10_90_10_67.png

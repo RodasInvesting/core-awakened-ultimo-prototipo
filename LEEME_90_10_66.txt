@@ -1,0 +1,16 @@
+CORE AWAKENED 90.10.66 — AETHEL NORMAL COMBAT VARIETY PASS
+
+Contenido:
+- Se integran 3 imágenes nuevas de Aethel SOLO para modo normal.
+- Modo Furia no se toca.
+- Se añade 1 puño normal nuevo.
+- Se añaden 2 patadas normales nuevas.
+- Se actualiza scripts/aethel.gd para cargar e intercalar las nuevas poses.
+
+Archivos nuevos:
+- assets/aethel_redesign_final/punetazo_5_90_10_66.png
+- assets/aethel_redesign_final/patada_5_rodillazo_90_10_66.png
+- assets/aethel_redesign_final/patada_6_90_10_66.png
+
+Archivo modificado:
+- scripts/aethel.gd

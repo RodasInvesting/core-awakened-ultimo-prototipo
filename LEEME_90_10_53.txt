@@ -1,0 +1,10 @@
+CORE AWAKENED 90.10.53 — VS CLASH SCREEN
+
+Pantalla VS con gigantografias oficiales.
+- J1: imagen normal a la izquierda, poder hacia el centro.
+- Rival: flip horizontal automatico a la derecha, poder hacia el centro.
+- Choque luminoso + VS central.
+- Entrada lateral animada.
+- Varkhos conserva su poster anterior hasta su pase final.
+
+Copiar sobre la raiz del proyecto.

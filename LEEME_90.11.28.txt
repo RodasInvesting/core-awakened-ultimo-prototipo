@@ -1,0 +1,8 @@
+CORE AWAKENED 90.11.28
+
+FIX CRASH AL INICIAR PELEA CON JESTER
+- main.gd ya no llama de forma rígida configurar_lado_combate().
+- usa has_method/call y fallback seguro a indice_lado_combate.
+- Jester expone además configurar_lado_combate() explícitamente.
+- No se altera bloqueo, Guardia de Esquina, Fighter de combate, CORE, dash ni IA.
+- Conserva 90.11.27: selector calibrado + Guardia de Escape en Esquina.

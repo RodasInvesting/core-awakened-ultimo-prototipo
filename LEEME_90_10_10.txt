@@ -1,0 +1,47 @@
+CORE AWAKENED — ACTUALIZACION 90.10.10
+ESCENARIOS JESTER + XENOID / SELECTOR DE ESCENARIOS VERSUS
+
+INSTALACION
+1) Cerrar Godot.
+2) Hacer una copia de seguridad de la carpeta actual del proyecto.
+3) Extraer el contenido de este ZIP directamente dentro de la carpeta raiz:
+   core awakened ultimo prototipo
+4) Cuando Windows pregunte, elegir REEMPLAZAR los archivos existentes.
+5) Abrir project.godot y dejar que Godot importe los 2 fondos y las 2 pistas nuevas.
+
+CAMBIOS
+- Jester recibe arena propia: assets/fondos/jester.png
+- Xenoid recibe arena propia: assets/fondos/xenoid.png
+- Jester recibe musica propia: assets/sonidos/escenarios/jester.wav
+- Xenoid recibe musica propia: assets/sonidos/escenarios/xenoid.mp3
+- Versus/Batalla Rapida cambia a:
+  Seleccionar personaje -> Seleccionar escenario -> Presentacion VS -> Pelea
+- Arcade conserva el flujo automatico y asigna el escenario del rival.
+- Revancha en Versus conserva el escenario elegido.
+- Varkhos NO recibe escenario todavia y queda fuera del selector de arenas.
+- fighter.gd NO fue modificado.
+
+ESCENARIOS DEL SELECTOR
+1. Kai      — SANTUARIO VIOLETA
+2. Cibor-X  — NUCLEO CIBERNETICO
+3. Fang     — TEMPLO DEL TIGRE
+4. Kali     — COLMENA ESMERALDA
+5. Aethel   — ALTAR CELESTIAL
+6. Magnus   — FORJA TITANICA
+7. Helena   — JARDIN CARMESI
+8. Jester   — LABORATORIO DEL VACIO
+9. Xenoid   — NEXO XENOID
+
+ARCHIVOS DE CODIGO MODIFICADOS
+- project.godot
+- scripts/game_state.gd
+- scripts/selector_personajes.gd
+- scripts/main.gd
+
+ARCHIVOS NUEVOS
+- scripts/selector_escenarios.gd
+- scenes/SelectorEscenarios.tscn
+- assets/fondos/jester.png
+- assets/fondos/xenoid.png
+- assets/sonidos/escenarios/jester.wav
+- assets/sonidos/escenarios/xenoid.mp3

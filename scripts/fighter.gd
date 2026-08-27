@@ -1,43 +1,20 @@
 class_name Fighter
+# CORE AWAKENED 90.11.09 — AIR DASH AISLADO SOBRE 90.11.08.
+# Mantiene intacta la coreografía trifásica CORE II/III aprobada y suma un único
+# dash horizontal por permanencia en el aire mediante el mismo doble toque.
+# No altera Versus Local en suelo, Combo Cancel, IA, gravedad ni doble salto.
+# CORE AWAKENED 90.11.08 — CORE II/III TRIFÁSICO: PUÑOS → PATADAS → MIXTA → REMATE.
+# Cambia únicamente la coreografía automática de CORE II y CORE III.
+# Versus Local y Combo Cancel manual permanecen intactos.
+# CORE AWAKENED 90.11.06 — LOCK DE RECEPCIÓN COMBO CANCEL EXCLUSIVO CPU.
+# Versus Local queda intacto. Cuando un x2/x3 ya fue confirmado contra IA,
+# la CPU no puede insertar una nueva decisión de IA antes del siguiente impacto.
+# No acelera ataques, no aumenta hitstun y no cambia física global.
+# CORE AWAKENED 90.11.02 — CURVA DE CARGA CORE + REMIX DE PERSONAJE.
+# Conserva intacto el combate 90.10.76 y convierte la capa de control en un sistema
+# realmente reutilizable por J1, J2 local y futuro input externo/online. J2 puede usar
+# teclado independiente o mando asignado sin duplicar ninguna mecánica del Fighter.
 extends CharacterBody2D
-
-# --- Partículas GPU (compartidas por todos los personajes) ---
-# Godot no estaba usando GPUParticles2D en ningún lado -- todos los efectos
-# de impacto eran Polygon2D creados a mano con Tween. Esto agrega una
-# textura circular suave, generada una sola vez y cacheada, para usar con
-# GPUParticles2D reales: se renderizan en la GPU (mucho más livianas que
-# decenas de nodos Polygon2D) y permiten variación orgánica real de
-# velocidad/rotación/escala por partícula, algo que a mano es tedioso.
-static var _textura_particula_cache: ImageTexture = null
-
-static func _obtener_textura_particula() -> ImageTexture:
-	if _textura_particula_cache:
-		return _textura_particula_cache
-	var tam := 16
-	var img := Image.create(tam, tam, false, Image.FORMAT_RGBA8)
-	var centro := Vector2(tam / 2.0, tam / 2.0)
-	for y in range(tam):
-		for x in range(tam):
-			var d: float = Vector2(x + 0.5, y + 0.5).distance_to(centro) / (tam / 2.0)
-			var a: float = clampf(1.0 - d, 0.0, 1.0)
-			a = a * a
-			img.set_pixel(x, y, Color(1.0, 1.0, 1.0, a))
-	_textura_particula_cache = ImageTexture.create_from_image(img)
-	return _textura_particula_cache
-
-# FASE 97 — relieve 2D compartido. Un solo ShaderMaterial para todo el
-# roster (mismo shader, mismos parámetros): más liviano que crear una
-# instancia de material por luchador, y asegura que todos reaccionen
-# igual a la luz de escenario.
-static var _material_volumen_cache: ShaderMaterial = null
-
-static func _material_volumen_compartido() -> ShaderMaterial:
-	if _material_volumen_cache:
-		return _material_volumen_cache
-	var mat := ShaderMaterial.new()
-	mat.shader = load("res://shaders/volumen_personaje.gdshader")
-	_material_volumen_cache = mat
-	return _material_volumen_cache
 
 signal impacto(fuerza: float)
 # FASE 86 — audio/impacto premium. Se conservó `impacto` por compatibilidad,
@@ -69,9 +46,9 @@ const MULT_DANO_GLOBAL := 0.32
 # llenarse (peleas más largas hasta ver la Fase Absoluta).
 const MULT_PODER_GLOBAL := 0.55
 
-# FASE 90.2 — golpes con más presencia física: que ningún golpe deje al
-# rival "pegado" en el lugar, ni en combate normal ni durante el combo
-# automático del CORE. Sube el empuje base de TODOS los golpes del juego.
+# Empuje físico global. En 90.10.97 los golpes INTERMEDIOS de CORE II/III
+# conservan esta fuerza para reacción visual/sonora, pero el receptor no la
+# convierte en desplazamiento hasta el remate final.
 const MULT_EMPUJE_GLOBAL := 1.35
 
 # FASE 85 — CORE competitivo: todos los luchadores cargan a un ritmo más
@@ -80,6 +57,20 @@ const MULT_EMPUJE_GLOBAL := 1.35
 const CORE_GANANCIA_MIN := 5.8
 const CORE_GANANCIA_MAX := 7.2
 const CORE_BLOQUEO_MULT := 0.18
+# 90.11.01 — Rendimientos decrecientes de CORE dentro de una cadena normal.
+# El COMBO x2/x3 conserva daño y velocidad, pero no multiplica casi linealmente
+# la recarga. El primer impacto carga normal; los siguientes cargan menos.
+const CORE_COMBO_SEGUNDO_GOLPE_MULT := 0.45
+const CORE_COMBO_TERCER_MAS_MULT := 0.30
+# 90.11.02 — CURVA DE PROGRESIÓN CORE. La primera carga aparece pronto para
+# presentar la mecánica; la segunda exige más presión y la tercera debe sentirse
+# como un recurso final realmente conquistado. Se aplica a la ganancia por impacto
+# y convive con los rendimientos decrecientes de COMBO x2/x3.
+# 90.11.03 — misma progresión por niveles, pero un poco más accesible en pelea real contra IA.
+# CORE I sigue siendo el más frecuente; CORE III continúa siendo claramente el más costoso.
+const CORE_CARGA_NIVEL_1_MULT := 1.22
+const CORE_CARGA_NIVEL_2_MULT := 0.90
+const CORE_CARGA_NIVEL_3_MULT := 0.90
 
 # FASE 85 — cajas de contacto más cercanas al cuerpo que realmente se ve.
 # La colisión física sigue compacta para que los personajes no se empujen
@@ -88,14 +79,50 @@ const HURTBOX_ALTURA_VISIBLE_MULT := 0.60
 const HURTBOX_ANCHO_CUERPO_MULT := 1.18
 const COLISION_ALTURA_VISIBLE_MULT := 0.36
 
-# Cuánto dura el combo automático de puños/patadas que se dispara al entrar
-# en Fase Absoluta, antes del golpe rematador final.
-const DURACION_COMBO_AUTO := 2.0
-# Distancia objetivo para los combos automáticos: el atacante se acerca
-# físicamente antes de lanzar cada golpe para no perder la secuencia por
-# estar unos píxeles fuera de rango.
+# CORE HIERARCHY: los combos automáticos recorren el repertorio disponible
+# del modo correspondiente. Desde 90.10.96 ese repertorio se ejecuta en DOS
+# pasadas continuas para CORE II y CORE III. El sistema sigue aceptando más
+# sprites sin reescribir la arquitectura.
+# 90.10.96 — CORE II/III toman como referencia la cadencia del COMBO CANCEL
+# manual (COMBO x2): golpes muy seguidos, pero todavía legibles. El multiplicador
+# actúa sobre startup+activo; el recovery queda reducido a una transición mínima.
+# 90.10.98 — CORE II/III ya NO heredan la duración/cooldown propio de cada
+# puño o patada. Ese esquema hacía que una patada larga insertara una pausa
+# perceptible dentro de la secuencia (rápido-rápido-pausa). La ráfaga usa un
+# beat uniforme, inspirado en el COMBO x2 manual contra pared: cada sprite
+# conserva un contacto visible corto, pero todos entran con la misma cadencia.
+const MULT_VELOCIDAD_COMBO_CORE := 0.58 # compatibilidad fuera del timing fijo
+const STARTUP_COMBO_CORE_UNIFORME := 0.012
+const ACTIVO_COMBO_CORE_UNIFORME := 0.065
+const RECOVERY_COMBO_CORE_CONTINUO := 0.010
+const POLL_COMBO_CORE_CONTINUO := 0.004
+# 90.11.08 — la ejecución activa ya no usa el remix reducido de 90.10.99:
+# ahora CORE II/III hacen tres actos completos (puños, patadas, mezcla).
+# Conservamos estas constantes y el constructor anterior por compatibilidad
+# con scripts/personajes viejos; no gobiernan la racha trifásica actual.
+const FRACCION_REMIX_COMBO_CORE := 0.50
+const FRACCION_REMIX_COMBO_CORE_REPERTORIO_GRANDE := 0.30
+const UMBRAL_REPERTORIO_GRANDE_COMBO_CORE := 15
+# Distancia base para los combos automáticos. Desde 90.10.71 ya no es una
+# cifra rígida: el pushbox calcula una distancia corporal adaptativa por pareja
+# y usa esta base como piso. Así Aethel/Kali/Magnus no funden los torsos sin
+# convertir alas, pelo, colas o auras en una pared física.
 const DISTANCIA_COMBO_AUTO_OBJETIVO := 82.0
+const DISTANCIA_COMBO_AUTO_PUSH_MIN := 88.0
+const DISTANCIA_COMBO_AUTO_PUSH_MAX := 100.0
+# 90.10.46 — el combo CORE también debe alinearse verticalmente. Antes el
+# acercamiento sólo corregía X: si se activaba CORE II/III desde salto o
+# doble salto, el atacante quedaba arriba del rival y golpeaba al vacío.
+const DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO := 18.0
 const DISTANCIA_COMBO_AUTO_MAX := 250.0
+# Compatibilidad con los personajes actuales:
+# algunos (Magnus) pueden desactivar las patadas del combo automático.
+var combo_auto_incluye_patada := true
+# Compatibilidad heredada del remix 90.11.02. En 90.11.08 la segunda pasada ya
+# exhibe todas las patadas, por lo que estas preferencias quedan conservadas
+# para no romper scripts de personaje aunque la racha trifásica no las necesite.
+var combo_core_remix_prioriza_patadas := false
+var combo_core_remix_patadas_objetivo := 0
 # FASE 60 — asistencia de avance durante ataques normales. Da una pequeña
 # transferencia de peso automática hacia el rival para que los golpes no
 # parezcan "anclados" al piso cuando el jugador pulsa X/C cerca del objetivo.
@@ -106,11 +133,11 @@ const VELOCIDAD_LUNGE_PATADA := 104.0
 
 var rango_punetazo := 90.0
 var dano_punetazo := 8.0
-var cooldown_punetazo := 0.26
+var cooldown_punetazo := 0.30
 
 var rango_patada := 100.0
 var dano_patada := 13.0
-var cooldown_patada := 0.47
+var cooldown_patada := 0.55
 
 var ventana_combo := 1.1
 
@@ -152,11 +179,21 @@ var textura_victoria: Texture2D = null
 var texturas_caminata: Array[Texture2D] = []
 var textura_caminata_der: Texture2D = null
 var textura_caminata_izq: Texture2D = null
+# Compatibilidad con Xenoid V3: conserva su asset de carrera sin activar
+# ninguna lógica nueva de escalado o Combat Feel.
+var textura_carrera: Texture2D = null
+# 90.10.41 — Backdash visual independiente. El dash hacia adelante usa
+# textura_carrera; la evasión hacia atrás puede usar su PNG propio sin
+# cambiar velocidad, distancia, hitboxes ni lógica física del dash.
+var textura_evasion: Texture2D = null
+var textura_furia_evasion: Texture2D = null
+# Si un personaje todavía no tiene PNG dedicado de dash, puede pedir una
+# inclinación procedural más marcada sobre su pose de fallback.
+var dash_visual_fallback_reforzado: bool = false
 var textura_salto: Texture2D = null
 var textura_doble_salto: Texture2D = null
 var textura_descenso: Texture2D = null
 var textura_bloqueo: Texture2D = null
-var textura_carrera: Texture2D = null
 
 # --- Golpes extra (opcional). Si un personaje carga más de un puñetazo o
 #     patada acá, el botón va a ir alternando entre todos en vez de
@@ -179,11 +216,12 @@ var texturas_furia_patada_extra: Array[Texture2D] = []
 var texturas_furia_caminata: Array[Texture2D] = []
 var textura_furia_caminata_der: Texture2D = null
 var textura_furia_caminata_izq: Texture2D = null
+# Compatibilidad con Xenoid V3.
+var textura_furia_carrera: Texture2D = null
 var textura_furia_salto: Texture2D = null
 var textura_furia_doble_salto: Texture2D = null
 var textura_furia_descenso: Texture2D = null
 var textura_furia_bloqueo: Texture2D = null
-var textura_furia_carrera: Texture2D = null
 
 var escala_sprite := 1.0
 
@@ -199,17 +237,34 @@ const ALTURA_VISIBLE_NORMAL_GLOBAL := 255.0
 # Calibración visual por personaje. No cambia la colisión ni el peso: corrige
 # únicamente diferencias de lienzo/efectos incluidos dentro de los PNG base
 # para que todos se vean con la misma altura corporal en estado normal.
+# 90.10.26 — ajustes cinematográficos por personaje. Solo afectan el arte
+# grande de Especial/Remate/Absoluto; NO cambian hitboxes, daño ni cuerpo.
+# Jester y Kali tienen ilustraciones/VFX más expansivos, por eso se les da
+# un encuadre ligeramente más contenido para que el rival siga leyéndose.
+const PODER_CINEMA_ALTURA_MULT := {
+	"Jester": 0.90,
+	"Kali": 0.92,
+}
+const PODER_CINEMA_ALPHA_MULT := {
+	"Jester": 0.88,
+	"Kali": 0.90,
+}
+const PODER_CINEMA_VFX_MULT := {
+	"Jester": 0.72,
+	"Kali": 0.76,
+}
+
 const ALTURA_AJUSTES_VISUALES := {
 	"Kai": 1.00,
 	"Cibor-X": 1.00,
 	"Fang": 1.00,
 	"Kali": 1.00,
 	"Aethel": 1.00,
-	# FASE 92.1: pedido explícito de que el golem se vea un poco más grande.
+	# Magnus debe verse un poco más grande.
 	"Magnus": 1.15,
 	"Helena": 1.00,
 	"Jester": 1.00,
-	# Jefe final de Arcade: visiblemente más grande que el resto del roster.
+	# Varkhos, jefe final: más grande que el roster normal.
 	"Varkhos": 1.35,
 }
 
@@ -246,6 +301,7 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/aethel/punetazo.png": 0.471322,
 	"res://assets/aethel/rematador.png": 0.195418,
 	"res://assets/aethel/salto.png": 1.060785,
+
 	"res://assets/cibor-x/absoluto.png": 0.203433,
 	"res://assets/cibor-x/bloqueo.png": 0.653844,
 	"res://assets/cibor-x/caminata_1.png": 0.213046,
@@ -285,6 +341,7 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/cibor-x/rematador.png": 0.201645,
 	"res://assets/cibor-x/salto.png": 0.215290,
 	"res://assets/cibor-x/victoria.png": 0.200834,
+
 	"res://assets/fang/absoluto.png": 0.202254,
 	"res://assets/fang/bloqueo.png": 0.203449,
 	"res://assets/fang/caminata_1.png": 0.206396,
@@ -322,6 +379,7 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/fang/rematador.png": 0.202276,
 	"res://assets/fang/salto.png": 0.203823,
 	"res://assets/fang/victoria.png": 0.202271,
+
 	"res://assets/helena/absoluto.png": 0.201952,
 	"res://assets/helena/bloqueo.png": 0.202906,
 	"res://assets/helena/derribado.png": 0.203800,
@@ -358,10 +416,7 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/helena/recarga.png": 0.202087,
 	"res://assets/helena/salto.png": 0.203403,
 	"res://assets/helena/victoria.png": 0.205342,
-	# FASE 92.2: calibrado a mano para que el combo de poder de Jester tenga
-	# presencia real (mismo criterio que Magnus: +18% sobre el cálculo
-	# automático, porque el aura de energía infla el rectángulo visible más
-	# que en una pose parada común).
+
 	"res://assets/jester/absoluto.png": 0.236541,
 	"res://assets/jester/especial.png": 0.238838,
 	"res://assets/jester/furia_parado.png": 0.237490,
@@ -373,6 +428,7 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/jester/furia_punetazo_5.png": 0.239130,
 	"res://assets/jester/recarga.png": 0.237490,
 	"res://assets/jester/rematador.png": 0.236541,
+
 	"res://assets/kai/absoluto.png": 0.196786,
 	"res://assets/kai/bloqueo.png": 0.460016,
 	"res://assets/kai/caminata_1.png": 0.588085,
@@ -412,10 +468,13 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/kai/salto.png": 0.463023,
 	"res://assets/kai/doble_salto.png": 0.434927,
 	"res://assets/kai/victoria.png": 0.306652,
+
+	# Kali: las poses normales actuales se normalizan dinámicamente.
 	"res://assets/kali/absoluto.png": 0.152102,
 	"res://assets/kali/especial.png": 0.190687,
 	"res://assets/kali/furia_derribado.png": 0.844056,
 	"res://assets/kali/furia_golpe_recibido.png": 0.840183,
+
 	"res://assets/magnus/absoluto.png": 0.174706,
 	"res://assets/magnus/especial.png": 0.272933,
 	"res://assets/magnus/furia_derribado.png": 0.845040,
@@ -446,9 +505,85 @@ var vida := 220.0
 # se queda trabado en la última pose para siempre.
 var esta_derrotado := false
 var objetivo: Fighter
-# Control humano del luchador actual. Cuando es false usa la IA del personaje.
+# 90.10.82 — PUSHBOX ÚNICO. Entre Fighter y Fighter ya no usamos la
+# respuesta física automática de CharacterBody2D; suelo/paredes siguen
+# colisionando normalmente. El contacto horizontal entre luchadores lo
+# resuelve exclusivamente _aplicar_separacion_fisica(), evitando que el
+# orden J1->J2 de move_and_slide produzca desplazamientos asimétricos.
+var _objetivo_pushbox_manual_id: int = 0
+# 90.10.84 — cada pareja Fighter se resuelve una sola vez por frame físico.
+# Main asigna 0 a J1/lado izquierdo y 1 a J2/rival. Esto evita depender del
+# orden interno de _physics_process y deja una autoridad estable para rollback.
+var indice_lado_combate: int = -1
+# 90.10.76 — fuente de control. `controlado_por_jugador` se conserva por
+# compatibilidad con escenas/scripts existentes, pero el Fighter ya puede recibir
+# input local o un frame externo (futuro J2 / rollback / red) sin leer Input ahí.
+enum FuenteControl { IA, LOCAL, EXTERNA }
+var fuente_control: int = FuenteControl.IA
 var controlado_por_jugador := false
+var jugador_local_indice := 0
+var gamepad_asignado_id := -1
+# 90.10.79 — aislamiento real de dispositivos. Un Fighter con mando asignado
+# puede dejar de escuchar teclado; esto evita que J1/J2 compartan una segunda
+# fuente de input en Versus Local. Fuera de Versus se conserva compatibilidad.
+var teclado_local_habilitado := true
+var input_frame_externo: Dictionary = {}
+var input_externo_disponible := false
+# 90.10.93 — último frame ya enrutado por Main. En Versus Local el Fighter
+# jamás consulta Input directamente; este cache también alimenta el footwork
+# durante ataques para que no exista una segunda ruta de teclado/mando.
+var input_frame_enrutado_actual: Dictionary = {
+	"izquierda": false,
+	"derecha": false,
+	"salto": false,
+	"bloqueo": false,
+	"puno": false,
+	"patada": false,
+	"especial": false,
+}
+# 90.10.85 — DIAGNÓSTICO J2. No modifica gameplay: expone el input crudo y
+# el desplazamiento real para distinguir mando/Steam Input de cualquier movimiento físico.
+var debug_input_izquierda: bool = false
+var debug_input_derecha: bool = false
+var debug_gamepad_axis_x: float = 0.0
+var debug_gamepad_dpad_izq: bool = false
+var debug_gamepad_dpad_der: bool = false
+var debug_delta_x_frame: float = 0.0
+var debug_x_inicio_frame: float = 0.0
+# 90.10.88 — anclaje neutral durante DASH en Versus Local.
+# Protege al defensor en el mismo frame donde nace el segundo toque.
+var dash_iniciado_este_frame: bool = false
+var ultima_intencion_horizontal: float = 0.0
 var z_estaba_presionado: bool = false
+var salto_estaba_presionado: bool = false
+# 90.10.94 — BUFFER DE ATAQUE HUMANO.
+# Un tap breve del mando durante RECOVERY no puede desaparecer antes de que el
+# Fighter vuelva a FaseAtaque.NINGUNA. Conservamos la última pulsación de
+# puño/patada durante una ventana corta; teclado y mando quedan equivalentes.
+const ATAQUE_BUFFER_DURACION := 0.24
+var puno_estaba_presionado: bool = false
+var patada_estaba_presionada: bool = false
+var ataque_buffer_tipo: String = ""
+var ataque_buffer_timer: float = 0.0
+# 90.10.30 — GAMEPAD FOUNDATION. El jugador sigue pudiendo usar teclado,
+# pero ahora el primer mando conectado se suma en paralelo. Se usan índices
+# estándar SDL/Godot: A=0, B=1, X=2, Y=3, RB=10, D-Pad 11..14.
+const PAD_A := 0
+const PAD_B := 1
+const PAD_X := 2
+const PAD_Y := 3
+const PAD_RB := 10
+const PAD_DPAD_UP := 11
+const PAD_DPAD_DOWN := 12
+const PAD_DPAD_LEFT := 13
+const PAD_DPAD_RIGHT := 14
+const PAD_AXIS_LEFT_X := 0
+const PAD_AXIS_LEFT_Y := 1
+const PAD_AXIS_LT := 4
+const PAD_AXIS_RT := 5
+const PAD_DEADZONE_MOV := 0.45
+const PAD_DEADZONE_VERTICAL := 0.64
+var gamepad_salto_previo: bool = false
 var mirando := 1.0
 
 var combo_count := 0
@@ -460,12 +595,6 @@ var flash_timer := 0.0
 var pose_timer := 0.0
 var en_pose_recarga := false
 var en_combo_auto_visual := false
-# FASE 92.1: por defecto el combo automático alterna golpe/patada. Poner
-# esto en false hace que el combo use SOLO puñetazos -- pensado para
-# personajes que todavía no tienen arte furia_patada a la altura de su
-# arte furia_punetazo (para no mezclar una patada de la camada vieja en
-# medio de un combo con puños ya rediseñados).
-var combo_auto_incluye_patada := true
 var empuje_x := 0.0
 var empuje_timer := 0.0
 # FASE 79 — remates con vuelo hacia atrás + caída al piso.
@@ -502,6 +631,9 @@ var _atk_dur_recovery := 0.0
 # Es lo que antes faltaba: antes el daño se aplicaba y el personaje
 # seguía caminando como si nada al toque.
 var hitstun_timer := 0.0
+# Cooldown independiente de la guardia normal. Sólo se usa para reingresar en
+# bloqueo desde hitstun cuando el jugador está atrapado contra una pared.
+var guardia_escape_esquina_cooldown: float = 0.0
 var hitstop_timer := 0.0
 
 # "Peso" del golpe de este personaje: multiplica el empuje y el hit-stun
@@ -520,16 +652,77 @@ var friccion_suelo := 2800.0
 var friccion_aire := 1100.0
 var _delta_actual := 0.0166
 var _rect_visual_cache: Dictionary = {}
-const DISTANCIA_MINIMA_LUCHADORES := 46.0
-const ARENA_LIMITE_IZQUIERDO := 58.0
-const ARENA_LIMITE_DERECHO := 1222.0
+# FASE 90.10 — separación física más legible.
+# Los cuerpos nunca deben fundirse visualmente cuando están cuerpo a cuerpo.
+const DISTANCIA_MINIMA_LUCHADORES := 62.0
+# 90.10.80 — PUSHBOX NEUTRAL ANCLADO. Si un solo luchador camina contra
+# un rival quieto, el que avanza absorbe la corrección y se frena en el borde
+# corporal. El rival quieto ya no es arrastrado hacia atrás frame a frame.
+const VELOCIDAD_NEUTRAL_EMPUJE_UMBRAL := 18.0
+# 90.10.86 — TOPE DURO DEL PUSHBOX NEUTRAL. El volumen visual de una pose
+# horizontal (dash, alas, pelo largo) puede ser enorme, pero NO representa el
+# torso físico. En neutral ningún PNG puede declarar contacto corporal a más
+# distancia que esta cifra. Golpes/CORE conservan sus reglas específicas.
+const PUSHBOX_NEUTRAL_DISTANCIA_MAX := 118.0
+# 90.10.14 — zona de combate segura. Los límites anteriores (58..1222)
+# permitían que el origen físico siguiera dentro aunque media silueta ya estuviera
+# fuera de la plataforma visible. Dejamos un margen real a ambos lados.
+const ARENA_LIMITE_IZQUIERDO := 110.0
+const ARENA_LIMITE_DERECHO := 1170.0
+
+# 90.11.27 — GUARDIA DE ESCAPE EN ESQUINA (Versus Local).
+# Evita el corner-lock infinito sin regalar un ataque durante hitstun. Si un
+# jugador está realmente acorralado y mantiene BLOQUEO tras recibir un golpe,
+# el siguiente golpe normal puede entrar como bloqueo y cortar el Combo Cancel.
+const GUARDIA_ESCAPE_ESQUINA_MARGEN := 72.0
+const GUARDIA_ESCAPE_ESQUINA_COOLDOWN := 0.85
+const GUARDIA_ESCAPE_ESQUINA_DURACION := 0.24
 const FUERZA_REBOTE_MURO_ESPECIAL := 0.42
-# FASE 78: al impactar, los cuerpos no deben sentirse como dos papeles
-# superpuestos. Estas distancias extra fuerzan mejor lectura del contacto.
-const DISTANCIA_MINIMA_CONTACTO := 58.0
-const DISTANCIA_MINIMA_CONTACTO_BLOQUEO := 62.0
-const DISTANCIA_MINIMA_CONTACTO_PESADO := 66.0
+const DISTANCIA_MINIMA_CONTACTO := 82.0
+const DISTANCIA_MINIMA_CONTACTO_BLOQUEO := 88.0
+const DISTANCIA_MINIMA_CONTACTO_PESADO := 96.0
+# 90.10.7: además de la colisión física compacta, usamos el ancho REAL visible
+# del PNG para impedir que dos siluetas se metan una dentro de la otra.
+const MARGEN_SEPARACION_VISUAL := 14.0
+# 90.10.16 — después de un impacto real mantenemos durante unas centésimas
+# una distancia corporal limpia. No afecta el acercamiento ANTES del golpe,
+# por lo que conserva el arreglo de patadas de 90.10.12.
+const CONTACTO_POST_GOLPE_MIN := 92.0
+const CONTACTO_POST_GOLPE_MAX := 118.0
+const CONTACTO_POST_GOLPE_DUR_PUNO := 0.095
+const CONTACTO_POST_GOLPE_DUR_PATADA := 0.125
+# 90.10.74 — MICROESPACIOS DE COMBATE. No bajan la velocidad ni cambian el
+# alcance: actúan únicamente DESPUÉS de un impacto limpio y suficientemente
+# fuerte. La patada abre más neutral que el puño; CORE automático y bloqueos
+# quedan excluidos para no romper combos ni el rebote defensivo ya validado.
+const MICROESPACIO_UMBRAL_FUERZA := 185.0
+const MICROESPACIO_PUNO_EXTRA_MIN := 2.0
+const MICROESPACIO_PUNO_EXTRA_MAX := 5.0
+const MICROESPACIO_PATADA_EXTRA_MIN := 5.0
+const MICROESPACIO_PATADA_EXTRA_MAX := 11.0
+const MICROESPACIO_DISTANCIA_MAX := 130.0
+const MICROESPACIO_DUR_PUNO_MAX := 0.040
+const MICROESPACIO_DUR_PATADA_MAX := 0.065
+# 90.10.72 — PUSHBOX 2.1: la pose de ataque puede proyectar el torso varios
+# píxeles por delante del origen físico. Este margen se suma SOLO después de
+# que el golpe ya conectó; nunca actúa antes del hitbox y por eso no acorta
+# ni rompe el alcance real del puño/patada.
+const PUSH_POSE_CONTACTO_PUNO := 4.0
+const PUSH_POSE_CONTACTO_PATADA := 6.0
+const PUSH_POSE_CONTACTO_TRADE := 2.0
+const PUSH_POSE_CONTACTO_MAX := 8.0
+# 90.10.17 — colchón corporal ANTES del impacto. La vieja cifra fija de 72 px
+# servía para no romper las patadas, pero era demasiado compacta para Magnus,
+# Jester y combinaciones con torsos anchos. Ahora el mínimo se adapta al torso
+# lógico/masa, ignorando el ancho completo de alas, pelo, colas y auras.
+const PRECONTACTO_MIN := 78.0
+const PRECONTACTO_MAX := 94.0
+const PRECONTACTO_DOBLE_ATAQUE_MAX := 88.0
+const MARGEN_KO_VISUAL := 24.0
+const REBOTE_KO_EXTRA := 18.0
 const Z_BASE_Y_DIVISOR := 12.0
+var contacto_post_golpe_timer: float = 0.0
+var contacto_post_golpe_distancia: float = 0.0
 var ciclo_caminata := 0.0
 var ciclo_reposo := 0.0
 var indice_caminata := 0
@@ -556,29 +749,16 @@ var parpadeo_bloqueado: bool = false
 # FASE 56 — lectura física del CORE sin cambiar la escala del luchador.
 var aura_core: Polygon2D
 var fase_expresion: float = 0.0
-# FASE 90.5: recalibrado desde cero. Los valores viejos eran de una versión
-# anterior del arte de cada personaje (antes de varios rediseños) y ya no
-# correspondían a los ojos reales de los parado.png actuales -- por eso el
-# parpadeo aparecía "flotando" arriba del personaje, sin sentido.
-# Formato Vector4(x, y, separación, ancho) = posición del CENTRO entre los
-# dos ojos respecto del centro geométrico del PNG (x, y), medio de la
-# distancia entre ojos (separación) y ancho aproximado de cada ojo, TODO
-# en píxeles crudos de ese PNG (se reescala solo, según el zoom del sprite).
-# Medido a mano sobre el parado.png actual de cada uno.
-#
-# Solo entran acá los personajes con dos ojos simétricos y bien visibles de
-# frente. El resto del roster tiene diseños donde un parpadeo genérico no
-# tiene dónde ir: Fang y Aethel muestran un solo ojo (perfil/rostro girado),
-# Cibor-X tiene un único lente robótico, Kali tiene un ojo compuesto grande
-# y otro chico muy asimétricos, Magnus es un único cristal brillante sin
-# ojos pareados, y Varkhos tiene ojos-vacío sin párpado (más un tercer ojo
-# aparte). Para esos, es mejor no mostrar nada que inventar una posición
-# que no calce -- si en algún momento cambian de pose a una más de frente,
-# se puede calibrar igual que estos tres.
 const DATOS_CARA := {
-	"Kai": Vector4(83.5, -175.5, 45.0, 32.0),
-	"Helena": Vector4(108.0, -304.5, 70.0, 51.0),
-	"Jester": Vector4(58.0, -164.5, 70.0, 42.0),
+	# y/x = posición local aproximada de los ojos respecto del centro
+	# del PNG. Calibración directa sobre los parado.png actuales.
+	"Kai": Vector4(-4.5, -56.0, 14.0, 9.0),
+	"Cibor-X": Vector4(30.0, -53.0, 30.0, 10.0),
+	"Fang": Vector4(35.0, -72.0, 20.0, 9.5),
+	"Kali": Vector4(5.0, -79.0, 17.0, 9.0),
+	"Aethel": Vector4(32.0, -62.0, 14.0, 9.5),
+	"Magnus": Vector4(12.0, -54.0, 19.0, 9.5),
+	"Helena": Vector4(16.0, -74.0, 12.0, 9.0),
 }
 var en_el_aire := false
 var saltos_maximos := 2
@@ -594,28 +774,55 @@ var tween_victoria: Tween
 # dura esa cinemática -- si no, se lo podía seguir caminando mientras el
 # otro tiraba su especial, y no se sentía como estar recibiendo un golpe.
 var congelado_por_rival := false
-# Red de seguridad: por si alguna secuencia queda trabada por algún
-# motivo que no contemplamos, este reloj la corta sola. Ninguna
-# secuencia real (especial simple, remate, o absoluto) tarda más de
-# ~8 segundos, así que 10 da margen de sobra sin arriesgar cortar una
-# secuencia legítima.
+# Red de seguridad: por si alguna secuencia queda trabada por algún motivo.
+# Desde 90.10.39 los combos recorren todas las variantes disponibles; damos
+# margen suficiente para futuros combos Furia de 10 golpes sin que el reloj
+# de seguridad corte una secuencia legítima.
 var reloj_seguridad_secuencia := 0.0
-const TIEMPO_MAXIMO_SECUENCIA := 10.0
-# Cuenta cuántas veces este personaje llenó la barra en TODA la pelea
-# (persiste entre rondas, se resetea solo al empezar una partida nueva).
-# 1ra vez: nada más el especial cargado. 2da vez: especial + combo +
-# remate normal. 3ra vez en adelante: especial + combo x2 + remate
-# ABSOLUTO (el póster), que termina la partida entera ahí mismo.
+const TIEMPO_MAXIMO_SECUENCIA := 18.0
+# Cuenta cuántas veces este personaje llenó la barra en TODA la pelea.
+# CORE I: especial + gigantografía normal.
+# CORE II: combo completo en modo normal, sin Furia ni gigantografía.
+# CORE III: Furia + combo completo Furia + Absoluto/gigantografía final.
 var veces_fase_absoluta := 0
 var bloqueando := false
 var bloqueo_timer := 0.0
 
 # --- Personalidad de IA (cada personaje puede pisar estos valores) ---
+# 90.10.76 — la IA aprobada en 90.10.75 pasa a ser el perfil FÁCIL. Medio y
+# Difícil mejoran tiempo de decisión/defensa/entrada, pero nunca reciben daño,
+# velocidad, alcance ni lectura de inputs privilegiados.
+enum DificultadIA { FACIL, MEDIA, DIFICIL }
+var dificultad_ia: int = DificultadIA.FACIL
 var ia_prob_patada := 0.35
 var ia_prob_bloqueo := 0.20
 var ia_prob_retroceso := 0.15
+# 90.10.25 — IA DE COMBATE DINÁMICA.
+# La IA comparte ahora el lenguaje de movilidad del jugador: puede entrar con
+# dash, retroceder, saltar, usar doble salto/cruce y atacar desde el aire.
+# Estas probabilidades son deliberadamente moderadas: buscamos actividad y
+# variedad, no lectura perfecta de inputs ni una CPU injusta.
+var ia_prob_salto := 0.18
+var ia_prob_doble_salto := 0.58
+var ia_prob_dash_adelante := 0.34
+var ia_prob_dash_atras := 0.10
+var ia_prob_ataque_aereo := 0.58
 var ia_cooldown_decision := 0.0
 var ia_retrocediendo := false
+# 90.10.75 — cuando es true la CPU sostiene brevemente una distancia de lectura
+# en vez de perseguir al rival frame a frame. Se decide de nuevo al vencer el
+# cooldown; no es una pausa fija ni modifica la velocidad del personaje.
+var ia_mantener_distancia := false
+# 90.11.06 — lock EXCLUSIVO de CPU durante un Combo Cancel ya confirmado.
+# Nunca se activa para J1/J2 local. No es hitstun: solamente impide que la
+# rutina de IA inserte guardia, retroceso, dash o una nueva decisión antes
+# del siguiente impacto que el jugador ya ganó con su input.
+var ia_combo_cancel_lock_timer: float = 0.0
+var ia_dash_cooldown := 0.0
+var ia_doble_salto_pendiente := false
+var ia_doble_salto_timer := 0.0
+var ia_ataque_aereo_pendiente := false
+var ia_ataque_aereo_timer := 0.0
 
 var visual: Polygon2D
 var sprite: Sprite2D
@@ -644,11 +851,29 @@ var anticipacion_ataque_x: float = 0.0
 var capa_estela: Node2D
 var estela_timer: float = 0.0
 var ultima_direccion_movimiento: float = 0.0
-# FASE 62 — carrera por doble pulsación de dirección. La segunda pulsación
-# dentro de una ventana corta activa una carrera breve mientras la tecla se
-# mantenga presionada. No modifica la escala física ni atraviesa al rival.
+# 90.10.23 — DASH DE COMBATE por doble pulsación. La segunda pulsación ya
+# no activa una carrera sostenida/derrape: dispara un impulso corto y limpio
+# en la dirección pulsada. El luchador SIEMPRE conserva la mirada hacia el
+# rival, así el mismo sistema sirve como dash ofensivo (hacia delante) y
+# evasión rápida (hacia atrás).
 const VENTANA_DOBLE_PULSO_CARRERA := 0.28
-const MULT_CARRERA := 1.65
+const MULT_CARRERA := 2.05
+const DASH_DURACION := 0.17
+const DASH_FRENO := 0.10
+# 90.11.09 — AIR DASH. Reutiliza exactamente la velocidad y duración del dash
+# terrestre, pero sólo aplica el impulso X: la velocidad Y/gravedad siguen su
+# curso normal. Se permite UNA vez por permanencia en el aire y se recarga al
+# aterrizar. El doble salto no se consume ni se reinicia por usarlo.
+const MULT_DASH_AEREO := MULT_CARRERA
+const DASH_AEREO_DURACION := DASH_DURACION
+var dash_aereo_activo: bool = false
+var dash_aereo_direccion: float = 0.0
+var dash_aereo_timer: float = 0.0
+var dash_aereo_usado: bool = false
+# 90.10.24 — el segundo salto gana altura real para que el cruce aéreo
+# pase limpiamente por encima del rival incluso si éste entra con dash.
+# El primer salto conserva exactamente el peso/altura anterior.
+const MULT_DOBLE_SALTO_ALTURA := 1.40
 var doble_pulso_izq_timer: float = 0.0
 var doble_pulso_der_timer: float = 0.0
 var tecla_izq_previa: bool = false
@@ -658,10 +883,32 @@ var carrera_direccion: float = 0.0
 var carrera_inicio_timer: float = 0.0
 var carrera_frenado_timer: float = 0.0
 var carrera_humo_timer: float = 0.0
-const CARRERA_IMPULSO_INICIAL := 55.0
-const CARRERA_POLVO_INTERVALO := 0.12
+const CARRERA_IMPULSO_INICIAL := 220.0
+const CARRERA_POLVO_INTERVALO := 0.08
+
+# 90.10.23 — cruce aéreo. El SEGUNDO salto puede pasar por encima del rival;
+# mientras dura el cruce se ignora únicamente la colisión Fighter↔Fighter.
+# El suelo y los límites de arena siguen funcionando normalmente.
+var cruce_aereo_activo: bool = false
 var asentamiento_aterrizaje: float = 0.0
 const SUELO_REFERENCIA_Y := 560.0
+# Ajuste visual global de la línea de combate. La física del escenario sigue
+# en Y=560, pero sprites, sombras y cajas de golpe se presentan más abajo.
+const OFFSET_VISUAL_LINEA_COMBATE_Y := 28.0
+# Ajuste adicional exclusivo de la pose horizontal de K.O.
+const OFFSET_DERRIBADO_FINAL_Y := 22.0
+# 90.10.70 — apoyo visual dinámico del K.O. horizontal. Algunos PNG de
+# derribado (pelo, alas, aura, extremidades) tienen alfa por debajo del torso
+# y el used_rect deja al cuerpo principal visualmente suspendido aunque el
+# CharacterBody ya esté exactamente en Y=560. Este extra pequeño se calcula
+# por el alto visible de la pose y sólo se aplica al K.O. definitivo.
+const OFFSET_DERRIBADO_DINAMICO_MAX := 18.0
+const DISTANCIA_FINAL_GANADOR_DERRIBADO := 190.0
+# 90.10.72 — presentación final: una vez cargada la pose de victoria, el
+# ganador mantiene aire suficiente respecto al cuerpo horizontal del perdedor.
+# Se calcula además con los radios visuales reales, así no depende de un PNG.
+const DISTANCIA_VICTORIA_GANADOR_DERRIBADO := 220.0
+const MARGEN_VICTORIA_KO_VISUAL := 34.0
 
 func _ready() -> void:
 	# FASE 85: si más adelante se agrega assets/<personaje>/victoria.png, se
@@ -671,6 +918,33 @@ func _ready() -> void:
 		var ruta_victoria: String = textura_parado.resource_path.get_base_dir() + "/victoria.png"
 		if ResourceLoader.exists(ruta_victoria):
 			textura_victoria = load(ruta_victoria)
+
+	# 90.10.41 — recuperar automáticamente el sprite dedicado de EVASIÓN /
+	# backdash que ya exista en la carpeta de cada peleador. Se aceptan varios
+	# nombres habituales para no obligar a renombrar assets anteriores.
+	if textura_parado:
+		var base_assets: String = textura_parado.resource_path.get_base_dir()
+		if not textura_evasion:
+			var candidatos_evasion: Array[String] = [
+				"evasion.png", "evasión.png", "backdash.png", "dash_atras.png",
+				"dash_atrás.png", "retroceso.png", "aceleracion_atras.png",
+				"aceleracion_atrás.png", "evasiva.png", "esquiva.png"
+			]
+			for nombre_asset in candidatos_evasion:
+				var ruta_evasion: String = base_assets + "/" + nombre_asset
+				if ResourceLoader.exists(ruta_evasion):
+					textura_evasion = load(ruta_evasion)
+					break
+		if not textura_furia_evasion:
+			var candidatos_furia_evasion: Array[String] = [
+				"furia_evasion.png", "furia_evasión.png", "evasion_furia.png",
+				"furia_backdash.png", "furia_dash_atras.png", "furia_dash_atrás.png"
+			]
+			for nombre_asset_furia in candidatos_furia_evasion:
+				var ruta_furia_evasion: String = base_assets + "/" + nombre_asset_furia
+				if ResourceLoader.exists(ruta_furia_evasion):
+					textura_furia_evasion = load(ruta_furia_evasion)
+					break
 
 	# Los luchadores son cuerpos físicos entre sí: evita que se atraviesen
 	# durante el roce normal y mantiene una separación mínima natural.
@@ -688,14 +962,6 @@ func _ready() -> void:
 	if textura_parado:
 		sprite = Sprite2D.new()
 		sprite.centered = true
-		# .duplicate(): cada luchador necesita SU PROPIA instancia del
-		# material a partir de FASE 98b, porque el shader ahora recibe
-		# parámetros por personaje (en_furia, color_furia). Compartir la
-		# misma instancia haría que el estado de Furia de uno se filtre
-		# visualmente al otro.
-		sprite.material = _material_volumen_compartido().duplicate()
-		sprite.material.set_shader_parameter("color_furia", color_fase)
-		sprite.light_mask = 1 | 2
 		add_child(sprite)
 		_actualizar_textura(_tex_parado())
 		_crear_capa_facial()
@@ -714,6 +980,34 @@ func _ready() -> void:
 	ciclo_reposo = randf_range(0.0, TAU)
 	parpadeo_timer = randf_range(2.0, 4.2)
 
+func _actualizar_orientacion_hacia_rival() -> void:
+	# Al comenzar una pelea ambos scripts arrancan con mirando=1.0. Una vez que
+	# main asigna `objetivo`, corregimos automáticamente la orientación.
+	# También mantiene la regla de juego: aun retrocediendo/evasionando, el
+	# luchador sigue mirando al contrincante.
+	if not objetivo or not is_instance_valid(objetivo):
+		return
+	if esta_derrotado or bloqueo_cinematico or en_secuencia_especial:
+		return
+	if fase_ataque != FaseAtaque.NINGUNA:
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	if absf(dx) > 1.0:
+		mirando = signf(dx)
+
+
+func _orientar_hacia_rival_inmediato() -> void:
+	# Se usa justo antes de lanzar un golpe. En el aire el input horizontal
+	# puede ocurrir en el mismo frame que X/C; esta corrección evita que ese
+	# input haga salir un puño/patada hacia el lado contrario al oponente.
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		return
+	var dx: float = objetivo.global_position.x - global_position.x
+	if absf(dx) > 1.0:
+		mirando = signf(dx)
+
+
 func _crear_capa_estela() -> void:
 	if capa_estela or not sprite:
 		return
@@ -725,28 +1019,18 @@ func _crear_capa_estela() -> void:
 func _crear_capa_facial() -> void:
 	if not sprite:
 		return
-	# FASE 90.5: antes esto SIEMPRE creaba la capa facial, usando un
-	# resguardo (Vector4(0, -195, ...)) para cualquier personaje sin
-	# calibrar -- ese resguardo no correspondía a los ojos de nadie, por
-	# eso el parpadeo podía aparecer flotando arriba del personaje. Ahora,
-	# si el personaje no está en DATOS_CARA, directamente no se crea la
-	# capa (parpado_izq/der quedan null) y el parpadeo queda apagado para
-	# ese personaje sin arriesgar una posición inventada.
-	if not DATOS_CARA.has(nombre_luchador):
-		return
 	capa_facial = Node2D.new()
 	capa_facial.name = "ExpresionFacial"
 	capa_facial.z_index = 8
 	add_child(capa_facial)
-	var datos: Vector4 = DATOS_CARA[nombre_luchador]
-	var centro_x: float = datos.x
+	var datos: Vector4 = DATOS_CARA.get(nombre_luchador, Vector4(0.0, -195.0, 5.0, 9.0))
 	var centro_y: float = datos.y
 	var separacion: float = datos.z
 	var ancho_ojo: float = datos.w
 	parpado_izq = _crear_parpado()
 	parpado_der = _crear_parpado()
-	parpado_izq.position = Vector2(centro_x - separacion, centro_y)
-	parpado_der.position = Vector2(centro_x + separacion, centro_y)
+	parpado_izq.position = Vector2(-separacion, centro_y)
+	parpado_der.position = Vector2(separacion, centro_y)
 	capa_facial.add_child(parpado_izq)
 	capa_facial.add_child(parpado_der)
 	parpado_izq.scale = Vector2(ancho_ojo / 6.0, 1.0)
@@ -768,8 +1052,59 @@ func _crear_parpado() -> Polygon2D:
 
 func _physics_process(delta: float) -> void:
 	_delta_actual = delta
+	debug_x_inicio_frame = global_position.x
+	debug_delta_x_frame = 0.0
+	# 90.10.89 — latch del DASH. La 90.10.88 comprobaba carrera_activa sólo al
+	# final del frame. Si el pushbox frenaba la carrera antes de llegar al guard,
+	# el frame dejaba de parecer un frame de dash y J2 podía quedar desplazado.
+	# Guardamos si YA veníamos en dash y luego sumamos cualquier dash iniciado
+	# durante este mismo frame. Así el estado no se pierde aunque se frene.
+	var dash_activo_al_inicio_frame: bool = carrera_activa
+	dash_iniciado_este_frame = false
+
+	# 90.11.06 — este reloj corre incluso durante hit-stop para que el lock de
+	# recepción no dure artificialmente más que la ráfaga que protege.
+	if ia_combo_cancel_lock_timer > 0.0:
+		ia_combo_cancel_lock_timer = maxf(0.0, ia_combo_cancel_lock_timer - delta)
+
+	# Snapshot del rival antes de cualquier mutación hecha por este Fighter.
+	var rival_x_antes_del_frame: float = objetivo.global_position.x if objetivo and is_instance_valid(objetivo) else 0.0
+
+	# 90.10.82 — un solo sistema de contacto entre luchadores. La excepción
+	# se instala apenas ambos Fighter ya se conocen como objetivo. No afecta
+	# suelo, límites ni otros cuerpos: sólo evita que move_and_slide() resuelva
+	# también el choque Fighter-vs-Fighter antes/después de nuestro pushbox.
+	_asegurar_pushbox_manual_con_rival()
+
+	# 90.10.15 — ESTADO FINAL DE VICTORIA.
+	# Una vez declarada la victoria, este Fighter queda completamente fuera de
+	# la simulación de combate hasta el cambio de escena. No acepta input,
+	# footwork, empujes residuales ni separación corporal. El Tween visual de
+	# la pose sigue funcionando porque corre fuera de _physics_process().
+	if en_pose_victoria:
+		velocity = Vector2.ZERO
+		empuje_timer = 0.0
+		empuje_x = 0.0
+		empuje_pendiente_timer = 0.0
+		empuje_pendiente_fuerza = 0.0
+		contacto_post_golpe_timer = 0.0
+		contacto_post_golpe_distancia = 0.0
+		_aplicar_limites_arena()
+		return
+
+	# 90.10.16 — el contacto ya confirmado tiene prioridad incluso durante
+	# hit-stop. Evita que el follow-through, footwork o el orden de físicas
+	# vuelvan a meter los torsos uno dentro del otro justo después del impacto.
+	_mantener_separacion_post_golpe(delta)
+
 	if hitstop_timer > 0.0:
 		hitstop_timer -= delta
+		# 90.10.14 — el hit-stop congela animación/inputs, NO los límites del mundo.
+		# Un rival podía ser empujado fuera por el proceso del otro luchador y, si
+		# estaba en hit-stop, saltarse varios frames de clamp quedando fuera de escena.
+		_aplicar_limites_arena()
+		if objetivo and is_instance_valid(objetivo):
+			objetivo._aplicar_limites_arena()
 		return
 
 	var vel_actual := velocidad
@@ -810,6 +1145,8 @@ func _physics_process(delta: float) -> void:
 
 	if hitstun_timer > 0.0:
 		hitstun_timer -= delta
+	if guardia_escape_esquina_cooldown > 0.0:
+		guardia_escape_esquina_cooldown = maxf(0.0, guardia_escape_esquina_cooldown - delta)
 
 	if recuperacion_post_levantada_timer > 0.0:
 		recuperacion_post_levantada_timer = maxf(0.0, recuperacion_post_levantada_timer - delta)
@@ -832,7 +1169,12 @@ func _physics_process(delta: float) -> void:
 			derribo_especial_deslizando = false
 
 	_actualizar_carrera_visual(delta)
+	_actualizar_dash_aereo(delta)
 	_actualizar_fase_ataque(delta)
+	# 90.10.94 — si un botón se pulsó durante recovery, puede dispararse en el
+	# primer frame legal inmediatamente después de terminar la animación.
+	_actualizar_buffer_ataque(delta)
+	_actualizar_orientacion_hacia_rival()
 
 	# Profundidad dinámica: un luchador más bajo en pantalla queda delante
 	# de uno que está saltando. Durante un impacto, el que recibe queda un
@@ -860,11 +1202,38 @@ func _physics_process(delta: float) -> void:
 			_detener_bloqueo()
 
 	move_and_slide()
+
+	# 90.10.11 — SEGUNDO CHEQUEO DE CONTACTO DESPUÉS DEL MOVIMIENTO.
+	# El chequeo normal de la fase de ataque ocurre antes de move_and_slide().
+	# Si el rival entra caminando en la patada durante ESTE MISMO cuadro, antes
+	# podía atravesar visualmente la pierna y recién se comprobaba al cuadro
+	# siguiente (cuando la ventana activa ya podía haber terminado). Repetimos
+	# el chequeo post-movimiento para ambos luchadores; _atk_ya_conecto evita
+	# cualquier daño duplicado.
+	if fase_ataque == FaseAtaque.ACTIVO and not _atk_ya_conecto:
+		_chequear_impacto_ataque()
+	if objetivo and is_instance_valid(objetivo):
+		if objetivo.fase_ataque == FaseAtaque.ACTIVO and not objetivo._atk_ya_conecto:
+			objetivo._chequear_impacto_ataque()
+
 	_aplicar_separacion_fisica()
+	# 90.10.14 — la separación puede mover a LOS DOS cuerpos. Por eso no basta
+	# con limitar solamente a quien está ejecutando este _physics_process.
 	_aplicar_limites_arena()
+	if objetivo and is_instance_valid(objetivo):
+		objetivo._aplicar_limites_arena()
+
+	# 90.10.89 — último guard del frame del atacante con DASH LATCHED.
+	# Aunque _aplicar_separacion_fisica() haya detenido carrera_activa al llegar
+	# al cuerpo, este booleano recuerda que el frame nació/continuó como dash.
+	var hubo_dash_en_este_frame: bool = dash_activo_al_inicio_frame or carrera_activa or dash_iniciado_este_frame
+	_anclar_rival_neutral_durante_dash(rival_x_antes_del_frame, hubo_dash_en_este_frame)
+	debug_delta_x_frame = global_position.x - debug_x_inicio_frame
 
 	var aterrizo_ahora := _estaba_en_aire and is_on_floor()
 	en_el_aire = not is_on_floor()
+	if aterrizo_ahora and cruce_aereo_activo:
+		_terminar_cruce_aereo()
 	if not esta_derrotado and derribo_especial_activo and derribo_especial_esperando_aterrizar and is_on_floor():
 		# FASE 81: seguro anti-bug. Si por timing de físicas el aterrizaje fuerte
 		# ya tocó piso pero no entró por el frame exacto de "aterrizo_ahora",
@@ -885,6 +1254,10 @@ func _physics_process(delta: float) -> void:
 
 	if is_on_floor():
 		saltos_usados = 0
+		# AIR DASH se recarga únicamente al tocar suelo.
+		dash_aereo_usado = false
+		if dash_aereo_activo:
+			_detener_dash_aereo()
 
 	if sprite:
 		sprite.flip_h = mirando < 0.0
@@ -921,7 +1294,10 @@ func _physics_process(delta: float) -> void:
 		# esto es lo que hace que el bloqueo, el salto y la caminata real
 		# aparezcan y desaparezcan solos según el estado del personaje.
 		if pose_timer <= 0.0 and not esta_derrotado and not derribo_especial_activo:
-			_actualizar_textura(_tex_reposo())
+			var mantener_reaccion_combo: bool = congelado_por_rival \
+				and objetivo and is_instance_valid(objetivo) and objetivo.en_combo_auto_visual
+			if not mantener_reaccion_combo:
+				_actualizar_textura(_tex_reposo())
 
 		# Rebote procedural: solo para personajes que todavía no tienen arte
 		# real de caminata (así no se rompen). Si ya hay caminata cargada,
@@ -935,42 +1311,22 @@ func _physics_process(delta: float) -> void:
 		# "respirando" -- así no se ve como una foto pegada. Es 100%
 		# procedural (posición y una rotación mínima), no necesita arte
 		# nuevo. Se apaga solo apenas hay cualquier otra pose activa.
-		# FASE 90.4: la respiración ahora también sube con el cansancio
-		# (vida restante), no solo con la carga de CORE -- un personaje a
-		# punto de perder se ve más agitado, no solo cuando está por usar
-		# su poder. Además, bloqueando ya no queda completamente estático:
-		# tiene su propio balanceo, más chico y más rápido que el de reposo
-		# (tensión sostenida en vez de respiración relajada), con un leve
-		# sesgo hacia el rival como si estuviera empujando el bloqueo.
-		var fatiga: float = clampf(1.0 - vida / maxf(vida_maxima, 1.0), 0.0, 1.0)
 		var quieto: bool = is_on_floor() and not moviendose and not en_el_aire \
 			and not bloqueando and pose_timer <= 0.0 and not esta_derrotado \
 			and not en_secuencia_especial and not congelado_por_rival and not derribo_especial_activo
-		var en_guardia: bool = is_on_floor() and bloqueando and not en_el_aire \
-			and pose_timer <= 0.0 and not esta_derrotado and not en_secuencia_especial \
-			and not congelado_por_rival and not derribo_especial_activo
 		if quieto:
-			# La respiración aumenta con la carga de CORE o con el cansancio
-			# por vida perdida, lo que sea mayor: el luchador transmite
-			# concentración o esfuerzo sin cambiar su tamaño normal.
+			# La respiración aumenta ligeramente cuando el CORE está cerca
+			# de llenarse: el luchador transmite concentración/esfuerzo sin
+			# cambiar su tamaño normal.
 			var carga_core: float = clampf(poder / maxf(poder_maximo, 1.0), 0.0, 1.0)
-			var intensidad: float = maxf(carga_core, fatiga)
-			var ritmo_respiracion: float = lerpf(1.6, 2.6, intensidad * intensidad)
+			var ritmo_respiracion: float = lerpf(1.6, 2.15, carga_core * carga_core)
 			ciclo_reposo += delta * ritmo_respiracion
-			var amplitud_respiracion: float = lerpf(2.5, 5.2, intensidad) * escala_actual
+			var amplitud_respiracion: float = lerpf(2.5, 4.0, carga_core) * escala_actual
 			var respiracion: float = sin(ciclo_reposo) * amplitud_respiracion
-			var transferencia_peso: float = sin(ciclo_reposo * 0.5 + 0.8) * (0.65 + intensidad * 0.35) * escala_actual
+			var transferencia_peso: float = sin(ciclo_reposo * 0.5 + 0.8) * (0.65 + carga_core * 0.35) * escala_actual
 			sprite.position.y = sprite_base_y + rebote + respiracion
 			sprite.position.x = _sprite_ancla_x() + transferencia_peso
-			sprite.rotation = sin(ciclo_reposo * 0.5) * lerpf(0.010, 0.018, intensidad)
-		elif en_guardia:
-			var carga_core_g: float = clampf(poder / maxf(poder_maximo, 1.0), 0.0, 1.0)
-			var intensidad_g: float = maxf(carga_core_g, fatiga)
-			ciclo_reposo += delta * lerpf(2.6, 3.4, intensidad_g)
-			var tension: float = sin(ciclo_reposo) * lerpf(1.4, 2.6, intensidad_g) * escala_actual
-			sprite.position.y = sprite_base_y + rebote + tension
-			sprite.position.x = _sprite_ancla_x() + mirando * lerpf(0.6, 1.4, intensidad_g) * escala_actual
-			sprite.rotation = mirando * lerpf(0.006, 0.012, intensidad_g)
+			sprite.rotation = sin(ciclo_reposo * 0.5) * lerpf(0.010, 0.015, carga_core)
 		else:
 			ciclo_reposo = 0.0
 			sprite.position.y = sprite_base_y + rebote
@@ -992,7 +1348,10 @@ func _physics_process(delta: float) -> void:
 	if pose_timer > 0.0:
 		pose_timer -= delta
 		if pose_timer <= 0.0 and not esta_derrotado and not derribo_especial_activo:
-			_actualizar_textura(_tex_reposo())
+			var mantener_reaccion_combo_timer: bool = congelado_por_rival \
+				and objetivo and is_instance_valid(objetivo) and objetivo.en_combo_auto_visual
+			if not mantener_reaccion_combo_timer:
+				_actualizar_textura(_tex_reposo())
 
 	# Se ejecuta al final para que squash/impacto no sea pisado por la
 	# actualización normal de textura/respiración del cuadro.
@@ -1000,25 +1359,178 @@ func _physics_process(delta: float) -> void:
 	_actualizar_expresion_facial(delta)
 	_actualizar_aura_core(delta)
 
-# Cada personaje decide cómo se mueve: teclado (jugador) o IA.
+	# 90.10.91 — ÚLTIMA AUTORIDAD VISUAL DEL FRAME.
+	# El diagnóstico 90.10.90 demostró que J2 podía estar lógicamente quieto
+	# (input=0, carrera_activa=false, velocity.x=0 y X mundial sin cambios) y,
+	# aun así, renderizar durante unos cuadros la textura de evasión/backdash.
+	# La presentación debe derivar del estado lógico, nunca al revés.
+	_corregir_visual_dash_fantasma_local()
+
+# Cada personaje decide cómo se mueve: IA, input local o un Input Frame externo.
 func _procesar_entrada(_delta: float, _vel_actual: float) -> void:
-	if controlado_por_jugador:
+	if fuente_control == FuenteControl.EXTERNA:
+		var frame: Dictionary = input_frame_externo if input_externo_disponible else _input_frame_neutro()
+		_aplicar_input_frame(frame, _vel_actual)
+		input_externo_disponible = false
+		return
+
+	# Compatibilidad: si una escena vieja sólo puso el booleano en true, sigue
+	# entrando exactamente por el camino humano local.
+	if controlado_por_jugador or fuente_control == FuenteControl.LOCAL:
 		_entrada_jugador(_vel_actual)
 
+# API de control preparada para Versus local y futuro online.
+func configurar_lado_combate(indice_lado: int) -> void:
+	indice_lado_combate = clampi(indice_lado, 0, 1)
+
+func configurar_control_local(indice_jugador: int = 0, gamepad_id: int = -1, teclado_habilitado: bool = true) -> void:
+	# indice 0 = J1; indice 1 = J2. gamepad_id -2 fuerza teclado solamente.
+	# `teclado_habilitado` permite aislamiento estricto por dispositivo en Versus.
+	jugador_local_indice = clampi(indice_jugador, 0, 1)
+	gamepad_asignado_id = gamepad_id
+	teclado_local_habilitado = teclado_habilitado
+	fuente_control = FuenteControl.LOCAL
+	controlado_por_jugador = true
+	input_externo_disponible = false
+
+func configurar_control_ia(dificultad: int = DificultadIA.FACIL) -> void:
+	dificultad_ia = clampi(dificultad, DificultadIA.FACIL, DificultadIA.DIFICIL)
+	fuente_control = FuenteControl.IA
+	controlado_por_jugador = false
+	input_externo_disponible = false
+
+func configurar_dificultad_ia(dificultad: int) -> void:
+	dificultad_ia = clampi(dificultad, DificultadIA.FACIL, DificultadIA.DIFICIL)
+
+func configurar_control_externo() -> void:
+	fuente_control = FuenteControl.EXTERNA
+	controlado_por_jugador = true
+	input_externo_disponible = false
+
+# Un frame contiene sólo intención de botones/direcciones. No contiene posición,
+# daño ni estados del Fighter: por eso puede viajar por red y re-simularse luego.
+func inyectar_input_frame(frame: Dictionary) -> void:
+	input_frame_externo = frame.duplicate(true)
+	input_frame_enrutado_actual = frame.duplicate(true)
+	input_externo_disponible = true
+
+# 90.10.93 — Versus Local usa esta fuente. El Fighter recibe intención ya
+# separada por dispositivo desde Main y se le apagan explícitamente todas las
+# rutas locales de teclado/gamepad para que no pueda existir input espejo.
+func configurar_control_enrutado(indice_jugador: int) -> void:
+	jugador_local_indice = clampi(indice_jugador, 0, 1)
+	gamepad_asignado_id = -2
+	teclado_local_habilitado = false
+	fuente_control = FuenteControl.EXTERNA
+	controlado_por_jugador = true
+	input_frame_externo = _input_frame_neutro()
+	input_frame_enrutado_actual = _input_frame_neutro()
+	input_externo_disponible = true
+	tecla_izq_previa = false
+	tecla_der_previa = false
+	doble_pulso_izq_timer = 0.0
+	doble_pulso_der_timer = 0.0
+	carrera_activa = false
+	carrera_direccion = 0.0
+	puno_estaba_presionado = false
+	patada_estaba_presionada = false
+	ataque_buffer_tipo = ""
+	ataque_buffer_timer = 0.0
+
+func _input_frame_neutro() -> Dictionary:
+	return {
+		"izquierda": false,
+		"derecha": false,
+		"salto": false,
+		"bloqueo": false,
+		"puno": false,
+		"patada": false,
+		"especial": false,
+	}
+
+func _capturar_input_local() -> Dictionary:
+	# 90.10.85: misma lectura que 90.10.84, pero guardando los valores CRUDOS
+	# para mostrarlos en pantalla. No altera deadzones ni botones.
+	var es_j2: bool = jugador_local_indice == 1
+	var teclado_izq: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_A) if es_j2 else Input.is_physical_key_pressed(KEY_LEFT))
+	var teclado_der: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_D) if es_j2 else Input.is_physical_key_pressed(KEY_RIGHT))
+	var salto_teclado: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_W) if es_j2 else Input.is_physical_key_pressed(KEY_UP))
+	var bloqueo_teclado: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_S) if es_j2 else Input.is_physical_key_pressed(KEY_DOWN))
+	var puno_teclado: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_F) if es_j2 else Input.is_physical_key_pressed(KEY_X))
+	var patada_teclado: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_G) if es_j2 else Input.is_physical_key_pressed(KEY_C))
+	var especial_teclado: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_H) if es_j2 else Input.is_physical_key_pressed(KEY_Z))
+
+	debug_gamepad_axis_x = _gamepad_eje(PAD_AXIS_LEFT_X)
+	debug_gamepad_dpad_izq = _gamepad_boton_activo(PAD_DPAD_LEFT)
+	debug_gamepad_dpad_der = _gamepad_boton_activo(PAD_DPAD_RIGHT)
+	debug_input_izquierda = teclado_izq or debug_gamepad_dpad_izq or debug_gamepad_axis_x < -PAD_DEADZONE_MOV
+	debug_input_derecha = teclado_der or debug_gamepad_dpad_der or debug_gamepad_axis_x > PAD_DEADZONE_MOV
+
+	return {
+		"izquierda": debug_input_izquierda,
+		"derecha": debug_input_derecha,
+		"salto": salto_teclado or _gamepad_salto_activo(),
+		"bloqueo": bloqueo_teclado or _gamepad_bloqueo_activo(),
+		"puno": puno_teclado or _gamepad_boton_activo(PAD_X),
+		"patada": patada_teclado or _gamepad_boton_activo(PAD_Y),
+		"especial": especial_teclado or _gamepad_especial_activo(),
+	}
+
+func obtener_debug_control() -> Dictionary:
+	return {
+		"jugador": jugador_local_indice + 1,
+		"fuente": fuente_control,
+		"pad": gamepad_asignado_id,
+		"teclado": teclado_local_habilitado,
+		"axis_x": debug_gamepad_axis_x,
+		"dpad_l": debug_gamepad_dpad_izq,
+		"dpad_r": debug_gamepad_dpad_der,
+		"izq": debug_input_izquierda,
+		"der": debug_input_derecha,
+		"dash": carrera_activa,
+		"dash_dir": carrera_direccion,
+		"vx": velocity.x,
+		"x": global_position.x,
+		"dx_frame": debug_delta_x_frame,
+	}
+
 func _entrada_jugador(vel_actual: float) -> void:
-	var izquierda: bool = Input.is_physical_key_pressed(KEY_LEFT)
-	var derecha: bool = Input.is_physical_key_pressed(KEY_RIGHT)
+	# Los scripts de cada personaje ya llaman a esta función cuando
+	# `controlado_por_jugador` es true. Resolver EXTERNA acá garantiza que TODOS
+	# los luchadores puedan usar luego exactamente el mismo camino para rollback/red,
+	# aunque tengan su propio override de _procesar_entrada().
+	if fuente_control == FuenteControl.EXTERNA:
+		var frame: Dictionary = input_frame_externo if input_externo_disponible else _input_frame_neutro()
+		_aplicar_input_frame(frame, vel_actual)
+		input_externo_disponible = false
+		return
+	_aplicar_input_frame(_capturar_input_local(), vel_actual)
+
+func _aplicar_input_frame(frame: Dictionary, vel_actual: float) -> void:
+	# 90.10.94 — una única verdad de input por Fighter/frame.
+	input_frame_enrutado_actual = frame.duplicate(false)
+	var izquierda: bool = bool(frame.get("izquierda", false))
+	var derecha: bool = bool(frame.get("derecha", false))
+	var salto_presionado: bool = bool(frame.get("salto", false))
+	var bloqueo_presionado: bool = bool(frame.get("bloqueo", false))
+	var puno_presionado: bool = bool(frame.get("puno", false))
+	var patada_presionada: bool = bool(frame.get("patada", false))
+	var especial_presionado: bool = bool(frame.get("especial", false))
+	var puno_justo: bool = puno_presionado and not puno_estaba_presionado
+	var patada_justa: bool = patada_presionada and not patada_estaba_presionada
+
+	ultima_intencion_horizontal = (-1.0 if izquierda else 0.0) + (1.0 if derecha else 0.0)
+
 	var izquierda_justa: bool = izquierda and not tecla_izq_previa
 	var derecha_justa: bool = derecha and not tecla_der_previa
 
-	# Ventana temporal para reconocer doble toque sin interferir con el
-	# movimiento normal. Cada dirección tiene su propio temporizador.
+	# Doble toque determinista a partir del mismo frame de intención.
 	doble_pulso_izq_timer = maxf(0.0, doble_pulso_izq_timer - _delta_actual)
 	doble_pulso_der_timer = maxf(0.0, doble_pulso_der_timer - _delta_actual)
 
 	if izquierda_justa:
 		if doble_pulso_izq_timer > 0.0:
-			_iniciar_carrera(-1.0)
+			_iniciar_dash_por_doble_toque(-1.0)
 			doble_pulso_izq_timer = 0.0
 		else:
 			doble_pulso_izq_timer = VENTANA_DOBLE_PULSO_CARRERA
@@ -1027,16 +1539,11 @@ func _entrada_jugador(vel_actual: float) -> void:
 
 	if derecha_justa:
 		if doble_pulso_der_timer > 0.0:
-			_iniciar_carrera(1.0)
+			_iniciar_dash_por_doble_toque(1.0)
 			doble_pulso_der_timer = 0.0
 		else:
 			doble_pulso_der_timer = VENTANA_DOBLE_PULSO_CARRERA
 		if carrera_activa and carrera_direccion < 0.0:
-			_detener_carrera()
-
-	# Soltar la dirección corta la carrera inmediatamente.
-	if carrera_activa:
-		if (carrera_direccion < 0.0 and not izquierda) or (carrera_direccion > 0.0 and not derecha):
 			_detener_carrera()
 
 	tecla_izq_previa = izquierda
@@ -1047,35 +1554,107 @@ func _entrada_jugador(vel_actual: float) -> void:
 		direccion -= 1.0
 	if derecha:
 		direccion += 1.0
-	var velocidad_input: float = vel_actual * (MULT_CARRERA if carrera_activa else 1.0)
-	mover(direccion, velocidad_input)
+	if dash_aereo_activo:
+		# Durante el burst aéreo el input no degrada la velocidad horizontal.
+		# La componente Y queda intacta para conservar exactamente el arco del salto.
+		_orientar_hacia_rival_inmediato()
+		velocity.x = dash_aereo_direccion * vel_actual * MULT_DASH_AEREO
+	elif carrera_activa:
+		_orientar_hacia_rival_inmediato()
+		velocity.x = carrera_direccion * vel_actual * MULT_CARRERA
+	else:
+		mover(direccion, vel_actual)
 
-	if Input.is_action_just_pressed("ui_up"):
+	# Salto y CORE derivan sus flancos desde el frame actual/anterior. Este mismo
+	# mecanismo funcionará para un frame recibido por red.
+	var salto_justo: bool = salto_presionado and not salto_estaba_presionado
+	if salto_justo:
 		saltar()
+	salto_estaba_presionado = salto_presionado
+	gamepad_salto_previo = salto_presionado
 
-	if Input.is_physical_key_pressed(KEY_DOWN):
+	if bloqueo_presionado:
 		if not bloqueando:
 			_iniciar_bloqueo(999.0)
 	elif bloqueando:
 		_detener_bloqueo()
 
-	if Input.is_physical_key_pressed(KEY_X):
+	# 90.10.94 — el flanco se guarda si llegó durante startup/activo/recovery.
+	# Después mantenemos el comportamiento histórico de botón sostenido para no
+	# cambiar el feel del teclado: intentar_* simplemente retorna si aún no es legal.
+	if puno_justo and fase_ataque != FaseAtaque.NINGUNA:
+		_guardar_buffer_ataque("punetazo")
+	if patada_justa and fase_ataque != FaseAtaque.NINGUNA:
+		_guardar_buffer_ataque("patada")
+
+	if puno_presionado:
 		intentar_punetazo()
 
-	if Input.is_physical_key_pressed(KEY_C):
+	if patada_presionada:
 		intentar_patada()
 
-	var z_presionado: bool = Input.is_physical_key_pressed(KEY_Z)
-	if z_presionado and not z_estaba_presionado:
+	puno_estaba_presionado = puno_presionado
+	patada_estaba_presionada = patada_presionada
+
+	if especial_presionado and not z_estaba_presionado:
 		intentar_poder_especial()
-	z_estaba_presionado = z_presionado
+	z_estaba_presionado = especial_presionado
+
+# Resuelve el mando asignado a ESTE Fighter.
+# -2 = teclado solamente (sin fallback a un gamepad compartido).
+# -1 = compatibilidad histórica: usar el primer mando conectado.
+# >=0 = device id explícito, usado por Versus local.
+func _gamepad_principal_id() -> int:
+	if gamepad_asignado_id == -2:
+		return -1
+	var pads := Input.get_connected_joypads()
+	if pads.is_empty():
+		return -1
+	if gamepad_asignado_id >= 0:
+		return gamepad_asignado_id if gamepad_asignado_id in pads else -1
+	return int(pads[0])
+
+func _gamepad_boton_activo(boton: int) -> bool:
+	var id := _gamepad_principal_id()
+	return id >= 0 and Input.is_joy_button_pressed(id, boton)
+
+func _gamepad_eje(eje: int) -> float:
+	var id := _gamepad_principal_id()
+	if id < 0:
+		return 0.0
+	return Input.get_joy_axis(id, eje)
+
+func _control_izquierda_activo() -> bool:
+	if fuente_control == FuenteControl.EXTERNA:
+		return bool(input_frame_enrutado_actual.get("izquierda", false))
+	var teclado: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_A) if jugador_local_indice == 1 else Input.is_physical_key_pressed(KEY_LEFT))
+	return teclado \
+		or _gamepad_boton_activo(PAD_DPAD_LEFT) \
+		or _gamepad_eje(PAD_AXIS_LEFT_X) < -PAD_DEADZONE_MOV
+
+func _control_derecha_activo() -> bool:
+	if fuente_control == FuenteControl.EXTERNA:
+		return bool(input_frame_enrutado_actual.get("derecha", false))
+	var teclado: bool = teclado_local_habilitado and (Input.is_physical_key_pressed(KEY_D) if jugador_local_indice == 1 else Input.is_physical_key_pressed(KEY_RIGHT))
+	return teclado \
+		or _gamepad_boton_activo(PAD_DPAD_RIGHT) \
+		or _gamepad_eje(PAD_AXIS_LEFT_X) > PAD_DEADZONE_MOV
+
+func _gamepad_salto_activo() -> bool:
+	return _gamepad_boton_activo(PAD_A) 		or _gamepad_boton_activo(PAD_DPAD_UP) 		or _gamepad_eje(PAD_AXIS_LEFT_Y) < -PAD_DEADZONE_VERTICAL
+
+func _gamepad_bloqueo_activo() -> bool:
+	return _gamepad_boton_activo(PAD_B) 		or _gamepad_boton_activo(PAD_DPAD_DOWN) 		or _gamepad_eje(PAD_AXIS_LEFT_Y) > PAD_DEADZONE_VERTICAL 		or _gamepad_eje(PAD_AXIS_LT) > 0.55
+
+func _gamepad_especial_activo() -> bool:
+	return _gamepad_boton_activo(PAD_RB) or _gamepad_eje(PAD_AXIS_RT) > 0.55
 
 func _procesar_footwork_durante_ataque(vel_actual: float) -> void:
 	var direccion_input: float = 0.0
 	if controlado_por_jugador:
-		if Input.is_physical_key_pressed(KEY_LEFT):
+		if _control_izquierda_activo():
 			direccion_input -= 1.0
-		if Input.is_physical_key_pressed(KEY_RIGHT):
+		if _control_derecha_activo():
 			direccion_input += 1.0
 	else:
 		# La IA conserva su comportamiento actual durante ataques; el avance
@@ -1110,30 +1689,94 @@ func _procesar_footwork_durante_ataque(vel_actual: float) -> void:
 	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
 		var dx_actual: float = objetivo.global_position.x - global_position.x
 		var separacion: float = absf(dx_actual)
-		var distancia_objetivo: float = maxf(_distancia_minima_contextual(objetivo) + 4.0, 62.0)
+		# Durante un ataque NO usamos el radio visual adaptativo para frenar,
+		# porque cabello/alas/poses anchas pueden detener al atacante antes de
+		# que el pie o puño entre en la hurtbox real.
+		var distancia_objetivo: float = 68.0 if _atk_tipo == "punetazo" else 74.0
 		if separacion <= distancia_objetivo and hacia_rival:
 			velocity.x = 0.0
 
+# 90.11.09 — el MISMO doble toque decide el dash según el estado físico.
+# En suelo conserva literalmente _iniciar_carrera(); en aire entra por un estado
+# nuevo y aislado para no tocar el dash terrestre ya aprobado.
+func _iniciar_dash_por_doble_toque(direccion: float) -> void:
+	if is_on_floor():
+		_iniciar_carrera(direccion)
+	else:
+		_iniciar_dash_aereo(direccion)
+
+func _iniciar_dash_aereo(direccion: float) -> void:
+	if is_on_floor() or saltos_usados <= 0 or dash_aereo_usado or dash_aereo_activo:
+		return
+	if esta_derrotado or en_secuencia_especial or bloqueo_cinematico \
+		or congelado_por_rival or hitstun_timer > 0.0 or fase_ataque != FaseAtaque.NINGUNA:
+		return
+	var dir: float = signf(direccion)
+	if dir == 0.0:
+		return
+	_detener_carrera()
+	_orientar_hacia_rival_inmediato()
+	dash_aereo_activo = true
+	dash_aereo_usado = true
+	dash_aereo_direccion = dir
+	dash_aereo_timer = DASH_AEREO_DURACION
+	velocity.x = dash_aereo_direccion * velocidad * (mult_velocidad_fase if en_fase_absoluta else 1.0) * MULT_DASH_AEREO
+
+	# Visual: hacia atrás usa la evasión existente; hacia delante usa carrera.
+	# Si un personaje carece de ese PNG, conserva su salto/doble salto/descenso.
+	var tex_dash: Texture2D = _tex_carrera()
+	if not tex_dash:
+		tex_dash = _tex_doble_salto() if velocity.y < 0.0 else _tex_descenso()
+	if tex_dash and sprite:
+		_actualizar_textura(tex_dash)
+		pose_timer = maxf(pose_timer, DASH_AEREO_DURACION)
+
+func _detener_dash_aereo() -> void:
+	if not dash_aereo_activo:
+		return
+	dash_aereo_activo = false
+	dash_aereo_timer = 0.0
+	dash_aereo_direccion = 0.0
+
+func _actualizar_dash_aereo(delta: float) -> void:
+	if not dash_aereo_activo:
+		return
+	if is_on_floor() or esta_derrotado or en_secuencia_especial or bloqueo_cinematico \
+		or congelado_por_rival or hitstun_timer > 0.0 or fase_ataque != FaseAtaque.NINGUNA:
+		_detener_dash_aereo()
+		return
+	dash_aereo_timer = maxf(0.0, dash_aereo_timer - delta)
+	if dash_aereo_timer <= 0.0:
+		_detener_dash_aereo()
+
 func _iniciar_carrera(direccion: float) -> void:
+	# Dash solamente desde suelo. En el aire las flechas quedan reservadas al
+	# control horizontal y al cruce del doble salto.
+	if not is_on_floor() or esta_derrotado or en_secuencia_especial or bloqueo_cinematico:
+		return
 	carrera_activa = true
-	carrera_direccion = direccion
-	carrera_inicio_timer = 0.18
+	dash_iniciado_este_frame = true
+	carrera_direccion = signf(direccion)
+	carrera_inicio_timer = DASH_DURACION
 	carrera_frenado_timer = 0.0
 	carrera_humo_timer = 0.0
-	mirando = direccion
-	velocity.x = move_toward(velocity.x, direccion * velocidad * MULT_CARRERA, CARRERA_IMPULSO_INICIAL * _mult_arranque_carrera())
+	_orientar_hacia_rival_inmediato()
+	velocity.x = carrera_direccion * velocidad * MULT_CARRERA
 	_efecto_inicio_carrera()
 
 func _detener_carrera() -> void:
 	if not carrera_activa:
 		return
 	carrera_activa = false
-	carrera_frenado_timer = 0.16
+	carrera_frenado_timer = DASH_FRENO
 	carrera_inicio_timer = 0.0
 	carrera_direccion = 0.0
 
 func _actualizar_carrera_visual(delta: float) -> void:
-	carrera_inicio_timer = maxf(0.0, carrera_inicio_timer - delta)
+	if carrera_activa:
+		carrera_inicio_timer = maxf(0.0, carrera_inicio_timer - delta)
+		if carrera_inicio_timer <= 0.0:
+			_detener_carrera()
 	carrera_frenado_timer = maxf(0.0, carrera_frenado_timer - delta)
 	if not carrera_activa or esta_derrotado or not is_on_floor() or en_secuencia_especial:
 		return
@@ -1142,7 +1785,9 @@ func _actualizar_carrera_visual(delta: float) -> void:
 		carrera_humo_timer = CARRERA_POLVO_INTERVALO
 		_efecto_paso(1 if carrera_direccion < 0.0 else -1)
 	if sprite and fase_ataque == FaseAtaque.NINGUNA and pose_timer <= 0.0:
-		var objetivo_rot: float = -0.025 * carrera_direccion
+		var tiene_pose_dash: bool = _tex_carrera() != null
+		var inclinacion_dash: float = 0.060 if (dash_visual_fallback_reforzado or not tiene_pose_dash) else 0.025
+		var objetivo_rot: float = -inclinacion_dash * carrera_direccion
 		sprite.rotation = lerpf(sprite.rotation, objetivo_rot, clampf(delta * 12.0, 0.0, 1.0))
 		var objetivo_y: float = sprite_base_y - 1.5 * escala_actual
 		sprite.position.y = lerpf(sprite.position.y, objetivo_y, clampf(delta * 10.0, 0.0, 1.0))
@@ -1166,9 +1811,114 @@ func _efecto_inicio_carrera() -> void:
 		tw.tween_property(polvo, "modulate:a", 0.0, 0.18)
 		tw.chain().tween_callback(polvo.queue_free)
 
+# 90.10.88 — lectura del dispositivo asignado a ESTE Fighter. Respeta el
+# aislamiento J1/J2 y se usa sólo para decidir si el defensor está neutral.
+func _hay_input_horizontal_local_actual() -> bool:
+	if fuente_control == FuenteControl.EXTERNA:
+		return bool(input_frame_enrutado_actual.get("izquierda", false)) \
+			or bool(input_frame_enrutado_actual.get("derecha", false))
+	if fuente_control != FuenteControl.LOCAL:
+		return false
+	return _control_izquierda_activo() or _control_derecha_activo()
+
+func _puede_quedar_anclado_ante_dash() -> bool:
+	if fuente_control not in [FuenteControl.LOCAL, FuenteControl.EXTERNA]:
+		return false
+	if esta_derrotado or derribo_especial_activo or en_secuencia_especial or bloqueo_cinematico:
+		return false
+	if fase_ataque != FaseAtaque.NINGUNA or hitstun_timer > 0.0:
+		return false
+	if empuje_timer > 0.0 or empuje_pendiente_timer > 0.0 or empuje_pendiente_fuerza > 0.0:
+		return false
+	return not _hay_input_horizontal_local_actual()
+
+# Regla competitiva dura: un dash de movimiento no puede arrastrar ni activar
+# movimiento del rival local si ese rival no está dando input horizontal ni
+# recibiendo un golpe. Se ejecuta al final del frame del atacante y por eso
+# neutraliza cualquier escritura indirecta sobre `objetivo` antes de que J2
+# procese su propio frame.
+func _anclar_rival_neutral_durante_dash(rival_x_antes: float, hubo_dash_en_frame: bool = false) -> void:
+	if not objetivo or not is_instance_valid(objetivo):
+		return
+	if fuente_control not in [FuenteControl.LOCAL, FuenteControl.EXTERNA] \
+		or objetivo.fuente_control not in [FuenteControl.LOCAL, FuenteControl.EXTERNA]:
+		return
+	# 90.10.89 — NO depender del valor final de carrera_activa. El dash puede
+	# haber sido detenido por contacto unos renglones antes y aun así este frame
+	# debe proteger al defensor neutral de cualquier desplazamiento espejo.
+	if not hubo_dash_en_frame:
+		return
+	if fase_ataque != FaseAtaque.NINGUNA or en_secuencia_especial or hitstun_timer > 0.0:
+		return
+	if not objetivo._puede_quedar_anclado_ante_dash():
+		return
+
+	var dir_rival: float = signf(objetivo.global_position.x - global_position.x)
+	if dir_rival == 0.0:
+		dir_rival = mirando if mirando != 0.0 else 1.0
+	var dir_dash: float = carrera_direccion
+	if dir_dash == 0.0:
+		# Si el contacto ya llamó _detener_carrera(), carrera_direccion también
+		# quedó en 0. El latch nos confirma que fue un frame de dash; usamos la
+		# dirección del rival para tratarlo como dash de entrada únicamente si el
+		# atacante terminó en contacto/cercanía. Un backdash que se aleja no mueve
+		# al rival y no necesita restauración porque no puede producir penetración.
+		dir_dash = dir_rival
+	# Backdash propio: no hay motivo para tocar al rival.
+	if dir_dash * dir_rival <= 0.0:
+		return
+
+	objetivo.global_position.x = rival_x_antes
+	objetivo.velocity.x = 0.0
+	if objetivo.carrera_activa and not objetivo._hay_input_horizontal_local_actual():
+		objetivo._detener_carrera()
+	objetivo._aplicar_limites_arena()
+
+# 90.10.91 — guard visual puro para Versus Local.
+# No mueve el cuerpo, no altera inputs y no toca golpes. Sólo impide que una
+# textura de carrera/evasión quede visible cuando el Fighter está lógicamente
+# neutral. Esta regla ataca exactamente el caso capturado en 90.10.90:
+# J2 DASH=0 / VX=0 / X estable, pero PNG de backdash en pantalla.
+func _corregir_visual_dash_fantasma_local() -> void:
+	if fuente_control not in [FuenteControl.LOCAL, FuenteControl.EXTERNA] or not controlado_por_jugador:
+		return
+	if not sprite or carrera_activa:
+		return
+	if _hay_input_horizontal_local_actual():
+		return
+	if absf(velocity.x) > 10.0:
+		return
+	if esta_derrotado or derribo_especial_activo or en_secuencia_especial \
+		or bloqueo_cinematico or congelado_por_rival or en_pose_recarga:
+		return
+	if not is_on_floor() or en_el_aire or bloqueando:
+		return
+	if fase_ataque != FaseAtaque.NINGUNA or hitstun_timer > 0.0:
+		return
+
+	var tex_actual: Texture2D = sprite.texture
+	var es_textura_dash: bool = \
+		(tex_actual != null and textura_carrera != null and tex_actual == textura_carrera) \
+		or (tex_actual != null and textura_furia_carrera != null and tex_actual == textura_furia_carrera) \
+		or (tex_actual != null and textura_evasion != null and tex_actual == textura_evasion) \
+		or (tex_actual != null and textura_furia_evasion != null and tex_actual == textura_furia_evasion)
+	if not es_textura_dash:
+		return
+
+	# Estado lógico neutral => visual neutral. No tocamos pose_timer porque puede
+	# pertenecer a otro subsistema; sólo sustituimos una textura imposible para
+	# el estado actual y limpiamos la inclinación residual de carrera.
+	var tex_neutra: Texture2D = _tex_parado()
+	if tex_neutra:
+		_actualizar_textura(tex_neutra)
+		sprite.rotation = 0.0
+
 func mover(direccion: float, vel_actual: float) -> void:
 	if direccion != 0.0:
-		mirando = sign(direccion)
+		# Fuera de un ataque el input puede orientar; durante STARTUP/ACTIVO
+		# la orientación queda fijada hacia el golpe/rival.
+		if fase_ataque == FaseAtaque.NINGUNA or fase_ataque == FaseAtaque.RECOVERY:
+			mirando = sign(direccion)
 		velocity.x = move_toward(velocity.x, direccion * vel_actual, aceleracion * _delta_actual)
 	else:
 		var friccion: float = friccion_suelo if is_on_floor() else friccion_aire
@@ -1180,9 +1930,52 @@ func saltar() -> void:
 		saltos_usados = 1
 		salto_hecho.emit()
 	elif saltos_usados < saltos_maximos:
-		velocity.y = fuerza_salto * 1.2
+		velocity.y = fuerza_salto * MULT_DOBLE_SALTO_ALTURA
 		saltos_usados += 1
+		# El segundo salto abre una ventana real de cruce por encima del rival.
+		if saltos_usados >= 2:
+			_activar_cruce_aereo()
 		salto_hecho.emit()
+
+# 90.10.94 — buffer corto de ataque para taps de mando/teclado.
+func _guardar_buffer_ataque(tipo: String) -> void:
+	if tipo != "punetazo" and tipo != "patada":
+		return
+	ataque_buffer_tipo = tipo
+	ataque_buffer_timer = ATAQUE_BUFFER_DURACION
+
+func _actualizar_buffer_ataque(delta: float) -> void:
+	if ataque_buffer_timer <= 0.0 or ataque_buffer_tipo.is_empty():
+		ataque_buffer_timer = 0.0
+		ataque_buffer_tipo = ""
+		return
+
+	ataque_buffer_timer = maxf(0.0, ataque_buffer_timer - delta)
+	if ataque_buffer_timer <= 0.0:
+		ataque_buffer_tipo = ""
+		return
+
+	# Sólo se consume cuando el Fighter realmente puede comenzar un golpe normal.
+	if (
+		fase_ataque != FaseAtaque.NINGUNA
+		or bloqueando
+		or esta_derrotado
+		or hitstun_timer > 0.0
+		or en_secuencia_especial
+		or bloqueo_cinematico
+		or congelado_por_rival
+		or recuperacion_post_levantada_timer > 0.0
+	):
+		return
+
+
+	var tipo: String = ataque_buffer_tipo
+	ataque_buffer_tipo = ""
+	ataque_buffer_timer = 0.0
+	if tipo == "punetazo":
+		intentar_punetazo()
+	elif tipo == "patada":
+		intentar_patada()
 
 func intentar_punetazo() -> void:
 	if fase_ataque != FaseAtaque.NINGUNA or bloqueando:
@@ -1227,6 +2020,11 @@ func intentar_poder_especial() -> void:
 # lentos (Magnus) siguen siendo lentos, pero ahora con ventanas de verdad.
 func _iniciar_ataque(tipo: String, rango: float, dano_base: float, empuje_base: float, hitstun_base: float, ciclo_total: float) -> void:
 	_detener_carrera()
+	_detener_dash_aereo()
+	# 90.10.23 — también en salto/doble salto el ataque nace orientado hacia
+	# el rival. El jugador puede moverse hacia atrás en el aire sin lanzar el
+	# puño o la patada fuera de la pelea.
+	_orientar_hacia_rival_inmediato()
 	_atk_tipo = tipo
 	ataque_lanzado.emit(tipo, en_fase_absoluta)
 	_atk_rango = rango
@@ -1235,12 +2033,33 @@ func _iniciar_ataque(tipo: String, rango: float, dano_base: float, empuje_base: 
 	_atk_hitstun = hitstun_base
 	_atk_ya_conecto = false
 
-	# FASE 74 — identidad física: cada cuerpo prepara y recupera el golpe a
-	# un ritmo ligeramente distinto. No cambia la escala del sprite ni la
-	# lógica de CORE; solo el timing corporal del ataque normal.
-	var startup: float = ciclo_total * 0.28 * _mult_startup_personalidad()
-	_atk_dur_activo = ciclo_total * 0.14
-	_atk_dur_recovery = ciclo_total * 0.58 * _mult_recovery_personalidad()
+	# 90.10.12 — LA POSE VISIBLE Y LA HITBOX TIENEN EL MISMO TIEMPO.
+	# El video de prueba mostró que el rival todavía podía entrar caminando en
+	# una pierna VISUALMENTE extendida durante RECOVERY. Como cada golpe usa un
+	# único sprite estático (no tenemos todavía cuadros de retracción), la regla
+	# correcta es: mientras la pose de impacto está visible, el golpe está ACTIVO.
+	# Después vuelve al reposo y recién ahí queda la recuperación lógica.
+	var frac_startup: float = 0.16 if tipo == "punetazo" else 0.12
+	var frac_activo: float = 0.50 if tipo == "punetazo" else 0.62
+	var frac_recovery: float = maxf(0.18, 1.0 - frac_startup - frac_activo)
+	# CORE II/III siguen acelerando startup + activo con el multiplicador ya
+	# validado. 90.10.69 cambia únicamente el recovery de la ráfaga automática:
+	# pasa a una transición mínima y constante para que todos los golpes salgan
+	# corridos, sin la pausa visual de cada recuperación completa.
+	var ciclo_efectivo: float = ciclo_total * (MULT_VELOCIDAD_COMBO_CORE if en_combo_auto_visual else 1.0)
+	var startup: float
+	if en_combo_auto_visual:
+		# 90.10.98 — RÁFAGA CONTINUA. En CORE II/III el ritmo no depende del
+		# cooldown individual del personaje ni del tipo de golpe. Puño y patada
+		# comparten exactamente el mismo beat para evitar la micro-pausa que se
+		# percibía cada vez que entraba una patada de ciclo largo.
+		startup = STARTUP_COMBO_CORE_UNIFORME
+		_atk_dur_activo = ACTIVO_COMBO_CORE_UNIFORME
+		_atk_dur_recovery = RECOVERY_COMBO_CORE_CONTINUO
+	else:
+		startup = ciclo_efectivo * frac_startup * _mult_startup_personalidad()
+		_atk_dur_activo = ciclo_efectivo * frac_activo
+		_atk_dur_recovery = ciclo_efectivo * frac_recovery * _mult_recovery_personalidad()
 
 	fase_ataque = FaseAtaque.STARTUP
 	timer_fase_ataque = startup
@@ -1253,7 +2072,9 @@ func _iniciar_ataque(tipo: String, rango: float, dano_base: float, empuje_base: 
 	# hit-stop y luz de contacto.
 	_set_color(Color.WHITE)
 	flash_timer = 0.0
-	_mostrar_pose(tipo, startup + _atk_dur_activo + _atk_dur_recovery)
+	# La extremidad deja de verse exactamente cuando deja de poder pegar.
+	# Así nunca existe el caso visual de "pie dentro del rival pero sin hit".
+	_mostrar_pose(tipo, startup + _atk_dur_activo)
 
 func _preparar_avance_ataque() -> void:
 	# Asistencia muy corta y física: solo acerca al atacante si el rival está
@@ -1295,6 +2116,11 @@ func _actualizar_fase_ataque(delta: float) -> void:
 			if timer_fase_ataque <= 0.0:
 				fase_ataque = FaseAtaque.ACTIVO
 				timer_fase_ataque = _atk_dur_activo
+				# 90.10.9: resolver el contacto EN EL MISMO FRAME en que el golpe
+				# entra a ACTIVO. Antes se esperaba un frame más; la separación/marcha
+				# del rival podía sacar los cuerpos del rango antes del chequeo.
+				if not _atk_ya_conecto:
+					_chequear_impacto_ataque()
 		FaseAtaque.ACTIVO:
 			if not _atk_ya_conecto:
 				_chequear_impacto_ataque()
@@ -1326,6 +2152,13 @@ func _chequear_impacto_ataque() -> void:
 	var dano := _atk_dano * MULT_DANO_GLOBAL
 	if en_fase_absoluta:
 		dano *= mult_dano_fase
+	# 90.11.27 — si el defensor humano está atrapado en una esquina y mantiene
+	# BLOQUEO durante el hitstun del golpe anterior, permitimos que este follow-up
+	# normal entre como guardia. Como `bloqueado` se calcula DESPUÉS, todo el
+	# pipeline existente (daño reducido, stun reducido, recoil y corte de Combo
+	# Cancel) funciona sin crear una excepción paralela.
+	if objetivo.hitstun_timer > 0.0:
+		objetivo.intentar_guardia_escape_esquina_preimpacto()
 	var bloqueado := objetivo.bloqueando
 	var empuje_final: float = (_atk_empuje_base * peso_golpe + dano * 4.0) * MULT_EMPUJE_GLOBAL
 	# Transferencia de masa: un cuerpo pesado pega con más presencia y un
@@ -1333,13 +2166,7 @@ func _chequear_impacto_ataque() -> void:
 	# para conservar el balance que ya funciona.
 	var transferencia_masa: float = clampf((_masa_corporal() * peso_golpe) / maxf(objetivo._masa_corporal(), 0.55), 0.72, 1.32)
 	empuje_final *= transferencia_masa
-	# FASE 90.2: antes esto casi anulaba el empuje (x0.22) durante el combo
-	# automático del CORE, y era justamente la causa de que el rival quedara
-	# "pegado" recibiendo golpes sin moverse. _acercar_para_combo_auto() ya
-	# recalcula la distancia al objetivo en cada golpe del combo, así que un
-	# empuje real acá no rompe nada -- al contrario, es lo que hace que cada
-	# golpe lo tire para atrás y el atacante tenga que avanzar de nuevo para
-	# conectar el siguiente, que es exactamente el efecto que buscamos.
+	# El combo CORE conserva el empuje real; no lo reducimos artificialmente.
 	var hitstun_final: float = _atk_hitstun * peso_golpe * lerpf(0.90, 1.08, clampf((transferencia_masa - 0.72) / 0.60, 0.0, 1.0))
 	if objetivo.global_position.y < global_position.y - 25.0:
 		hitstun_final *= 0.85
@@ -1350,10 +2177,13 @@ func _chequear_impacto_ataque() -> void:
 	velocity.x = mirando * avance_contacto
 	seguimiento_ataque_x = mirando * (3.0 if _atk_tipo == "punetazo" else 5.0) * _mult_followthrough_personalidad()
 	var intensidad_contacto: float = clampf(empuje_final / 280.0, 0.65, 1.45)
-	# Hit-stop distinto por tipo de ataque: la patada pesa un poco más, el
-	# puño conserva velocidad. Bloqueando, la pausa es seca y corta.
-	var pausa_contacto: float = 0.024 + intensidad_contacto * (0.010 if _atk_tipo == "punetazo" else 0.016)
-	hitstop_timer = pausa_contacto if not bloqueado else 0.018 + intensidad_contacto * 0.004
+	# 90.10.73 — HIT FEEDBACK competitivo. Los golpes normales ya no necesitan
+	# congelar el Engine completo para sentirse sólidos: el contacto se resuelve
+	# con hit-stop LOCAL del Fighter. Puño = seco/rápido; patada = un poco más
+	# pesada. Esto mantiene la velocidad del juego y prepara mejor el combate para
+	# una futura simulación online/rollback.
+	var pausa_contacto: float = 0.018 + intensidad_contacto * (0.007 if _atk_tipo == "punetazo" else 0.012)
+	hitstop_timer = pausa_contacto if not bloqueado else 0.014 + intensidad_contacto * 0.003
 	objetivo.recibir_dano(dano, empuje_final, hitstun_final, mirando, _atk_tipo)
 	_aplicar_contacto_corporal_post_golpe(objetivo, empuje_final, bloqueado)
 	# Un bloqueo firme devuelve presión al atacante. La patada rebota un poco
@@ -1391,7 +2221,10 @@ func _obtener_hurtbox_global(personaje: Fighter) -> Rect2:
 		maxf(alto_fisico, alto_visible_contacto)
 	)
 	return Rect2(
-		personaje.global_position + Vector2(-size.x * 0.5, -size.y),
+		personaje.global_position + Vector2(
+			-size.x * 0.5,
+			-size.y + personaje.OFFSET_VISUAL_LINEA_COMBATE_Y
+		),
 		size
 	)
 
@@ -1399,18 +2232,25 @@ func _obtener_hitbox_ataque() -> Rect2:
 	var mult_cuerpo := _mult_cuerpo_actual()
 	var cuerpo_ancho := ancho_cuerpo * mult_cuerpo
 	var cuerpo_alto := alto_cuerpo * mult_cuerpo
-	var alcance: float = _atk_rango + (12.0 if _atk_tipo == "patada" else 6.0)
-	# Puño: tronco/cabeza. Patada: una ventana algo más baja y más alta.
-	var alto_hit: float = 46.0 if _atk_tipo == "punetazo" else 58.0
-	var centro_y: float = -cuerpo_alto * (0.52 if _atk_tipo == "punetazo" else 0.42)
-	var ancho_hit: float = maxf(alcance - cuerpo_ancho * 0.08, 60.0)
-	# La caja comienza muy cerca del cuerpo y se proyecta hacia delante.
-	# Esto corrige el problema de ataques que se veían conectados a simple
-	# vista pero no tocaban la hurtbox por unos píxeles.
-	var avance_inicial: float = cuerpo_ancho * 0.10
+	# 90.10.12 — alcance alineado con los sprites reales. El video Fang/Kai
+	# confirmó que algunas patadas largas llegan bastante más allá del cuerpo
+	# físico que la caja anterior. Ampliamos sólo el frente del ataque (no la
+	# hurtbox del rival) y con un margen moderado para no crear golpes fantasma.
+	var alcance: float = _atk_rango + (44.0 if _atk_tipo == "patada" else 18.0)
+	# Puño: torso/cabeza. Patada: cubre desde pierna baja hasta torso medio;
+	# esto contempla patadas rectas, altas y descendentes de todo el roster.
+	var alto_hit: float = 52.0 if _atk_tipo == "punetazo" else 76.0
+	var centro_y: float = -cuerpo_alto * (0.50 if _atk_tipo == "punetazo" else 0.36)
+	var ancho_hit: float = maxf(alcance - cuerpo_ancho * (0.06 if _atk_tipo == "punetazo" else 0.03), 64.0)
+	# La caja nace casi desde el borde frontal del torso. En patadas largas no
+	# dejamos un hueco muerto entre el cuerpo físico y la pierna dibujada.
+	var avance_inicial: float = cuerpo_ancho * (0.08 if _atk_tipo == "punetazo" else 0.04)
 	var izquierda: float = avance_inicial if mirando > 0.0 else -avance_inicial - ancho_hit
 	return Rect2(
-		global_position + Vector2(izquierda, centro_y - alto_hit * 0.5),
+		global_position + Vector2(
+			izquierda,
+			centro_y - alto_hit * 0.5 + OFFSET_VISUAL_LINEA_COMBATE_Y
+		),
 		Vector2(ancho_hit, alto_hit)
 	)
 
@@ -1424,6 +2264,22 @@ func _registrar_golpe_conectado(bloqueado: bool = false) -> void:
 	var ganancia: float = clampf(poder_por_golpe * MULT_PODER_GLOBAL, CORE_GANANCIA_MIN, CORE_GANANCIA_MAX)
 	if _atk_tipo == "patada":
 		ganancia *= 1.08
+	# 90.11.05 — dos velocidades de carga. CORE I conserva exactamente la velocidad
+	# aprobada de 90.11.04. CORE II y CORE III comparten el mismo ritmo. La velocidad
+	# depende del SIGUIENTE CORE que estamos construyendo.
+	if veces_fase_absoluta <= 0:
+		ganancia *= CORE_CARGA_NIVEL_1_MULT
+	elif veces_fase_absoluta == 1:
+		ganancia *= CORE_CARGA_NIVEL_2_MULT
+	else:
+		ganancia *= CORE_CARGA_NIVEL_3_MULT
+	# 90.11.01 — COMBO x2/x3: la cadena sigue premiando presión y ejecución,
+	# pero con rendimiento decreciente de CORE. Esto alarga la pelea sin tocar
+	# daño, hit-stop, velocidad ni la ventana de Combo Cancel.
+	if combo_count == 2:
+		ganancia *= CORE_COMBO_SEGUNDO_GOLPE_MULT
+	elif combo_count >= 3:
+		ganancia *= CORE_COMBO_TERCER_MAS_MULT
 	# Bloquear ahora sí protege también la carrera de CORE: el atacante recibe
 	# solo una fracción pequeña por mantener presión, no la carga completa.
 	if bloqueado:
@@ -1442,17 +2298,16 @@ func _activar_fase_absoluta() -> void:
 	fase_activada.emit()
 
 	if veces_fase_absoluta == 1:
-		# Primera vez en toda la pelea: el especial reemplaza al personaje
-		# un toque y listo. Sigue todo en modo normal, sin transformarse.
+		# CORE I — PODER: se conserva exactamente el especial/gigantografía
+		# actual. Todo ocurre en modo normal.
 		_secuencia_poder_simple()
 	elif veces_fase_absoluta == 2:
-		# Segunda vez: especial (reemplaza al personaje) -> ahí SÍ se
-		# transforma para el combo -> remate normal -> vuelve a la normalidad.
-		_secuencia_rematador()
+		# CORE II — COMBO NORMAL + REMATE: la cadena usa sólo golpes
+		# normales, pero conserva el remate/gigantografía propios del segundo CORE.
+		_secuencia_combo_normal()
 	else:
-		# Tercera vez (y de ahí en adelante): especial -> se transforma
-		# para el combo -> remate ABSOLUTO con el póster, en cámara lenta.
-		# Esto termina la partida entera.
+		# CORE III — FURIA FINAL: transformación exclusiva, combo con todo el
+		# repertorio Furia disponible y gigantografía absoluta para cerrar.
 		_secuencia_absoluta()
 
 # Entra/sale de Fase Absoluta -- ahora es SOLO un cambio de color/textura
@@ -1471,6 +2326,12 @@ func _salir_furia() -> void:
 	indice_patada = 0
 	indice_golpe_recibido = -1
 	_set_color(Color.WHITE)
+	# 90.10.15: la coroutine del Absoluto puede terminar DESPUÉS de que Main
+	# ya haya llamado mostrar_pose_victoria(). En ese caso no debe pisar
+	# victoria.png con la pose normal.
+	if en_pose_victoria:
+		velocity = Vector2.ZERO
+		return
 	_actualizar_textura(_tex_parado())
 
 # Compatibilidad: algunos lugares viejos podían llamar a esto por nombre.
@@ -1488,58 +2349,295 @@ func _ejecutar_especial() -> void:
 # a que el golpe anterior termine su ciclo antes de tirar el siguiente --
 # si no, con un intervalo fijo la mitad de los intentos caían a mitad de
 # otro golpe y se perdían en silencio.
+func _construir_pasada_completa_combo_core(total_punos: int, total_patadas: int) -> Array[Dictionary]:
+	var secuencia: Array[Dictionary] = []
+	var punos_usados: int = 0
+	var patadas_usadas: int = 0
+
+	# Distribución proporcional, no alternancia ciega. Ejemplo Helena 10P/5K:
+	# P-P-K / P-P-K / ... Esto mantiene las patadas repartidas a lo largo de
+	# TODA la pasada y evita terminar con un bloque de cinco puños parecidos.
+	while punos_usados < total_punos or patadas_usadas < total_patadas:
+		var usar_patada: bool = false
+		if punos_usados >= total_punos:
+			usar_patada = true
+		elif patadas_usadas >= total_patadas:
+			usar_patada = false
+		elif total_patadas <= 0:
+			usar_patada = false
+		elif total_punos <= 0:
+			usar_patada = true
+		elif punos_usados == 0 and patadas_usadas == 0:
+			# Abrimos con puño cuando existe repertorio de puños, como el combo manual.
+			usar_patada = false
+		else:
+			var progreso_puno_siguiente: float = float(punos_usados + 1) / float(total_punos)
+			var progreso_patada_siguiente: float = float(patadas_usadas + 1) / float(total_patadas)
+			# El tipo que esté más "atrasado" en su repertorio entra primero.
+			# En empate privilegiamos puño para evitar K-K innecesario cuando 1:1.
+			usar_patada = progreso_patada_siguiente < progreso_puno_siguiente
+
+		if usar_patada:
+			secuencia.append({"tipo": "patada", "indice": patadas_usadas})
+			patadas_usadas += 1
+		else:
+			secuencia.append({"tipo": "punetazo", "indice": punos_usados})
+			punos_usados += 1
+
+	return secuencia
+
+func _construir_remix_combo_core(completa: Array[Dictionary]) -> Array[Dictionary]:
+	var remix: Array[Dictionary] = []
+	var total: int = completa.size()
+	if total <= 0:
+		return remix
+
+	# 90.11.00 — REMIX ADAPTATIVO. Helena (15 ataques normales) y Xenoid
+	# (16) ya muestran TODO su repertorio en la pasada completa; repetir luego el 50%
+	# hacía que CORE II se alargara más que el resto del roster. Para repertorios
+	# grandes el remix baja a 30%, sin quitar ni un solo sprite de la exhibición.
+	var fraccion_remix: float = FRACCION_REMIX_COMBO_CORE
+	if total >= UMBRAL_REPERTORIO_GRANDE_COMBO_CORE:
+		fraccion_remix = FRACCION_REMIX_COMBO_CORE_REPERTORIO_GRANDE
+	var objetivo_remix: int = maxi(1, int(ceil(float(total) * fraccion_remix)))
+	if total == 1:
+		remix.append(completa[0].duplicate())
+		return remix
+
+	# 90.11.02 — REMIX CON IDENTIDAD DE PERSONAJE. La pasada completa siempre
+	# permanece 100% intacta; sólo el remix de CORE II puede priorizar patadas.
+	# CORE III no usa esta preferencia para conservar su coreografía Furia actual.
+	if combo_core_remix_prioriza_patadas and not en_fase_absoluta and combo_core_remix_patadas_objetivo > 0:
+		var pasos_patada: Array[Dictionary] = []
+		var pasos_puno: Array[Dictionary] = []
+		for paso in completa:
+			if String(paso.get("tipo", "")) == "patada":
+				pasos_patada.append(paso)
+			else:
+				pasos_puno.append(paso)
+
+		var objetivo_patadas: int = mini(combo_core_remix_patadas_objetivo, mini(objetivo_remix, pasos_patada.size()))
+		# Si existen puños y el remix tiene más de un beat, conservamos al menos uno
+		# para que siga sintiéndose como combinación y no como una ráfaga mono-tipo.
+		if not pasos_puno.is_empty() and objetivo_remix > 1:
+			objetivo_patadas = mini(objetivo_patadas, objetivo_remix - 1)
+		var objetivo_punos: int = mini(objetivo_remix - objetivo_patadas, pasos_puno.size())
+
+		var seleccion_patadas: Array[Dictionary] = []
+		if objetivo_patadas > 0:
+			for i in range(objetivo_patadas):
+				var pos_k: int = int(floor(float(i) * float(pasos_patada.size()) / float(objetivo_patadas)))
+				pos_k = clampi(pos_k, 0, pasos_patada.size() - 1)
+				seleccion_patadas.append(pasos_patada[pos_k].duplicate())
+
+		var seleccion_punos: Array[Dictionary] = []
+		if objetivo_punos > 0:
+			for i in range(objetivo_punos):
+				# Elegimos desde el centro hacia afuera para no volver siempre a P1/P2.
+				var fraccion: float = float(i + 1) / float(objetivo_punos + 1)
+				var pos_p: int = clampi(int(round(fraccion * float(pasos_puno.size() - 1))), 0, pasos_puno.size() - 1)
+				seleccion_punos.append(pasos_puno[pos_p].duplicate())
+
+		# Patrón K-P-K-K...: abre con pierna para que el cambio de lenguaje corporal
+		# sea visible inmediatamente y distribuye los puños disponibles en el remix.
+		var ik: int = 0
+		var ip: int = 0
+		while remix.size() < objetivo_remix and (ik < seleccion_patadas.size() or ip < seleccion_punos.size()):
+			if ik < seleccion_patadas.size():
+				remix.append(seleccion_patadas[ik])
+				ik += 1
+			if remix.size() >= objetivo_remix:
+				break
+			if ip < seleccion_punos.size():
+				remix.append(seleccion_punos[ip])
+				ip += 1
+		# Completar con patadas restantes antes de volver al constructor genérico.
+		while remix.size() < objetivo_remix and ik < seleccion_patadas.size():
+			remix.append(seleccion_patadas[ik])
+			ik += 1
+		if remix.size() == objetivo_remix:
+			return remix
+
+	# "Zig-zag" entre el comienzo y el final del repertorio. No es volver a
+	# ejecutar la primera mitad: toma poses de zonas diferentes y cambia el orden.
+	# En una lista P/K alternada esto conserva mezcla; en repertorios 2:1 también
+	# evita seleccionar accidentalmente sólo puños.
+	var usados: Dictionary = {}
+	var izquierda: int = 1 if total > 2 else 0
+	var derecha: int = total - 2 if total > 2 else total - 1
+	var tomar_izquierda: bool = true
+	var intentos: int = 0
+	var max_intentos: int = maxi(8, total * 4)
+
+	while remix.size() < objetivo_remix and usados.size() < total and intentos < max_intentos:
+		intentos += 1
+		var idx: int = izquierda if tomar_izquierda else derecha
+		idx = clampi(idx, 0, total - 1)
+		if not usados.has(idx):
+			remix.append(completa[idx].duplicate())
+			usados[idx] = true
+
+		if tomar_izquierda:
+			izquierda += 2
+			if izquierda >= total:
+				izquierda = 0
+		else:
+			derecha -= 2
+			if derecha < 0:
+				derecha = total - 1
+		tomar_izquierda = not tomar_izquierda
+
+	# Blindaje para tamaños donde los dos cursores pudieran caer repetidamente
+	# en posiciones ya usadas. Completa el 50% con huecos aún no seleccionados.
+	if remix.size() < objetivo_remix:
+		for idx in range(total):
+			if remix.size() >= objetivo_remix:
+				break
+			if not usados.has(idx):
+				remix.append(completa[idx].duplicate())
+				usados[idx] = true
+
+	return remix
+
+func _ejecutar_paso_coreografia_combo_core(paso: Dictionary) -> void:
+	var tipo: String = String(paso.get("tipo", ""))
+	var indice: int = int(paso.get("indice", 0))
+	if tipo == "patada":
+		var lista_patadas: Array[Texture2D] = _lista_patada()
+		if lista_patadas.is_empty():
+			return
+		indice_patada = clampi(indice, 0, lista_patadas.size() - 1)
+		intentar_patada()
+	else:
+		var lista_punos: Array[Texture2D] = _lista_punetazo()
+		if lista_punos.is_empty():
+			return
+		indice_punetazo = clampi(indice, 0, lista_punos.size() - 1)
+		intentar_punetazo()
+
+# El bucle de puños/patadas automáticos en sí (sin el remate al final).
+# 90.11.08 — COREOGRAFÍA TRIFÁSICA:
+#   A) RÁFAGA DE PUÑOS: todos los puños disponibles, en orden;
+#   B) RÁFAGA DE PATADAS: todas las patadas disponibles, en orden;
+#   C) MIXTA: repertorio completo de puños/patadas intercalado;
+#   D) remate/Absoluto único.
+# Se aplica únicamente al combo automático de CORE II/III. No altera Versus Local,
+# Combo Cancel manual, timings normales, daño, hitstun ni knockback.
+# La cadencia uniforme 90.10.98 y el receptor anclado 90.10.97 se conservan.
 func _racha_combo_auto() -> void:
 	en_combo_auto_visual = true
-	var t := 0.0
-	var golpe_es_patada := false
-	while t < DURACION_COMBO_AUTO and not esta_derrotado and en_fase_absoluta:
-		if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
-			# Durante la cinemática el _physics_process mantiene velocity en cero,
-			# así que no sirve "mover()" para cerrar la distancia. Hacemos un
-			# pequeño avance cinematográfico con tween, pero solo cuando el golpe
-			# anterior ya terminó su recovery.
-			if fase_ataque == FaseAtaque.NINGUNA:
-				await _acercar_para_combo_auto()
-				if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
-					break
-				var distancia: float = objetivo.global_position.x - global_position.x
-				if absf(distancia) > 1.0:
-					mirando = signf(distancia)
-				if golpe_es_patada and combo_auto_incluye_patada:
-					intentar_patada()
-				else:
-					intentar_punetazo()
-				golpe_es_patada = not golpe_es_patada
-		await get_tree().create_timer(0.05, true, false, true).timeout
-		t += 0.05
+	# Arrancar la ráfaga sin inercia heredada. Hasta el remate el receptor
+	# conserva su posición horizontal entre impactos.
+	if objetivo and is_instance_valid(objetivo):
+		objetivo.empuje_timer = 0.0
+		objetivo.empuje_x = 0.0
+		objetivo.empuje_pendiente_timer = 0.0
+		objetivo.empuje_pendiente_fuerza = 0.0
+		objetivo.velocity.x = 0.0
+
+	indice_punetazo = 0
+	indice_patada = 0
+	var total_punos: int = _lista_punetazo().size()
+	var total_patadas: int = _lista_patada().size() if combo_auto_incluye_patada else 0
+
+	# 90.11.08 — tres actos claramente distintos. La tercera pasada reutiliza el
+	# constructor proporcional ya validado para mantener mezclados repertorios 2:1
+	# (por ejemplo 10 puños / 5 patadas) sin esconder ningún sprite.
+	var pasada_punos: Array[Dictionary] = []
+	for i in range(total_punos):
+		pasada_punos.append({"tipo": "punetazo", "indice": i})
+
+	var pasada_patadas: Array[Dictionary] = []
+	for i in range(total_patadas):
+		pasada_patadas.append({"tipo": "patada", "indice": i})
+
+	var pasada_mixta: Array[Dictionary] = _construir_pasada_completa_combo_core(total_punos, total_patadas)
+	var coreografia: Array[Dictionary] = []
+	coreografia.append_array(pasada_punos)
+	coreografia.append_array(pasada_patadas)
+	coreografia.append_array(pasada_mixta)
+
+	for paso in coreografia:
+		if esta_derrotado:
+			break
+		if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+			break
+
+		# Cada beat espera únicamente el fin lógico del anterior. Todos los tipos
+		# comparten el timing uniforme 90.10.98: no existe pausa por cooldown de patada.
+		while fase_ataque != FaseAtaque.NINGUNA and not esta_derrotado:
+			await get_tree().create_timer(POLL_COMBO_CORE_CONTINUO, true, false, true).timeout
+		if esta_derrotado:
+			break
+
+		await _acercar_para_combo_auto()
+		if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+			break
+
+		var distancia: float = objetivo.global_position.x - global_position.x
+		if absf(distancia) > 1.0:
+			mirando = signf(distancia)
+		_ejecutar_paso_coreografia_combo_core(paso)
+		await get_tree().create_timer(POLL_COMBO_CORE_CONTINUO, true, false, true).timeout
+
+	while fase_ataque != FaseAtaque.NINGUNA and not esta_derrotado:
+		await get_tree().create_timer(POLL_COMBO_CORE_CONTINUO, true, false, true).timeout
+
+	# Mantener el estado manual predecible: históricamente las dos vueltas
+	# completas devolvían ambos índices a cero por wrap.
+	indice_punetazo = 0
+	indice_patada = 0
 	velocity.x = 0.0
+	# Liberar el combo cage ANTES del remate: CORE II/III recupera knockback normal.
 	en_combo_auto_visual = false
 
 func _acercar_para_combo_auto() -> void:
 	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
 		return
+
+	# 90.10.46 — TARGET LOCK 2D. El rival puede estar en el piso mientras el
+	# atacante activa CORE desde salto/doble salto (o al revés). Por eso ya no
+	# basta con cerrar la distancia horizontal: alineamos también la altura del
+	# cuerpo antes de permitir que empiece el siguiente golpe del combo.
 	var dx: float = objetivo.global_position.x - global_position.x
-	var distancia: float = absf(dx)
-	if distancia <= DISTANCIA_COMBO_AUTO_OBJETIVO:
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	# 90.10.71 — el acercamiento usa el mismo target que el pushbox. En 90.10.70
+	# el tween siempre intentaba volver a 82 px aunque el cuerpo visual necesitara
+	# más espacio, generando la penetración residual que vimos en Kali/Aethel.
+	var distancia_combo_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+	if distancia_x <= distancia_combo_objetivo \
+		and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
 		return
+
 	var lado: float = signf(dx)
+	# Si estamos prácticamente encima/debajo del rival, conservar el lado de
+	# combate actual evita un giro indeterminado y nos deja a distancia segura.
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
 	mirando = lado
-	# Si están demasiado separados, cerramos la distancia con una entrada
-	# más marcada; si ya están relativamente cerca, el avance es mínimo.
-	var distancia_objetivo: float = DISTANCIA_COMBO_AUTO_OBJETIVO
-	if distancia > DISTANCIA_COMBO_AUTO_MAX:
-		distancia_objetivo = 96.0
-	var destino_x: float = objetivo.global_position.x - lado * distancia_objetivo
-	var duracion: float = clampf(distancia / 900.0, 0.08, 0.20)
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_combo_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	# Un trayecto vertical grande (doble salto) necesita unas décimas más que
+	# el viejo dash horizontal para verse dirigido, pero sigue siendo muy rápido.
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "global_position:x", destino_x, duracion)
+	tween.tween_property(self, "global_position", destino, duracion)
 	await tween.finished
-	velocity.x = 0.0
+	velocity = Vector2.ZERO
 
 func _congelar_rival(activo: bool) -> void:
 	if objetivo and is_instance_valid(objetivo):
 		objetivo.congelado_por_rival = activo
+		if not activo and not objetivo.esta_derrotado \
+			and not objetivo.derribo_especial_activo and objetivo.pose_timer <= 0.0:
+			objetivo._actualizar_textura(objetivo._tex_reposo())
 
 # Beat cinematográfico antes del combo automático (cargas 2 y 3): el
 # personaje pasa a su pose de "recarga de energía" propia, brilla, y le
@@ -1549,9 +2647,7 @@ func _congelar_rival(activo: bool) -> void:
 func _mostrar_recarga_energia(camara_lenta: bool) -> void:
 	if not textura_recarga or not sprite:
 		return
-	# FASE AUDIO: escena de recarga alargada ~0.65s (antes 1.05/1.55) para
-	# que entre un grito de voz más largo sin que se corte a la fuerza.
-	var espera: float = 2.20 if camara_lenta else 1.70
+	var espera: float = 1.55 if camara_lenta else 1.05
 	en_pose_recarga = true
 	velocity = Vector2.ZERO
 	pose_timer = espera + 0.08
@@ -1585,8 +2681,27 @@ func _bloquear_cinematica() -> void:
 			mirando = signf(dx)
 
 func _desbloquear_cinematica() -> void:
+	# 90.10.15: si ya se declaró la victoria, una secuencia asíncrona vieja
+	# (especial/Absoluto) no tiene permiso para reabrir el control del Fighter.
+	if en_pose_victoria:
+		bloqueo_cinematico = true
+		velocity = Vector2.ZERO
+		carrera_activa = false
+		carrera_direccion = 0.0
+		return
 	bloqueo_cinematico = false
 	velocity = Vector2.ZERO
+	carrera_activa = false
+	carrera_direccion = 0.0
+	dash_aereo_activo = false
+	dash_aereo_direccion = 0.0
+	dash_aereo_timer = 0.0
+	# No recargar dash_aereo_usado acá: sólo aterrizar permite otro air dash.
+	doble_pulso_izq_timer = 0.0
+	doble_pulso_der_timer = 0.0
+	tecla_izq_previa = false
+	tecla_der_previa = false
+	gamepad_salto_previo = false
 
 func _pose_final_especial(duracion: float) -> void:
 	# Usa el último frame de puñetazo como pose de lanzamiento: el cuerpo
@@ -1597,16 +2712,42 @@ func _pose_final_especial(duracion: float) -> void:
 		pose_timer = duracion
 
 func _acercar_para_especial() -> void:
-	if not objetivo or not is_instance_valid(objetivo):
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
 		return
-	var distancia: float = absf(objetivo.global_position.x - global_position.x)
-	if distancia <= 210.0:
+
+	# 90.10.47 — CORE I TARGET LOCK 2D. El primer CORE debe tener la misma
+	# fiabilidad espacial que CORE II/III: si se dispara lejos, desde salto o
+	# doble salto, primero acelera hacia la posición REAL del rival y recién
+	# entonces ejecuta el golpe/gigantografía. Antes sólo corregía X.
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	if distancia_x <= 210.0 and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
 		return
-	var lado: float = signf(objetivo.global_position.x - global_position.x)
-	var destino_x: float = objetivo.global_position.x - lado * 150.0
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * 150.0,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 980.0, 0.08, 0.32)
+
+	# Si existe una pose de carrera/aceleración, se usa únicamente durante el
+	# cierre de distancia. No altera hitboxes, daño ni la pose del especial.
+	var tex_aceleracion: Texture2D = _tex_carrera()
+	if tex_aceleracion and sprite:
+		_actualizar_textura(tex_aceleracion)
+		pose_timer = duracion + 0.03
+
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "global_position:x", destino_x, 0.18)
+	tween.tween_property(self, "global_position", destino, duracion)
 	await tween.finished
 	velocity = Vector2.ZERO
 
@@ -1662,9 +2803,7 @@ func _aplicar_impacto_especial(multiplicador_dano: float = 2.6) -> void:
 		direccion = mirando
 	var bloqueado: bool = objetivo.bloqueando
 	var dano: float = dano_punetazo * MULT_DANO_GLOBAL * multiplicador_dano
-	# FASE IMPACTO: empuje del primer CORE subido (antes 360) para que se
-	# note más el golpe, en línea con el remate y el absoluto.
-	var empuje: float = 620.0 * peso_golpe
+	var empuje: float = 360.0 * peso_golpe
 	var stun: float = 0.55 * peso_golpe
 	if bloqueado:
 		dano *= 0.35
@@ -1693,43 +2832,49 @@ func _secuencia_poder_simple() -> void:
 		if dir_previa == 0.0:
 			dir_previa = mirando
 		objetivo.preparar_impacto_cinematico(1.10, dir_previa, "especial")
-	await _mostrar_poder_reemplazando(textura_especial, 1.05, 320.0, true, 2.6)
+		# 90.10.57 — CORE I GUARANTEED HIT. El impacto real ocurre en el
+		# instante del golpe, antes de mostrar la gigantografía. Antes el daño
+		# quedaba postergado hasta que terminaba todo el póster, lo que hacía
+		# que visualmente pareciera que el CORE I no conectaba. Se aplica una
+		# sola vez; _mostrar_poder_reemplazando recibe aplicar_impacto=false.
+		_aplicar_impacto_especial(2.6)
+	await _mostrar_poder_reemplazando(textura_especial, 1.05, 320.0, false, 2.6)
 	_congelar_rival(false)
 	_desbloquear_cinematica()
 	en_secuencia_especial = false
 
-# 2da carga: especial (reemplaza, en modo normal) -> se transforma ->
-# combo -> remate normal (reemplaza) -> vuelve a modo normal.
-func _secuencia_rematador() -> void:
+# CORE II: combo en modo normal seguido por su remate/gigantografía.
+# No activa aura/Furia; sólo usa los golpes normales y luego conserva
+# el cierre cinematográfico propio del segundo CORE.
+func _secuencia_combo_normal() -> void:
 	if en_secuencia_especial:
 		return
 	en_secuencia_especial = true
 	_bloquear_cinematica()
 	_congelar_rival(true)
 
-	await _acercar_para_especial()
-	_pose_final_especial(0.95)
-	_ejecutar_especial()
-	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
-		var dir_previa: float = signf(objetivo.global_position.x - global_position.x)
-		if dir_previa == 0.0:
-			dir_previa = mirando
-		objetivo.preparar_impacto_cinematico(1.00, dir_previa, "especial")
-	await _mostrar_poder_reemplazando(textura_especial, 0.95, 320.0, true, 2.4)
-
-	_entrar_furia()
-	# Primero la pose de recarga en el lugar actual del luchador; recién
-	# después avanza hacia el rival para iniciar el combo automático. Así la
-	# ilustración no se monta encima del oponente.
+	# CORE II NO entra en Furia. Los índices/listas permanecen en modo normal
+	# y se reproducen en tres actos: puños, patadas y mezcla completa.
+	en_fase_absoluta = false
+	indice_punetazo = 0
+	indice_patada = 0
+	# CORE II conserva su recarga de energía original antes del combo.
+	# La única diferencia frente al diseño anterior es que el combo usa
+	# exclusivamente sprites normales, no Furia.
 	await _mostrar_recarga_energia(false)
 	await _acercar_para_combo_auto()
 	await _racha_combo_auto()
 	if not esta_derrotado:
 		await _ejecutar_rematador()
-	_salir_furia()
+
 	_congelar_rival(false)
 	_desbloquear_cinematica()
 	en_secuencia_especial = false
+
+# Alias de compatibilidad por si algún script viejo todavía invoca el nombre
+# anterior. Desde 90.10.40 CORE II ejecuta combo normal + remate.
+func _secuencia_rematador() -> void:
+	await _secuencia_combo_normal()
 
 func _ejecutar_rematador() -> void:
 	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
@@ -1741,46 +2886,27 @@ func _ejecutar_rematador() -> void:
 	if direccion == 0.0:
 		direccion = mirando
 
-	# FASE REDISEÑO: el remate del segundo CORE ahora lo da el cuerpo real
-	# del luchador (pose propia, escala normal), sin la gigantografía de
-	# fondo. Esa ilustración grande queda reservada solo para el remate
-	# ABSOLUTO del tercer CORE (ver _ejecutar_finalizacion_absoluta).
+	# El rival queda quieto durante TODO el póster. Primero se presenta el
+	# remate; recién cuando desaparece el arte grande ocurre la reacción física.
 	rematador_iniciado.emit()
 	_congelar_rival(true)
 	if puede_conectar and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
 		objetivo.preparar_impacto_cinematico(1.35, direccion, "rematador")
-	await _mostrar_remate_personaje(textura_rematador, 1.30)
+	await _mostrar_poder_reemplazando(textura_rematador, 1.30, 390.0)
 	_congelar_rival(false)
 	if puede_conectar and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
 		var dano: float = dano_patada * MULT_DANO_GLOBAL * mult_dano_fase * 2.4
 		objetivo.recibir_dano(dano, 520.0, 0.75, direccion, "rematador")
-		# FASE IMPACTO: vuelo hacia atrás más largo en el remate (antes
-		# 620/360), para que se sienta como un golpe de cierre de combo.
+		# CORE 2: vuelo fuerte dentro del sistema físico normal.
 		objetivo.recibir_derribo_especial(direccion, 1045.0 if not bloqueado else 570.0, 505.0 if not bloqueado else 310.0, 0.95 if not bloqueado else 0.45, true)
 		_efecto_chispas(bloqueado, objetivo.global_position)
-		_onda_impacto_local(objetivo.global_position, color_energia_poder(), 0.85)
-		hitstop_timer = 0.08 if not bloqueado else 0.04
 		await get_tree().create_timer(0.10, true, false, true).timeout
 	rematador_conectado.emit()
 
-# Muestra el remate con el sprite real del personaje (misma escala normal
-# calibrada en ESCALAS_POSE_PRECALCULADAS), en vez de una ilustración grande
-# de fondo. El personaje queda trabado en esa pose el tiempo indicado.
-func _mostrar_remate_personaje(tex: Texture2D, tiempo_visible: float) -> void:
-	if not tex or not sprite:
-		return
-	bloqueo_cinematico = true
-	velocity = Vector2.ZERO
-	_set_color(Color.WHITE)
-	flash_timer = 0.0
-	_actualizar_textura(tex)
-	pose_timer = tiempo_visible + 0.25
-	await get_tree().create_timer(tiempo_visible, true, false, true).timeout
-
-# Tercera carga de la barra en toda la pelea: especial (modo normal) ->
-# se transforma -> combo -> remate ABSOLUTO con el póster, cámara lenta.
-# Esto termina la partida entera (ver finalizacion_absoluta), no solo la
-# ronda -- ya no hay K.O. por vida, gana quien llega primero acá.
+# CORE III — FURIA FINAL: la transformación ocurre desde el comienzo de la
+# secuencia. Se recorre el repertorio Furia en tres actos (puños, patadas y mezcla)
+# y recién después llega la gigantografía absoluta. El especial normal de CORE I ya no se
+# repite acá, para que cada nivel de CORE tenga una identidad propia.
 func _secuencia_absoluta() -> void:
 	if en_secuencia_especial:
 		return
@@ -1788,20 +2914,10 @@ func _secuencia_absoluta() -> void:
 	_bloquear_cinematica()
 	_congelar_rival(true)
 
-	await _acercar_para_especial()
-	_pose_final_especial(1.0)
-	_ejecutar_especial()
-	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
-		var dir_previa: float = signf(objetivo.global_position.x - global_position.x)
-		if dir_previa == 0.0:
-			dir_previa = mirando
-		objetivo.preparar_impacto_cinematico(1.00, dir_previa, "especial")
-	await _mostrar_poder_reemplazando(textura_especial, 0.95, 320.0, true, 2.4)
-
-	_entrar_furia()
-	# Igual que en la carga 2: recarga primero en posición, luego avance y
-	# combo. La recarga no debe tapar al rival ni salirse de pantalla.
+	# CORE III: primero la recarga de energía en estado normal; al terminar
+	# entra la transformación Furia/Aura y recién ahí comienza el combo final.
 	await _mostrar_recarga_energia(true)
+	_entrar_furia()
 	await _acercar_para_combo_auto()
 	await _racha_combo_auto()
 	if not esta_derrotado:
@@ -1829,9 +2945,7 @@ func _ejecutar_finalizacion_absoluta() -> void:
 		if direccion == 0.0:
 			direccion = mirando
 		objetivo.recibir_dano(999.0, 980.0, 1.2, direccion, "absoluto")
-		# Este es el que pediste reforzar de nuevo puntualmente: +10%
-		# general más un extra propio, así el vuelo se nota claramente
-		# más que en especial/rematador.
+		# CORE 3: derribo físico estable, sin Tween ni espera artificial.
 		objetivo.recibir_derribo_especial(direccion, 1550.0, 680.0, 99.0, false)
 		_efecto_chispas(false, objetivo.global_position)
 		_onda_impacto_local(objetivo.global_position, color_energia_poder(), 1.6)
@@ -1845,6 +2959,9 @@ func _resolver_aterrizaje_derribo_especial() -> void:
 	velocity.x *= 0.42 if derribo_especial_se_levanta else 0.56
 	pose_timer = 0.0
 	_actualizar_textura(_tex_derribado())
+	# La textura derribada suele ser mucho más ancha que la pose de pie. Recalcular
+	# el límite en el mismo frame evita que desaparezca fuera del borde.
+	_aplicar_limites_arena()
 	var fuerza_caida: float = 430.0 if derribo_especial_se_levanta else 560.0
 	_efecto_golpe_suelo(fuerza_caida)
 	aterrizaje_hecho.emit(fuerza_caida, true)
@@ -1855,6 +2972,9 @@ func recibir_derribo_especial(direccion: float, fuerza_x: float, fuerza_y: float
 	if direccion == 0.0:
 		direccion = mirando if mirando != 0.0 else 1.0
 	derribo_especial_activo = true
+	# El cuerpo derribado deja de colisionar físicamente con el rival hasta
+	# levantarse. Esto elimina el "personaje invisible que sigue empujando".
+	_ignorar_colision_con_rival()
 	derribo_especial_esperando_aterrizar = true
 	derribo_especial_se_levanta = se_levanta
 	derribo_especial_timer = maxf(tiempo_tendido, 0.0)
@@ -1878,10 +2998,7 @@ func recibir_derribo_especial(direccion: float, fuerza_x: float, fuerza_y: float
 	empuje_pendiente_timer = 0.0
 	empuje_pendiente_fuerza = 0.0
 	mirando = -signf(direccion)
-	# FASE IMPACTO: tope de velocidad de vuelo horizontal más alto (antes
-	# 760) -- SOLO lo usan los remates de CORE (rematador/absoluto), nunca
-	# los golpes normales, así que subirlo no afecta el combate cuerpo a
-	# cuerpo de todos los días.
+	# Tope exclusivo del vuelo de los remates CORE.
 	velocity.x = clampf((fuerza_x / maxf(_masa_corporal(), 0.65)) * direccion, -1300.0, 1300.0)
 	velocity.y = -fuerza_y
 	hitstun_timer = maxf(hitstun_timer, 0.9 if se_levanta else 1.35)
@@ -1891,6 +3008,7 @@ func recibir_derribo_especial(direccion: float, fuerza_x: float, fuerza_y: float
 
 func _terminar_derribo_especial() -> void:
 	derribo_especial_activo = false
+	_restaurar_colision_con_rival()
 	derribo_especial_esperando_aterrizar = false
 	derribo_especial_se_levanta = false
 	derribo_especial_timer = 0.0
@@ -1999,6 +3117,55 @@ func _retencion_horizontal_aterrizaje() -> float:
 func _peso_visual_aterrizaje() -> float:
 	return clampf(_masa_corporal(), 0.72, 1.55)
 
+func intentar_guardia_escape_esquina_preimpacto() -> bool:
+	# Sólo control humano enrutado: ésta es la ruta exclusiva de Versus Local.
+	# No se habilita para IA ni para el control histórico de Arcade.
+	if not controlado_por_jugador or fuente_control != FuenteControl.EXTERNA:
+		return false
+	if esta_derrotado or en_secuencia_especial or bloqueo_cinematico:
+		return false
+	# Si ya estaba bloqueando antes del impacto, se conserva el bloqueo normal
+	# sin tocar su hitstun: esta mecánica sólo sirve para ENTRAR a guardia desde
+	# una cadena que de otro modo dejaría al jugador sin respuesta.
+	if bloqueando:
+		return false
+	if congelado_por_rival or derribo_especial_activo:
+		# CORE II/III y derribos conservan su coreografía cerrada.
+		return false
+	if not is_on_floor() or fase_ataque != FaseAtaque.NINGUNA:
+		return false
+	# Debe existir hitstun previo: el primer golpe limpio nunca se convierte
+	# mágicamente en bloqueo. La salida sólo puede aparecer en el follow-up.
+	if hitstun_timer <= 0.0 or guardia_escape_esquina_cooldown > 0.0:
+		return false
+	if not bool(input_frame_enrutado_actual.get("bloqueo", false)):
+		return false
+
+	# 90.11.29 — corrección: la Guardia de Esquina debe usar el límite de arena
+	# real que ya existe en Fighter. La llamada anterior apuntaba a una función
+	# inexistente y provocaba Parse Error en Fighter y todas sus subclases.
+	var limites_x: Vector2 = _limites_arena_x_pose_actual()
+	var cerca_izquierda: bool = global_position.x <= limites_x.x + GUARDIA_ESCAPE_ESQUINA_MARGEN
+	var cerca_derecha: bool = global_position.x >= limites_x.y - GUARDIA_ESCAPE_ESQUINA_MARGEN
+	if not cerca_izquierda and not cerca_derecha:
+		return false
+
+	# Limpiamos solamente la reacción heredada del impacto anterior para dejar
+	# entrar la guardia. El nuevo impacto se procesa inmediatamente después con
+	# el daño/stun/knockback normales de BLOQUEO y provoca el recoil del atacante.
+	hitstun_timer = 0.0
+	_reaccion_impacto_timer = 0.0
+	absorcion_impacto_timer = 0.0
+	empuje_pendiente_timer = 0.0
+	empuje_pendiente_fuerza = 0.0
+	empuje_timer = 0.0
+	empuje_x = 0.0
+	velocity.x = 0.0
+	pose_timer = 0.0
+	guardia_escape_esquina_cooldown = GUARDIA_ESCAPE_ESQUINA_COOLDOWN
+	_iniciar_bloqueo(GUARDIA_ESCAPE_ESQUINA_DURACION)
+	return true
+
 func aplicar_empuje(direccion: float, fuerza: float) -> void:
 	var fuerza_final: float = fuerza / _masa_corporal()
 	if bloqueando:
@@ -2025,6 +3192,14 @@ func _detener_bloqueo() -> void:
 		_actualizar_textura(_tex_reposo())
 
 func recibir_dano(cantidad: float, empuje_fuerza: float = 150.0, hitstun: float = 0.25, direccion_atacante: float = 0.0, tipo_impacto: String = "golpe") -> void:
+	# 90.10.97 — COMBO CAGE. Si este Fighter está congelado por el rival Y ese
+	# rival está ejecutando la ráfaga automática de CORE II/III, el impacto debe
+	# sentirse (reacción, hit-stop, partículas, audio) pero NO desplazar el cuerpo.
+	# El remate/Absoluto ocurre después de en_combo_auto_visual=false, por lo que
+	# conserva intacto su knockback fuerte.
+	var recibiendo_racha_core: bool = congelado_por_rival \
+		and objetivo and is_instance_valid(objetivo) and objetivo.en_combo_auto_visual
+
 	# Ya no hay K.O. por vida: los golpes siguen empujando y aturdiendo
 	# normal, pero la única forma de perder la partida es que el rival
 	# llegue a su remate ABSOLUTO (ver finalizacion_absoluta en main.gd).
@@ -2063,7 +3238,28 @@ func recibir_dano(cantidad: float, empuje_fuerza: float = 150.0, hitstun: float 
 		mirando = -sign(direccion_atacante)
 	if fuerza_relativa >= 190.0 and is_on_floor():
 		_efecto_golpe_suelo(fuerza_relativa)
-	hitstop_timer = 0.030 if fuerza_relativa >= 250.0 else (0.018 if fuerza_relativa >= 150.0 else 0.0)
+	# 90.10.73 — jerarquía de impacto del RECEPTOR. El rival se congela unas
+	# centésimas según la categoría real del golpe, nunca por un slow-motion
+	# global. Así un puño conserva cadencia, una patada pesa más y CORE/remates
+	# tienen una lectura claramente superior sin volver torpes los intercambios.
+	var pausa_receptor: float = 0.0
+	if en_bloqueo:
+		pausa_receptor = 0.014 + float(nivel_impacto_actual) * 0.002
+	else:
+		match tipo_impacto:
+			"punetazo":
+				pausa_receptor = 0.010 + float(nivel_impacto_actual) * 0.005
+			"patada":
+				pausa_receptor = 0.016 + float(nivel_impacto_actual) * 0.006
+			"especial":
+				pausa_receptor = 0.038
+			"rematador":
+				pausa_receptor = 0.052
+			"absoluto":
+				pausa_receptor = 0.070
+			_:
+				pausa_receptor = 0.012 + float(nivel_impacto_actual) * 0.005
+	hitstop_timer = maxf(hitstop_timer, pausa_receptor)
 
 	# Hit-stun real: mientras dure, el que lo recibe no puede hacer nada
 	# (ver "comprometido" en _physics_process). Bloqueando, el aturdimiento
@@ -2081,7 +3277,17 @@ func recibir_dano(cantidad: float, empuje_fuerza: float = 150.0, hitstun: float 
 	# (direccion_atacante = 0), es porque ya lo va a aplicar por su cuenta
 	# después -- así los remates/especiales que ya llamaban aplicar_empuje
 	# aparte siguen funcionando igual, sin duplicar el empujón.
-	if direccion_atacante != 0.0:
+	if recibiendo_racha_core:
+		# Ningún knockback intermedio: el rival queda como si estuviera contenido
+		# por una pared invisible de combo. Limpiamos también cualquier empuje
+		# pendiente del impacto anterior para evitar deriva acumulativa.
+		empuje_timer = 0.0
+		empuje_x = 0.0
+		empuje_pendiente_timer = 0.0
+		empuje_pendiente_fuerza = 0.0
+		empuje_pendiente_direccion = 0.0
+		velocity.x = 0.0
+	elif direccion_atacante != 0.0:
 		# El empuje ya no ocurre exactamente en el mismo instante del contacto.
 		# Primero se lee la pose/recoil y unas centésimas después el cuerpo cede.
 		empuje_pendiente_direccion = direccion_atacante
@@ -2094,7 +3300,27 @@ func recibir_dano(cantidad: float, empuje_fuerza: float = 150.0, hitstun: float 
 
 func _derrotado() -> void:
 	esta_derrotado = true
+	cruce_aereo_activo = false
+	# 90.10.70 — el K.O. manda por encima de cualquier estado cinematográfico
+	# anterior. Si el rival venía congelado por CORE/Absoluto, no puede conservar
+	# un bloqueo que anule su física o deje una pose suspendida al terminar.
+	bloqueo_cinematico = false
+	en_secuencia_especial = false
+	congelado_por_rival = false
+	en_combo_auto_visual = false
+	# KO definitivo: el cuerpo puede quedar tendido, pero nunca bloquear ni
+	# empujar al ganador con una colisión que ya no corresponde al combate.
+	_ignorar_colision_con_rival()
 	en_pose_victoria = false
+	# K.O. definitivo: fijar el origen sobre la línea física del escenario.
+	# La corrección visual del PNG se realiza más abajo, después de cargar
+	# exactamente la textura horizontal de derrotado.
+	velocity = Vector2.ZERO
+	empuje_timer = 0.0
+	empuje_x = 0.0
+	empuje_pendiente_timer = 0.0
+	empuje_pendiente_fuerza = 0.0
+	global_position.y = SUELO_REFERENCIA_Y
 	if tween_victoria and is_instance_valid(tween_victoria):
 		tween_victoria.kill()
 	tween_victoria = null
@@ -2120,11 +3346,127 @@ func _derrotado() -> void:
 	if sprite:
 		sprite.visible = true
 		_actualizar_textura(_tex_derribado())
+
+		# 90.10.70 — la pose horizontal suele tener pelo, aura o extremidades que
+		# alteran el used_rect. Sumamos un apoyo dinámico pequeño según el alto
+		# visible de ESTA pose, para que el torso no parezca flotando por culpa de
+		# puntas de pelo/alas que llegan más abajo que el cuerpo real.
+		var rect_ko: Rect2 = _obtener_rect_visual(sprite.texture)
+		var alto_ko_visible: float = rect_ko.size.y * absf(sprite.scale.y)
+		var apoyo_dinamico: float = clampf(alto_ko_visible * 0.075, 0.0, OFFSET_DERRIBADO_DINAMICO_MAX)
+		sprite_base_y += OFFSET_DERRIBADO_FINAL_Y + apoyo_dinamico
+		sprite.position.y = sprite_base_y
+
+	# Reencuadrar el cuerpo YA con la textura horizontal aplicada y separar el
+	# K.O. del ganador. En 90.10.69 la función existía pero nunca se llamaba.
+	_aplicar_limites_arena()
+	_asegurar_separacion_ko_final()
+
+	# 90.10.18 — K.O. FINAL ESTABLE.
+	# Una vez que el derrotado ya cayó y se asentó, NO lo recolocamos con Tween.
+	# El rebote lateral del K.O. anterior hacía que el cuerpo pareciera deslizarse
+	# solo por el suelo después de terminar la pelea. Velocity ya está en cero,
+	# la colisión con el rival está ignorada y los límites de arena ya se aplicaron:
+	# por eso la posición final de la caída se conserva exactamente hasta cambiar escena.
 	derrotado.emit()
+
+func _asegurar_separacion_ko_final() -> void:
+	if not objetivo or not is_instance_valid(objetivo):
+		return
+
+	# El centro-a-centro fijo de 190 px no alcanza para sprites acostados.
+	# Calculamos cuánto espacio ocupan REALMENTE ambos PNG en este instante.
+	var distancia_necesaria: float = maxf(
+		DISTANCIA_FINAL_GANADOR_DERRIBADO,
+		_distancia_visual_entre_cuerpos(objetivo) + MARGEN_KO_VISUAL
+	)
+	var distancia_actual: float = absf(global_position.x - objetivo.global_position.x)
+	if distancia_actual >= distancia_necesaria:
+		return
+
+	var lado_actual: float = signf(global_position.x - objetivo.global_position.x)
+	var limites_ko: Vector2 = _limites_arena_x_pose_actual()
+	var espacio_izq: float = objetivo.global_position.x - limites_ko.x
+	var espacio_der: float = limites_ko.y - objetivo.global_position.x
+
+	var lado: float = lado_actual
+	if lado == 0.0:
+		lado = -objetivo.mirando if objetivo.mirando != 0.0 else 1.0
+
+	if lado < 0.0 and espacio_izq < distancia_necesaria:
+		lado = 1.0
+	elif lado > 0.0 and espacio_der < distancia_necesaria:
+		lado = -1.0
+
+	var destino_x: float = clampf(
+		objetivo.global_position.x + lado * distancia_necesaria,
+		limites_ko.x,
+		limites_ko.y
+	)
+
+	# 90.10.70 — asentamiento inmediato y estable. No usamos Tween: al terminar
+	# la pelea la posición del derrotado debe quedar definitiva, sin deslizarse
+	# debajo del ganador ni volver a cruzarse por una coroutine tardía.
+	global_position.x = destino_x
+	velocity.x = 0.0
+	_aplicar_limites_arena()
+
+
+func _separar_ganador_del_ko() -> void:
+	if not objetivo or not is_instance_valid(objetivo) or not objetivo.esta_derrotado:
+		return
+
+	# El K.O. horizontal puede ser mucho más ancho que un luchador de pie.
+	# Usamos ambos radios visuales actuales, pero dejamos un piso de presentación
+	# para que la pose de victoria nunca quede parada encima del derrotado.
+	var distancia_necesaria: float = maxf(
+		DISTANCIA_VICTORIA_GANADOR_DERRIBADO,
+		_radio_corporal_visual() + objetivo._radio_corporal_visual() + MARGEN_VICTORIA_KO_VISUAL
+	)
+	var dx: float = global_position.x - objetivo.global_position.x
+	var distancia_actual: float = absf(dx)
+	if distancia_actual >= distancia_necesaria:
+		return
+
+	var limites: Vector2 = _limites_arena_x_pose_actual()
+	var lado_actual: float = signf(dx)
+	if lado_actual == 0.0:
+		# Mantener al ganador en el lado coherente con su orientación de combate.
+		lado_actual = -objetivo.mirando if absf(objetivo.mirando) > 0.01 else 1.0
+
+	var destino_mismo_lado: float = objetivo.global_position.x + lado_actual * distancia_necesaria
+	var destino_otro_lado: float = objetivo.global_position.x - lado_actual * distancia_necesaria
+	var mismo_lado_valido: bool = destino_mismo_lado >= limites.x and destino_mismo_lado <= limites.y
+	var otro_lado_valido: bool = destino_otro_lado >= limites.x and destino_otro_lado <= limites.y
+
+	var destino_x: float
+	if mismo_lado_valido:
+		destino_x = destino_mismo_lado
+	elif otro_lado_valido:
+		destino_x = destino_otro_lado
+	else:
+		# Si ninguna dirección permite la distancia completa por estar contra un
+		# borde, elegimos el extremo que más separación real ofrezca.
+		var dist_izq: float = absf(limites.x - objetivo.global_position.x)
+		var dist_der: float = absf(limites.y - objetivo.global_position.x)
+		destino_x = limites.x if dist_izq >= dist_der else limites.y
+
+	global_position.x = clampf(destino_x, limites.x, limites.y)
+	velocity = Vector2.ZERO
+	_aplicar_limites_arena()
+
+	# La victoria debe seguir mirando hacia el área del combate/perdedor.
+	var dir_rival: float = signf(objetivo.global_position.x - global_position.x)
+	if dir_rival != 0.0:
+		mirando = dir_rival
 
 func reiniciar_para_ronda() -> void:
 	vida = vida_maxima
 	esta_derrotado = false
+	cruce_aereo_activo = false
+	# 90.10.82: mantener el contacto Fighter-vs-Fighter exclusivamente por
+	# pushbox manual también al comenzar una ronda nueva.
+	_restaurar_colision_con_rival()
 	en_fase_absoluta = false
 	en_pose_victoria = false
 	bloqueo_cinematico = false
@@ -2148,6 +3490,13 @@ func reiniciar_para_ronda() -> void:
 	timer_fase_ataque = 0.0
 	hitstun_timer = 0.0
 	hitstop_timer = 0.0
+	# Limpiar flancos del Input Frame al comenzar una ronda nueva.
+	z_estaba_presionado = false
+	salto_estaba_presionado = false
+	tecla_izq_previa = false
+	tecla_der_previa = false
+	gamepad_salto_previo = false
+	input_externo_disponible = false
 	pose_timer = 0.0
 	flash_timer = 0.0
 	empuje_pendiente_timer = 0.0
@@ -2160,6 +3509,20 @@ func reiniciar_para_ronda() -> void:
 	ciclo_caminata = 0.0
 	bloqueando = false
 	bloqueo_timer = 0.0
+	# 90.10.75 — cada ronda empieza con una decisión limpia de IA.
+	ia_cooldown_decision = 0.0
+	ia_retrocediendo = false
+	ia_mantener_distancia = false
+	ia_combo_cancel_lock_timer = 0.0
+	ia_dash_cooldown = 0.0
+	ia_doble_salto_pendiente = false
+	ia_doble_salto_timer = 0.0
+	ia_ataque_aereo_pendiente = false
+	ia_ataque_aereo_timer = 0.0
+	dash_aereo_activo = false
+	dash_aereo_direccion = 0.0
+	dash_aereo_timer = 0.0
+	dash_aereo_usado = false
 	_set_color(Color.WHITE)
 	if sprite:
 		sprite.visible = true
@@ -2175,10 +3538,23 @@ func mostrar_pose_victoria() -> void:
 	en_secuencia_especial = false
 	congelado_por_rival = false
 	bloqueando = false
+	bloqueo_timer = 0.0
 	fase_ataque = FaseAtaque.NINGUNA
 	timer_fase_ataque = 0.0
 	hitstun_timer = 0.0
+	hitstop_timer = 0.0
 	velocity = Vector2.ZERO
+	empuje_timer = 0.0
+	empuje_x = 0.0
+	empuje_pendiente_timer = 0.0
+	empuje_pendiente_fuerza = 0.0
+	carrera_activa = false
+	carrera_direccion = 0.0
+	doble_pulso_izq_timer = 0.0
+	doble_pulso_der_timer = 0.0
+	tecla_izq_previa = false
+	tecla_der_previa = false
+	gamepad_salto_previo = false
 	pose_timer = 999.0
 	# Preferimos una pose específica; si aún no existe, Furia parado comunica
 	# mejor que una pose neutra y mantiene el tamaño normalizado.
@@ -2199,39 +3575,250 @@ func mostrar_pose_victoria() -> void:
 
 # --- Herramientas compartidas para que cada personaje sea chico ---
 
+# 90.10.76 — perfiles de dificultad. FÁCIL usa 1.0 en todos los factores y por
+# tanto reproduce la IA 90.10.75 aprobada. Los otros perfiles sólo mejoran
+# timing y toma de decisiones: jamás tocan daño, velocidad, alcance o CORE.
+func _ia_factor_tiempo_decision() -> float:
+	match dificultad_ia:
+		DificultadIA.MEDIA: return 0.84
+		DificultadIA.DIFICIL: return 0.70
+		_: return 1.0
+
+func _ia_factor_bloqueo() -> float:
+	match dificultad_ia:
+		DificultadIA.MEDIA: return 1.16
+		DificultadIA.DIFICIL: return 1.34
+		_: return 1.0
+
+func _ia_factor_ataque() -> float:
+	match dificultad_ia:
+		DificultadIA.MEDIA: return 1.05
+		DificultadIA.DIFICIL: return 1.10
+		_: return 1.0
+
+func _ia_factor_movilidad() -> float:
+	match dificultad_ia:
+		DificultadIA.MEDIA: return 1.08
+		DificultadIA.DIFICIL: return 1.16
+		_: return 1.0
+
+# 90.11.06 — API llamada sólo por PerfectBlock después de CONFIRMAR x2/x3.
+# Centralizarlo acá garantiza que todos los personajes CPU respeten el mismo lock,
+# porque sus scripts terminan usando _comportamiento_ia_basico().
+func activar_lock_recepcion_combo_cancel_cpu(duracion: float = 0.26) -> void:
+	if controlado_por_jugador or fuente_control != FuenteControl.IA:
+		return
+	ia_combo_cancel_lock_timer = maxf(ia_combo_cancel_lock_timer, duracion)
+	ia_retrocediendo = false
+	ia_mantener_distancia = false
+	bloqueando = false
+	bloqueo_timer = 0.0
+	if carrera_activa:
+		_detener_carrera()
+	velocity.x = 0.0
+
+
 func _comportamiento_ia_basico(delta: float, vel_actual: float, distancia_ataque: float, distancia_perseguir: float) -> void:
 	if esta_derrotado or not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
 		mover(0.0, vel_actual)
 		return
 
+	# 90.11.06 — el jugador ya confirmó un Combo Cancel. Durante esta microventana
+	# la CPU recibe exactamente como un rival neutral de Versus: no decide nada.
+	# No tocamos hitstun, fase_ataque ni los timers del atacante.
+	if ia_combo_cancel_lock_timer > 0.0:
+		ia_retrocediendo = false
+		ia_mantener_distancia = false
+		bloqueando = false
+		bloqueo_timer = 0.0
+		if carrera_activa:
+			_detener_carrera()
+		mover(0.0, vel_actual)
+		return
+
 	var distancia: float = objetivo.global_position.x - global_position.x
 	var distancia_abs: float = absf(distancia)
+	var direccion_rival: float = signf(distancia) if absf(distancia) > 1.0 else mirando
+	mirando = direccion_rival
 
+	# 90.10.75 — IA POR DISTANCIAS.
+	# La CPU ya no interpreta toda la pelea como "perseguir hasta tocar". El
+	# alcance real de sus golpes define una zona corta; por fuera existe una
+	# zona media de lectura/entrada y luego una zona lejana de persecución.
+	# Las probabilidades de personalidad de cada luchador siguen intactas.
+	var rango_ataque_ia: float = maxf(
+		distancia_ataque,
+		maxf(rango_punetazo * 1.18, rango_patada * 1.20)
+	)
+	var zona_corta: float = rango_ataque_ia * 1.03
+	var techo_zona_media: float = maxf(205.0, minf(distancia_perseguir, 320.0))
+	var zona_media: float = clampf(rango_ataque_ia * 2.15, 205.0, techo_zona_media)
+	var rango_presion: float = maxf(zona_corta * 1.38, zona_media * 0.72)
+	var rival_atacando: bool = objetivo.fase_ataque == FaseAtaque.STARTUP or objetivo.fase_ataque == FaseAtaque.ACTIVO
+	var factor_decision: float = _ia_factor_tiempo_decision()
+	var factor_bloqueo: float = _ia_factor_bloqueo()
+	var factor_ataque: float = _ia_factor_ataque()
+	var factor_movilidad: float = _ia_factor_movilidad()
+	var en_zona_corta: bool = distancia_abs <= zona_corta
+	var en_zona_media: bool = distancia_abs > zona_corta and distancia_abs <= zona_media
+
+	ia_dash_cooldown = maxf(0.0, ia_dash_cooldown - delta)
 	ia_cooldown_decision -= delta
-	if ia_cooldown_decision <= 0.0:
-		ia_cooldown_decision = randf_range(0.5, 1.1)
-		ia_retrocediendo = distancia_abs < distancia_ataque * 1.4 and randf() < ia_prob_retroceso
-		if distancia_abs <= distancia_ataque * 1.2 and not bloqueando and randf() < ia_prob_bloqueo:
-			_iniciar_bloqueo(randf_range(0.35, 0.7))
 
-	if distancia_abs > distancia_ataque:
-		if ia_retrocediendo:
-			mover(-sign(distancia), vel_actual)
-		elif distancia_abs < distancia_perseguir:
-			mover(sign(distancia), vel_actual)
+	# --- Continuación de una acción aérea ya decidida ---
+	# La decisión de doble salto/ataque aéreo se toma una vez al despegar para
+	# que la CPU no vuelva a sortear una acción diferente en cada frame.
+	if not is_on_floor():
+		mover(direccion_rival, vel_actual * 0.82)
+
+		if ia_doble_salto_pendiente and saltos_usados == 1:
+			ia_doble_salto_timer = maxf(0.0, ia_doble_salto_timer - delta)
+			if ia_doble_salto_timer <= 0.0:
+				saltar()
+				velocity.x = direccion_rival * vel_actual * 0.94
+				ia_doble_salto_pendiente = false
+
+		if ia_ataque_aereo_pendiente:
+			ia_ataque_aereo_timer = maxf(0.0, ia_ataque_aereo_timer - delta)
+			var rango_aereo: float = maxf(rango_ataque_ia * 1.45, 150.0)
+			if ia_ataque_aereo_timer <= 0.0 and distancia_abs <= rango_aereo:
+				ia_ataque_aereo_pendiente = false
+				_orientar_hacia_rival_inmediato()
+				if randf() < ia_prob_patada + 0.12:
+					intentar_patada()
+				else:
+					intentar_punetazo()
+		return
+
+	# Al tocar piso se cancelan planes aéreos que hayan quedado sin ejecutar.
+	ia_doble_salto_pendiente = false
+	ia_ataque_aereo_pendiente = false
+
+	# Un dash ya iniciado conserva el mismo movimiento físico que usa el jugador.
+	if carrera_activa:
+		_orientar_hacia_rival_inmediato()
+		return
+
+	# 90.10.75 — las ofensivas nacen en una ventana de decisión. Antes, una vez
+	# dentro de rango, la CPU llamaba intentar_punetazo/patada TODOS los frames;
+	# apenas terminaba el recovery volvía a golpear de inmediato. Ahora el breve
+	# cooldown genera neutral real sin añadir lentitud al Fighter.
+	if ia_cooldown_decision <= 0.0:
+		ia_retrocediendo = false
+		ia_mantener_distancia = false
+
+		if en_zona_corta:
+			ia_cooldown_decision = randf_range(0.20, 0.39) * factor_decision
+		elif en_zona_media:
+			ia_cooldown_decision = randf_range(0.27, 0.50) * factor_decision
 		else:
+			ia_cooldown_decision = randf_range(0.32, 0.58) * factor_decision
+
+		# Defensa reactiva: en corto importa bastante; en media sólo se anticipa
+		# si el rival está atacando. Nunca leemos el input del jugador de forma
+		# perfecta, preservando una CPU justa y con personalidad.
+		var prob_bloqueo_efectiva: float = clampf(ia_prob_bloqueo * (0.78 if rival_atacando else 0.10) * factor_bloqueo, 0.0, 0.82)
+		if distancia_abs <= rango_presion and not bloqueando and randf() < prob_bloqueo_efectiva:
+			_iniciar_bloqueo(randf_range(0.20, 0.42))
+			return
+
+		# En corto la CPU decide entre intercambio, pequeño retroceso o una pausa
+		# mínima de lectura. El ataque ocurre AQUÍ, una vez por decisión, no frame
+		# a frame. Esto es el corazón del nuevo ritmo de IA.
+		if en_zona_corta:
+			var prob_retroceso_corto: float = ia_prob_retroceso * (1.25 if rival_atacando else 0.62)
+			if randf() < prob_retroceso_corto:
+				ia_retrocediendo = true
+				if ia_dash_cooldown <= 0.0 and randf() < ia_prob_dash_atras:
+					_iniciar_carrera(-direccion_rival)
+					ia_dash_cooldown = randf_range(0.62, 1.02)
+				return
+
+			# Un porcentaje pequeño de decisiones no ataca: produce amague/neutral
+			# sin hacer pasiva a la CPU. Si el rival ya está pegando, se reduce aún
+			# más esa pausa para que responda con mayor urgencia.
+			var prob_ataque_corto: float = clampf((0.88 if rival_atacando else 0.80) * factor_ataque, 0.0, 0.96)
+			if randf() < prob_ataque_corto:
+				mover(0.0, vel_actual)
+				mirando = direccion_rival
+				if randf() < ia_prob_patada:
+					intentar_patada()
+				else:
+					intentar_punetazo()
+				# El timer no corre mientras la CPU está dentro de una fase de ataque.
+				# Dejamos sólo una respiración mínima al terminar el recovery.
+				ia_cooldown_decision = randf_range(0.07, 0.16) * factor_decision
+				return
+			ia_mantener_distancia = true
+
+		# Zona media: es el espacio de intención. Puede saltar, entrar con dash,
+		# caminar o sostener brevemente la distancia. Así no todo encuentro termina
+		# inmediatamente en dos sprites empujándose en el centro.
+		elif en_zona_media:
+			var prob_retroceso_media: float = ia_prob_retroceso * (0.82 if rival_atacando else 0.28)
+			if randf() < prob_retroceso_media:
+				ia_retrocediendo = true
+				if ia_dash_cooldown <= 0.0 and randf() < ia_prob_dash_atras * 0.82:
+					_iniciar_carrera(-direccion_rival)
+					ia_dash_cooldown = randf_range(0.70, 1.10)
+				return
+
+			var prob_salto_efectiva: float = ia_prob_salto + (0.06 if not objetivo.is_on_floor() else 0.0)
+			if randf() < prob_salto_efectiva:
+				saltar()
+				velocity.x = direccion_rival * vel_actual * 0.84
+				ia_doble_salto_pendiente = randf() < ia_prob_doble_salto
+				ia_doble_salto_timer = randf_range(0.15, 0.27)
+				ia_ataque_aereo_pendiente = randf() < ia_prob_ataque_aereo
+				ia_ataque_aereo_timer = randf_range(0.18, 0.34)
+				return
+
+			# Entrada explosiva desde media distancia, pero no en cada decisión.
+			if ia_dash_cooldown <= 0.0 and randf() < clampf(ia_prob_dash_adelante * 0.86 * factor_movilidad, 0.0, 0.72):
+				_iniciar_carrera(direccion_rival)
+				ia_dash_cooldown = randf_range(0.55, 0.92)
+				return
+
+			# Aproximadamente una de cada cuatro decisiones de zona media sostiene
+			# la distancia; las demás avanzan a velocidad moderada.
+			ia_mantener_distancia = randf() < 0.25
+
+		# Lejos: perseguir sigue siendo la prioridad. Conservamos el dash para que
+		# la pelea no pierda velocidad ni se convierta en dos CPUs esperando.
+		else:
+			if distancia_abs < distancia_perseguir and ia_dash_cooldown <= 0.0 and randf() < clampf(ia_prob_dash_adelante * factor_movilidad, 0.0, 0.78):
+				_iniciar_carrera(direccion_rival)
+				ia_dash_cooldown = randf_range(0.55, 0.95)
+				return
+
+	# --- Ejecución continua de la intención elegida ---
+	if bloqueando:
+		mover(0.0, vel_actual)
+		return
+
+	if en_zona_corta:
+		if ia_retrocediendo:
+			mover(-direccion_rival, vel_actual * 0.78)
+		else:
+			# En corto no perseguimos ni reintentamos golpes durante cada frame.
+			# La siguiente ofensiva llegará en la próxima ventana de decisión.
 			mover(0.0, vel_actual)
+		return
+
+	if en_zona_media:
+		if ia_retrocediendo:
+			mover(-direccion_rival, vel_actual * 0.72)
+		elif ia_mantener_distancia:
+			mover(0.0, vel_actual)
+		else:
+			mover(direccion_rival, vel_actual * 0.82)
+		return
+
+	# Zona lejana: persecución clara hasta volver a entrar en el espacio de juego.
+	if distancia_abs < distancia_perseguir:
+		mover(direccion_rival, vel_actual)
 	else:
-		if ia_retrocediendo:
-			mover(-sign(distancia), vel_actual)
-		else:
-			mover(0.0, vel_actual)
-		mirando = sign(distancia)
-		if not bloqueando:
-			if randf() < ia_prob_patada:
-				intentar_patada()
-			else:
-				intentar_punetazo()
+		mover(0.0, vel_actual)
 
 func _mult_cuerpo_actual() -> float:
 	# Fase Absoluta ya NO agranda a los personajes -- solo cambia color.
@@ -2268,24 +3855,76 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 	var img := Sprite2D.new()
 	img.texture = tex
 	img.centered = true
-	# Más atrás en la composición: queda claramente detrás del luchador y de
-	# sus efectos de primer plano, pero sigue dentro del mundo de la pelea.
 	img.z_index = -4
-	# FASE 84: los PÓSTERS/PODERES vuelven al tamaño cinematográfico que tenían
-	# antes de la 83. Esta escala es independiente de la escala corporal de
-	# golpes/recibir golpes, que se mantiene calibrada y estable.
-	var esc: float = alto_deseado / maxf(float(tex.get_height()), 1.0)
+
+	var es_absoluto: bool = tex == textura_absoluto
+	var es_rematador: bool = tex == textura_rematador
+	var mult_altura: float = float(PODER_CINEMA_ALTURA_MULT.get(nombre_luchador, 1.0))
+	var alto_final: float = alto_deseado * mult_altura
+
+	# 90.10.26: escalar por el área VISIBLE del PNG, no por todo el lienzo.
+	# Así un archivo con mucho margen transparente no termina ocupando media
+	# pantalla ni queda descentrado. También anclamos el contenido visible al piso.
+	var rect_visible: Rect2 = _obtener_rect_visual(tex)
+	if rect_visible.size.x <= 1.0 or rect_visible.size.y <= 1.0:
+		rect_visible = Rect2(0.0, 0.0, float(tex.get_width()), float(tex.get_height()))
+	var esc: float = alto_final / maxf(rect_visible.size.y, 1.0)
+
+	# Limitar el ancho cinematográfico según el encuadre REAL de cámara. Esto
+	# evita recortes en los extremos y conserva al rival visible.
+	var cam: Camera2D = get_viewport().get_camera_2d()
+	var ancho_visible_mundo: float = 1280.0
+	if cam:
+		ancho_visible_mundo = get_viewport_rect().size.x / maxf(cam.zoom.x, 0.01)
+	var fraccion_max: float = 0.60 if es_absoluto else (0.56 if es_rematador else 0.52)
+	if nombre_luchador in ["Jester", "Kali"]:
+		fraccion_max -= 0.035
+	var ancho_arte: float = rect_visible.size.x * esc
+	var ancho_maximo: float = ancho_visible_mundo * fraccion_max
+	if ancho_arte > ancho_maximo and ancho_arte > 1.0:
+		esc *= ancho_maximo / ancho_arte
+		ancho_arte = rect_visible.size.x * esc
+
 	img.scale = Vector2(esc, esc)
 	img.flip_h = mirando < 0.0
-	var pos_base := Vector2(-mirando * 18.0, -(float(tex.get_height()) * esc) / 2.0 - 18.0)
+
+	# Compensar el centro real del contenido visible dentro del lienzo PNG.
+	var centro_visible_x_tex: float = rect_visible.position.x + rect_visible.size.x * 0.5
+	var fondo_visible_y_tex: float = rect_visible.position.y + rect_visible.size.y
+	var offset_centro_x: float = (centro_visible_x_tex - float(tex.get_width()) * 0.5) * esc
+	var offset_fondo_y: float = (fondo_visible_y_tex - float(tex.get_height()) * 0.5) * esc
+	# 90.10.28 — DEPTH PASS V2: la gigantografía retrocede un poco más.
+	# El objetivo es dejar todavía más protagonista al cuerpo real del
+	# luchador, abrir lectura del rival y mostrar mejor la escenografía del
+	# escenario CORE, especialmente en Jester donde el arte ocupa mucho ancho.
+	var separacion_poster: float = 118.0 if es_absoluto else (96.0 if es_rematador else 82.0)
+	# Jester necesita más aire porque su arte es especialmente ancho/cargado.
+	# Kali recibe una corrección menor por sus alas y energía integrada.
+	if nombre_luchador == "Jester":
+		separacion_poster += 48.0
+	elif nombre_luchador == "Kali":
+		separacion_poster += 22.0
+	var centro_local_deseado: float = -mirando * separacion_poster
+	var pos_base := Vector2(centro_local_deseado - offset_centro_x, -18.0 - offset_fondo_y)
+
+	# Mantener el contenido visible dentro de los bordes actuales de cámara.
+	if cam:
+		var medio_ancho: float = ancho_visible_mundo * 0.5
+		var margen: float = 26.0
+		var izquierda: float = cam.global_position.x - medio_ancho + margen
+		var derecha: float = cam.global_position.x + medio_ancho - margen
+		var centro_global_arte: float = global_position.x + centro_local_deseado
+		var medio_arte: float = ancho_arte * 0.5
+		var centro_clamp: float = clampf(centro_global_arte, izquierda + medio_arte, derecha - medio_arte)
+		centro_local_deseado = centro_clamp - global_position.x
+		pos_base.x = centro_local_deseado - offset_centro_x
 	img.position = pos_base
 
-	# El póster se ve como arte integrado detrás del personaje.
-	# No usamos ninguna placa/rectángulo: el oscurecimiento vive en el propio
-	# póster. Ahora tiene más presencia y menos transparencia, y el Absoluto
-	# recibe un poco más de fuerza visual que los poderes 1/2.	
-	var es_absoluto: bool = tex == textura_absoluto
+	# Presencia cinematográfica sin tapar la lectura del rival. Jester/Kali
+	# reciben una transparencia apenas mayor porque su propio arte ya trae
+	# mucha energía integrada.
 	var alpha_poster: float = 0.90 if es_absoluto else 0.84
+	alpha_poster *= float(PODER_CINEMA_ALPHA_MULT.get(nombre_luchador, 1.0))
 	var tono_poster: Color = Color(0.66, 0.68, 0.74, 0.0)
 	img.modulate = tono_poster
 	var escala_inicial: Vector2 = Vector2(esc, esc)
@@ -2296,19 +3935,25 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 	# Halo de poder sobre el piso: el golpe especial "enciende" el suelo
 	# sin cubrir la pantalla con otra placa. Es muy sutil y queda detrás
 	# del luchador/póster.
+	var vfx_mult: float = float(PODER_CINEMA_VFX_MULT.get(nombre_luchador, 0.88))
+	if es_absoluto:
+		vfx_mult = minf(vfx_mult + 0.08, 0.96)
+
 	var halo_piso := Polygon2D.new()
-	halo_piso.polygon = _elipse_poder_poligono(74.0, 10.0)
+	halo_piso.polygon = _elipse_poder_poligono(74.0 * vfx_mult, 10.0 * vfx_mult)
 	halo_piso.color = Color(color_energia_poder().r, color_energia_poder().g, color_energia_poder().b, 0.0)
 	halo_piso.position = Vector2(0.0, 3.0)
 	halo_piso.z_index = -1
 	add_child(halo_piso)
 
 	var tw_halo := create_tween()
+	tw_halo.set_ignore_time_scale(true)
 	tw_halo.set_parallel(true)
 	tw_halo.tween_property(halo_piso, "modulate:a", 0.22, 0.16)
 	tw_halo.tween_property(halo_piso, "scale", Vector2(1.18, 1.0), 0.32).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 	var tween := create_tween()
+	tween.set_ignore_time_scale(true)
 	tween.set_parallel(true)
 	tween.tween_property(img, "modulate:a", alpha_poster, 0.12)
 	tween.tween_property(img, "scale", escala_final, 0.01)
@@ -2319,6 +3964,7 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 	# El póster ya no pulsa de tamaño. La energía vive en luz/partículas;
 	# la escala permanece clavada para no reintroducir el efecto de "crecer".
 	var tween_pulso := create_tween()
+	tween_pulso.set_ignore_time_scale(true)
 	tween_pulso.set_loops()
 	tween_pulso.tween_property(img, "modulate:a", alpha_poster * 0.96, 0.24)
 	tween_pulso.tween_property(img, "modulate:a", alpha_poster, 0.24)
@@ -2326,17 +3972,18 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 	# Capa de aura profunda: muy tenue, detrás del póster, para que el poder
 	# parezca emitir energía hacia el escenario en vez de ser una imagen plana.
 	var aura_fondo := Polygon2D.new()
-	aura_fondo.polygon = _elipse_poder_poligono(145.0 if es_absoluto else 120.0, 42.0 if es_absoluto else 34.0)
+	aura_fondo.polygon = _elipse_poder_poligono((145.0 if es_absoluto else 120.0) * vfx_mult, (42.0 if es_absoluto else 34.0) * vfx_mult)
 	aura_fondo.position = Vector2(-mirando * 28.0, 4.0)
 	aura_fondo.color = Color(color_energia_poder().r, color_energia_poder().g, color_energia_poder().b, 0.0)
 	aura_fondo.z_index = -5
 	add_child(aura_fondo)
 	var tw_aura := create_tween()
+	tw_aura.set_ignore_time_scale(true)
 	tw_aura.set_parallel(true)
 	tw_aura.tween_property(aura_fondo, "modulate:a", 0.12 if not es_absoluto else 0.17, 0.20)
 	tw_aura.tween_property(aura_fondo, "scale", Vector2(1.08, 1.0), 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
-	_animar_energia_poder(pos_base, tiempo_visible + 0.5)
+	_animar_energia_poder(pos_base, tiempo_visible + 0.5, vfx_mult)
 
 	var impacto_pendiente: bool = aplicar_impacto
 
@@ -2344,11 +3991,13 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 	tween_pulso.kill()
 	if is_instance_valid(halo_piso):
 		var tw_halo_out := create_tween()
+		tw_halo_out.set_ignore_time_scale(true)
 		tw_halo_out.tween_property(halo_piso, "modulate:a", 0.0, 0.18)
 		await tw_halo_out.finished
 		halo_piso.queue_free()
 	if is_instance_valid(aura_fondo):
 		var tw_aura_out := create_tween()
+		tw_aura_out.set_ignore_time_scale(true)
 		tw_aura_out.tween_property(aura_fondo, "modulate:a", 0.0, 0.16)
 		await tw_aura_out.finished
 		aura_fondo.queue_free()
@@ -2373,26 +4022,29 @@ func color_energia_poder() -> Color:
 # cortos que titilan, alrededor del póster -- para que se sienta como
 # energía activa y no una imagen fija. Todo con Line2D/Polygon2D, sin
 # arte nuevo.
-func _animar_energia_poder(centro: Vector2, duracion: float) -> void:
+func _animar_energia_poder(centro: Vector2, duracion: float, intensidad: float = 0.88) -> void:
 	var color_energia: Color = color_fase if color_fase else Color(1.0, 1.0, 1.0)
 	var t := 0.0
 	var proximo_anillo := 0.0
-	var proximo_rayo := 0.15
+	var proximo_rayo := 0.18
+	var intervalo_anillo: float = lerpf(0.68, 0.52, intensidad)
 	while t < duracion:
 		if t >= proximo_anillo:
-			_spawn_anillo_energia(centro, color_energia)
-			proximo_anillo = t + 0.5
+			_spawn_anillo_energia(centro, color_energia, intensidad)
+			proximo_anillo = t + intervalo_anillo
 		if t >= proximo_rayo:
-			_spawn_rayo_energia(centro, color_energia)
-			proximo_rayo = t + randf_range(0.35, 0.6)
+			_spawn_rayo_energia(centro, color_energia, intensidad)
+			proximo_rayo = t + randf_range(0.42, 0.68)
 		await get_tree().create_timer(0.1, true, false, true).timeout
 		t += 0.1
 
-func _spawn_anillo_energia(centro: Vector2, color: Color) -> void:
+func _spawn_anillo_energia(centro: Vector2, color: Color, intensidad: float = 0.88) -> void:
 	var anillo := Line2D.new()
-	anillo.width = 4.0
-	anillo.default_color = Color(color.r, color.g, color.b, 0.8)
-	anillo.z_index = 4
+	anillo.width = 3.2 * intensidad
+	anillo.default_color = Color(color.r, color.g, color.b, 0.56 * intensidad)
+	# 90.10.26: energía de presentación DETRÁS de ambos Fighter. El impacto
+	# real (chispas/onda) sigue delante cuando conecta.
+	anillo.z_index = -2
 	var puntos := PackedVector2Array()
 	for i in range(33):
 		var ang: float = (TAU / 32.0) * i
@@ -2401,28 +4053,30 @@ func _spawn_anillo_energia(centro: Vector2, color: Color) -> void:
 	anillo.position = centro
 	add_child(anillo)
 
-	var radio_final := randf_range(90.0, 150.0)
+	var radio_final := randf_range(78.0, 126.0) * intensidad
 	var tw := create_tween()
+	tw.set_ignore_time_scale(true)
 	tw.set_parallel(true)
-	tw.tween_property(anillo, "scale", Vector2.ONE * (radio_final / 20.0), 0.6).set_trans(Tween.TRANS_SINE)
-	tw.tween_property(anillo, "modulate:a", 0.0, 0.6)
+	tw.tween_property(anillo, "scale", Vector2.ONE * (radio_final / 20.0), 0.56).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(anillo, "modulate:a", 0.0, 0.56)
 	tw.chain().tween_callback(anillo.queue_free)
 
-func _spawn_rayo_energia(centro: Vector2, color: Color) -> void:
+func _spawn_rayo_energia(centro: Vector2, color: Color, intensidad: float = 0.88) -> void:
 	var rayo := Line2D.new()
-	rayo.width = 3.0
-	rayo.default_color = Color(1.0, 1.0, 1.0, 0.9).lerp(color, 0.3)
-	rayo.z_index = 6
+	rayo.width = 2.4 * intensidad
+	rayo.default_color = Color(1.0, 1.0, 1.0, 0.68 * intensidad).lerp(color, 0.3)
+	rayo.z_index = -1
 	var ang: float = randf_range(0.0, TAU)
-	var dist: float = randf_range(60.0, 130.0)
+	var dist: float = randf_range(48.0, 102.0) * intensidad
 	var punta := Vector2(cos(ang), sin(ang) * 0.6) * dist
-	var medio := punta * 0.5 + Vector2(randf_range(-18.0, 18.0), randf_range(-18.0, 18.0))
+	var medio := punta * 0.5 + Vector2(randf_range(-14.0, 14.0), randf_range(-14.0, 14.0))
 	rayo.points = PackedVector2Array([Vector2.ZERO, medio, punta])
 	rayo.position = centro
 	add_child(rayo)
 
 	var tw := create_tween()
-	tw.tween_property(rayo, "modulate:a", 0.0, 0.18)
+	tw.set_ignore_time_scale(true)
+	tw.tween_property(rayo, "modulate:a", 0.0, 0.16)
 	tw.tween_callback(rayo.queue_free)
 
 func _onda_impacto_local(centro_global: Vector2, color: Color, intensidad: float = 1.0) -> void:
@@ -2469,57 +4123,6 @@ func _efecto_chispas(bloqueado: bool = false, centro_global: Vector2 = Vector2.I
 		tween.parallel().tween_property(chispa, "modulate:a", 0.0, 0.25)
 		tween.tween_callback(chispa.queue_free)
 
-	_particulas_impacto_gpu(centro, color_chispa, intensidad)
-
-# Estallido de partículas GPU reales en el punto de contacto: polvo/chispa
-# fina que acompaña a las chispas de siempre, con caída por gravedad y
-# variación real de velocidad/rotación por partícula. No reemplaza nada,
-# se suma en el mismo momento en que ya se llama a _efecto_chispas.
-func _particulas_impacto_gpu(centro_local: Vector2, color: Color, intensidad: float = 1.0) -> void:
-	var particulas := GPUParticles2D.new()
-	particulas.texture = _obtener_textura_particula()
-	particulas.position = centro_local
-	particulas.z_index = 91
-	var cantidad: int = clampi(int(round(10.0 + intensidad * 6.0)), 10, 22)
-	particulas.amount = cantidad
-	particulas.lifetime = 0.5
-	particulas.one_shot = true
-	particulas.explosiveness = 0.9
-	particulas.speed_scale = 1.35
-
-	var mat := ParticleProcessMaterial.new()
-	mat.direction = Vector3(0.0, -1.0, 0.0)
-	mat.spread = 180.0
-	mat.gravity = Vector3(0.0, 420.0, 0.0)
-	mat.initial_velocity_min = 50.0 * intensidad
-	mat.initial_velocity_max = 170.0 * intensidad
-	mat.angular_velocity_min = -420.0
-	mat.angular_velocity_max = 420.0
-	mat.damping_min = 35.0
-	mat.damping_max = 95.0
-	mat.scale_min = 0.30
-	mat.scale_max = 0.65 + intensidad * 0.25
-	# FASE 98: color llevado por encima de 1.0 en RGB (sin tocar el alpha)
-	# para que estas partículas sí crucen el umbral de Glow y "prendan" de
-	# verdad, en vez de depender de que el color base ya sea lo bastante
-	# brillante por casualidad.
-	mat.color = Color(color.r * 1.6, color.g * 1.6, color.b * 1.6, color.a)
-
-	var curva := Curve.new()
-	curva.add_point(Vector2(0.0, 0.15))
-	curva.add_point(Vector2(0.12, 1.0))
-	curva.add_point(Vector2(1.0, 0.0))
-	var curva_tex := CurveTexture.new()
-	curva_tex.curve = curva
-	mat.scale_curve = curva_tex
-
-	particulas.process_material = mat
-	add_child(particulas)
-	particulas.emitting = true
-
-	var t := get_tree().create_timer(particulas.lifetime + 0.2, true, false, true)
-	t.timeout.connect(particulas.queue_free)
-
 func _efecto_estallido(color: Color, radio: float, dano_base: float) -> void:
 	var dano := dano_base * MULT_DANO_GLOBAL
 	var estallido := Polygon2D.new()
@@ -2563,7 +4166,7 @@ func _crear_sombra_dinamica() -> void:
 		Vector2(-10, 5), Vector2(-21, 3)
 	])
 	sombra.color = Color(0.01, 0.01, 0.015, 0.34)
-	sombra.position = Vector2(0, 3)
+	sombra.position = Vector2(0, 3 + OFFSET_VISUAL_LINEA_COMBATE_Y)
 	sombra.z_index = -5
 	add_child(sombra)
 
@@ -2629,8 +4232,6 @@ func _actualizar_sensacion_fisica(delta: float) -> void:
 	_actualizar_luz_contacto(vel_ratio, _reaccion_impacto_timer > 0.0)
 	_actualizar_sombra_dinamica(vel_ratio)
 	_actualizar_estela_movimiento(delta, vel_ratio)
-	if sprite.material:
-		sprite.material.set_shader_parameter("en_furia", en_fase_absoluta)
 
 func _actualizar_sombra_dinamica(vel_ratio: float) -> void:
 	if not sombra:
@@ -2793,8 +4394,8 @@ func _actualizar_expresion_facial(delta: float) -> void:
 		if parpado_izq:
 			parpado_izq.visible = false
 			parpado_der.visible = false
-			parpado_izq.scale.y = 0.0
-			parpado_der.scale.y = 0.0
+			parpado_izq.scale.y = 0.25
+			parpado_der.scale.y = 0.25
 		return
 
 	parpadeo_timer -= delta
@@ -2802,22 +4403,15 @@ func _actualizar_expresion_facial(delta: float) -> void:
 		parpadeo_fase = 1
 		parpadeo_progreso = 0.0
 
-	# FASE 90.5: se termina de conectar la animación (antes quedaba
-	# calculada pero nunca aplicada -- parpado_izq/der se forzaban a
-	# invisible siempre, con la posición vieja mal calibrada). Ahora la
-	# cobertura del párpado (scale.y, 0 = ojo abierto, 1 = cerrado) sigue
-	# el progreso real: cierra rápido en la fase 1 y abre un poco más
-	# lento en la fase 2, como un parpadeo natural. Solo corre para
-	# personajes calibrados en DATOS_CARA (parpado_izq queda null para
-	# el resto, así que esto no hace nada en ellos).
 	if parpadeo_fase == 1:
 		parpadeo_progreso += delta / 0.055
 		if parpado_izq:
-			var cobertura: float = clampf(parpadeo_progreso, 0.0, 1.0)
-			parpado_izq.visible = true
-			parpado_der.visible = true
-			parpado_izq.scale.y = cobertura
-			parpado_der.scale.y = cobertura
+			# Por ahora la capa no se muestra: los ojos ya están dibujados
+			# dentro de cada sprite y un párpado procedural genérico no debe
+			# inventar una línea fuera de la cara. Mantenemos el temporizador
+			# listo para futuras máscaras faciales por personaje.
+			parpado_izq.visible = false
+			parpado_der.visible = false
 		if parpadeo_progreso >= 1.0:
 			parpadeo_fase = 2
 			parpadeo_progreso = 0.0
@@ -2825,18 +4419,16 @@ func _actualizar_expresion_facial(delta: float) -> void:
 		parpadeo_progreso += delta / 0.07
 		var apertura: float = 1.0 - clampf(parpadeo_progreso, 0.0, 1.0)
 		if parpado_izq:
-			parpado_izq.visible = apertura > 0.02
-			parpado_der.visible = apertura > 0.02
-			parpado_izq.scale.y = apertura
-			parpado_der.scale.y = apertura
+			parpado_izq.visible = false
+			parpado_der.visible = false
 		if parpadeo_progreso >= 1.0:
 			parpadeo_fase = 0
 			parpadeo_timer = randf_range(2.0, 4.2)
 			if parpado_izq:
 				parpado_izq.visible = false
 				parpado_der.visible = false
-				parpado_izq.scale.y = 0.0
-				parpado_der.scale.y = 0.0
+				parpado_izq.scale.y = 0.25
+				parpado_der.scale.y = 0.25
 
 func _crear_aura_core() -> void:
 	if aura_core or not sprite:
@@ -2844,7 +4436,7 @@ func _crear_aura_core() -> void:
 	aura_core = Polygon2D.new()
 	aura_core.name = "AuraCore"
 	aura_core.polygon = _crear_elipse_local(46.0, 12.0)
-	aura_core.position = Vector2(0.0, -2.0)
+	aura_core.position = Vector2(0.0, -2.0 + OFFSET_VISUAL_LINEA_COMBATE_Y)
 	aura_core.z_index = -3
 	aura_core.color = Color(color_energia_poder().r, color_energia_poder().g, color_energia_poder().b, 0.0)
 	add_child(aura_core)
@@ -2863,7 +4455,7 @@ func _actualizar_aura_core(delta: float) -> void:
 func _crear_luz_contacto() -> void:
 	luz_contacto = Polygon2D.new()
 	luz_contacto.polygon = _crear_elipse_local(44.0, 10.0)
-	luz_contacto.position = Vector2(0.0, 1.0)
+	luz_contacto.position = Vector2(0.0, 1.0 + OFFSET_VISUAL_LINEA_COMBATE_Y)
 	luz_contacto.z_index = -4
 	luz_contacto.color = Color(color_base.r, color_base.g, color_base.b, 0.045)
 	add_child(luz_contacto)
@@ -3004,6 +4596,8 @@ func _actualizar_textura(tex: Texture2D) -> void:
 	# El borde visible inferior sigue anclado al piso. En derribado usamos
 	# una escala por ancho para que el cuerpo tumbado no crezca de golpe.
 	sprite_base_y = tex.get_height() * 0.5 * escala_efectiva - (rect.position.y + rect.size.y) * escala_efectiva
+	# La línea visual se baja sin alterar la colisión física del escenario.
+	sprite_base_y += OFFSET_VISUAL_LINEA_COMBATE_Y
 	sprite.position.y = sprite_base_y
 	sprite.position.x = _sprite_ancla_x()
 
@@ -3013,6 +4607,10 @@ func _actualizar_textura(tex: Texture2D) -> void:
 		var alto_colision: float = maxf(alto_cuerpo * mult_cuerpo, _altura_visible_objetivo() * COLISION_ALTURA_VISIBLE_MULT)
 		forma_colision.size = Vector2(ancho_colision, alto_colision)
 		colision_shape.position.y = -alto_colision / 2.0
+
+	# 90.10.72 — la separación final se hace DESPUÉS de cargar/normalizar la
+	# pose de victoria, porque recién aquí conocemos su volumen visual real.
+	_separar_ganador_del_ko()
 
 func _escala_normalizada_por_pose(tex: Texture2D, rect: Rect2) -> float:
 	if not tex:
@@ -3085,12 +4683,110 @@ func _sprite_ancla_x() -> float:
 	# su sitio sin saltos.
 	return 0.0
 
+func _radio_corporal_visual() -> float:
+	# No usamos el ancho completo del PNG como cuerpo: pelo, alas y auras
+	# pueden sobresalir mucho. Tomamos una fracción del used_rect alfa.
+	if not sprite or not sprite.texture:
+		return maxf(ancho_cuerpo * _mult_cuerpo_actual() * 0.62, 40.0)
+
+	var rect: Rect2 = _obtener_rect_visual(sprite.texture)
+	if rect.size.x <= 1.0 or rect.size.y <= 1.0:
+		return maxf(ancho_cuerpo * _mult_cuerpo_actual() * 0.62, 40.0)
+
+	var ancho_visible: float = rect.size.x * absf(sprite.scale.x)
+	var alto_visible: float = rect.size.y * absf(sprite.scale.y)
+	var horizontal: bool = esta_derrotado or ancho_visible > alto_visible * 1.22
+
+	if horizontal:
+		# Un cuerpo tumbado ocupa mucho más espacio lateral.
+		return clampf(ancho_visible * 0.47, 96.0, 180.0)
+
+	# De pie protegemos principalmente torso/cadera, no alas/cabello.
+	return clampf(ancho_visible * 0.22, 40.0, 62.0)
+
+
+func _distancia_visual_entre_cuerpos(otro: Fighter) -> float:
+	if not otro or not is_instance_valid(otro):
+		return DISTANCIA_MINIMA_LUCHADORES
+	return _radio_corporal_visual() + otro._radio_corporal_visual() + MARGEN_SEPARACION_VISUAL
+
+
+func _distancia_combo_auto_adaptativa(otro: Fighter) -> float:
+	# 90.10.71 — PUSHBOX 2.0 para CORE II/III. El viejo target fijo de 82 px
+	# era suficiente para impedir que los centros se cruzaran, pero no para que
+	# dos torsos grandes se leyeran separados. Calculamos una distancia compacta
+	# usando sólo el radio corporal recortado (nunca el ancho total del PNG).
+	if not otro or not is_instance_valid(otro):
+		return DISTANCIA_COMBO_AUTO_PUSH_MIN
+
+	var radio_suma: float = _radio_corporal_visual() + otro._radio_corporal_visual()
+	# El radio de pie está recortado a 40..62 px por luchador. Tomamos sólo una
+	# fracción de lo que excede el cuerpo compacto para no alejar los golpes.
+	var aporte_visual: float = clampf((radio_suma - 80.0) * 0.30, 0.0, 12.0)
+	var masa_mayor: float = maxf(_masa_corporal(), otro._masa_corporal())
+	var aporte_masa: float = clampf((masa_mayor - 1.0) * 4.0, 0.0, 3.0)
+	var distancia: float = DISTANCIA_COMBO_AUTO_PUSH_MIN + aporte_visual + aporte_masa
+	return clampf(distancia, DISTANCIA_COMBO_AUTO_PUSH_MIN, DISTANCIA_COMBO_AUTO_PUSH_MAX)
+
+
+func _distancia_precontacto_adaptativa(otro: Fighter, atacante: Fighter = null) -> float:
+	# Distancia preventiva de torso. Se calcula DESPUÉS de los chequeos de
+	# hitbox del frame, así nunca reemplaza al impacto: sólo evita que, si todavía
+	# no conectó, los centros corporales terminen prácticamente superpuestos.
+	if not otro or not is_instance_valid(otro):
+		return PRECONTACTO_MIN
+
+	var radio_suma: float = _radio_corporal_visual() + otro._radio_corporal_visual()
+	# La parte visual sólo aporta hasta 9 px. Aunque Kali tenga alas o Helena
+	# cabello largo, esos elementos no pueden convertir la silueta completa en
+	# una pared física.
+	var aporte_visual: float = clampf((radio_suma - 82.0) * 0.22, 0.0, 9.0)
+	var masa_mayor: float = maxf(_masa_corporal(), otro._masa_corporal())
+	var aporte_masa: float = clampf((masa_mayor - 1.0) * 11.0, 0.0, 7.0)
+	var altura_mayor: float = maxf(_altura_visible_objetivo(), otro._altura_visible_objetivo())
+	var aporte_altura: float = clampf((altura_mayor / ALTURA_VISIBLE_NORMAL_GLOBAL - 1.0) * 24.0, 0.0, 4.0)
+
+	var distancia: float = PRECONTACTO_MIN + aporte_visual + aporte_masa + aporte_altura
+	# La patada tiene una caja frontal holgada desde 90.10.12; puede mantener un
+	# poquito más de espacio de cadera sin perder contacto. Para puño no añadimos
+	# bonus: preferimos conservar la sensación de corto alcance.
+	if atacante and is_instance_valid(atacante) and atacante._atk_tipo == "patada":
+		distancia += 1.5
+	return clampf(distancia, PRECONTACTO_MIN, PRECONTACTO_MAX)
+
+
+func _bonus_pushbox_pose_contacto(otro: Fighter) -> float:
+	# Sólo corrige la proyección VISUAL después de un impacto confirmado.
+	# Antes del contacto retorna 0, manteniendo intactos rango, hitbox y lunge.
+	if not otro or not is_instance_valid(otro):
+		return 0.0
+	if en_combo_auto_visual or otro.en_combo_auto_visual:
+		# CORE II/III ya comparte target adaptativo entre tween y pushbox; no
+		# introducimos aquí una cifra distinta que haga pelear ambos sistemas.
+		return 0.0
+
+	var bonus: float = 0.0
+	var yo_contacte: bool = fase_ataque != FaseAtaque.NINGUNA and _atk_ya_conecto
+	var otro_contacto: bool = otro.fase_ataque != FaseAtaque.NINGUNA and otro._atk_ya_conecto
+
+	if yo_contacte:
+		bonus = maxf(bonus, PUSH_POSE_CONTACTO_PATADA if _atk_tipo == "patada" else PUSH_POSE_CONTACTO_PUNO)
+	if otro_contacto:
+		bonus = maxf(bonus, PUSH_POSE_CONTACTO_PATADA if otro._atk_tipo == "patada" else PUSH_POSE_CONTACTO_PUNO)
+	if yo_contacte and otro_contacto:
+		bonus += PUSH_POSE_CONTACTO_TRADE
+
+	return clampf(bonus, 0.0, PUSH_POSE_CONTACTO_MAX)
+
 func _distancia_minima_contextual(otro: Fighter = null) -> float:
 	var minimo: float = DISTANCIA_MINIMA_LUCHADORES
 	if otro and is_instance_valid(otro):
 		var cuerpo_yo: float = ancho_cuerpo * _mult_cuerpo_actual()
 		var cuerpo_otro: float = otro.ancho_cuerpo * otro._mult_cuerpo_actual()
 		minimo = maxf(minimo, (cuerpo_yo + cuerpo_otro) * 0.54)
+		# Esta es la pieza clave: si los PNG son visualmente anchos, la distancia
+		# mínima crece lo suficiente para que los torsos no se tapen.
+		minimo = maxf(minimo, _distancia_visual_entre_cuerpos(otro))
 		if fase_ataque == FaseAtaque.ACTIVO or otro.fase_ataque == FaseAtaque.ACTIVO:
 			minimo = maxf(minimo, DISTANCIA_MINIMA_CONTACTO)
 		if hitstun_timer > 0.0 or otro.hitstun_timer > 0.0:
@@ -3102,33 +4798,81 @@ func _distancia_minima_contextual(otro: Fighter = null) -> float:
 func _aplicar_contacto_corporal_post_golpe(otro: Fighter, fuerza: float, bloqueado: bool) -> void:
 	if not otro or not is_instance_valid(otro):
 		return
-	# FASE 90.3: antes esta función entera se saltaba durante el combo
-	# automático del CORE (en_secuencia_especial), incluido el
-	# microdesplazamiento instantáneo del defensor -- eso también aportaba
-	# a que el rival se sintiera "pegado" en el combo, aparte del empuje
-	# físico ya corregido en 90.2. Durante el combo dejamos pasar SOLO el
-	# golpe instantáneo al defensor (se nota en el mismo frame del
-	# impacto, antes de que el empuje físico termine de acelerarlo). Lo
-	# que seguimos evitando durante el combo es tocar la posición del
-	# ATACANTE acá (separación + auto-recoil): esa la controla por completo
-	# el tween de _acercar_para_combo_auto(), y sumarle un ajuste instantáneo
-	# aparte podría generar un microtemblor peleando contra ese tween.
-	if en_secuencia_especial or otro.en_secuencia_especial:
-		if otro.esta_derrotado:
-			return
-		var dir_combo: float = signf(otro.global_position.x - global_position.x)
-		if dir_combo == 0.0:
-			dir_combo = mirando if mirando != 0.0 else 1.0
-		var energia_combo: float = clampf(fuerza / 320.0, 0.0, 1.0)
-		otro.global_position.x += dir_combo * lerpf(5.5, 14.0, energia_combo)
+	# Durante el combo automático sí conservamos separación corporal.
+	# Solo los posters/cinemáticas puras mantienen los cuerpos completamente fijos.
+	if (en_secuencia_especial or otro.en_secuencia_especial) \
+		and not (en_combo_auto_visual or otro.en_combo_auto_visual):
 		return
 	var dir: float = signf(otro.global_position.x - global_position.x)
 	if dir == 0.0:
 		dir = mirando if mirando != 0.0 else 1.0
 	var actual: float = absf(otro.global_position.x - global_position.x)
-	var separacion_objetivo: float = _distancia_minima_contextual(otro)
-	separacion_objetivo = maxf(separacion_objetivo, DISTANCIA_MINIMA_CONTACTO_BLOQUEO if bloqueado else DISTANCIA_MINIMA_CONTACTO)
+	var combo_core_activo: bool = en_combo_auto_visual or otro.en_combo_auto_visual
+
+	# 90.10.97 — durante la RÁFAGA CORE el defensor NO cede terreno. Antes esta
+	# función agregaba hasta 4 px por impacto al receptor y luego el knockback de
+	# recibir_dano() lo alejaba todavía más; el siguiente golpe tenía que perseguirlo.
+	# Ahora el defensor conserva su X y sólo recolocamos al atacante a la distancia
+	# exacta de combo. Las poses de golpe recibido siguen funcionando normalmente.
+	if combo_core_activo:
+		var atacante_combo: Fighter = self if en_combo_auto_visual else otro
+		var defensor_combo: Fighter = otro if en_combo_auto_visual else self
+		if atacante_combo and defensor_combo and is_instance_valid(atacante_combo) and is_instance_valid(defensor_combo):
+			defensor_combo.velocity.x = 0.0
+			defensor_combo.empuje_timer = 0.0
+			defensor_combo.empuje_x = 0.0
+			defensor_combo.empuje_pendiente_timer = 0.0
+			defensor_combo.empuje_pendiente_fuerza = 0.0
+			var dir_combo: float = signf(defensor_combo.global_position.x - atacante_combo.global_position.x)
+			if dir_combo == 0.0:
+				dir_combo = atacante_combo.mirando if atacante_combo.mirando != 0.0 else 1.0
+			var distancia_lock: float = atacante_combo._distancia_combo_auto_adaptativa(defensor_combo)
+			atacante_combo.global_position.x = defensor_combo.global_position.x - dir_combo * distancia_lock
+			atacante_combo.velocity.x = 0.0
+			atacante_combo._aplicar_limites_arena()
+			defensor_combo._aplicar_limites_arena()
+		return
+
+	var separacion_objetivo: float
+	if combo_core_activo:
+		# 90.10.71 — usamos exactamente la misma distancia adaptativa que guía el
+		# acercamiento del auto-combo. Así el tween y el pushbox dejan de pelearse
+		# entre sí y los torsos grandes conservan aire visual entre impactos.
+		separacion_objetivo = _distancia_combo_auto_adaptativa(otro)
+		if bloqueado:
+			separacion_objetivo = minf(separacion_objetivo + 4.0, DISTANCIA_COMBO_AUTO_PUSH_MAX + 4.0)
+	else:
+		# 90.10.16 — para golpes normales usamos torso lógico, no el ancho total
+		# de alas/cabello/cola. El clamp evita tanto la superposición como el efecto
+		# de "golpear desde lejos" en personajes visualmente muy anchos.
+		separacion_objetivo = clampf(
+			_distancia_minima_contextual(otro),
+			CONTACTO_POST_GOLPE_MIN,
+			CONTACTO_POST_GOLPE_MAX
+		)
+		# 90.10.72 — margen por pose SOLO post-impacto. Un puño proyecta menos
+		# el torso que una patada; un trade puede sumar 2 px extra. Al ocurrir
+		# después de _atk_ya_conecto, este margen jamás puede provocar un whiff.
+		separacion_objetivo += _bonus_pushbox_pose_contacto(otro)
+		if bloqueado:
+			separacion_objetivo = maxf(separacion_objetivo, 98.0)
 	var energia: float = clampf(fuerza / 320.0, 0.0, 1.0)
+	# 90.10.74 — un impacto fuerte crea un microespacio REAL de decisión. Esto
+	# ocurre después de confirmar el hit, por lo que jamás acorta el rango ni
+	# genera whiffs. No se aplica en bloqueo ni en el auto-combo CORE: ahí ya
+	# existen reglas propias de rebote/posición.
+	var microespacio_extra: float = 0.0
+	var microespacio_duracion: float = 0.0
+	if not bloqueado and not combo_core_activo and fuerza >= MICROESPACIO_UMBRAL_FUERZA:
+		var peso_micro: float = clampf((fuerza - MICROESPACIO_UMBRAL_FUERZA) / 150.0, 0.0, 1.0)
+		if _atk_tipo == "patada":
+			microespacio_extra = lerpf(MICROESPACIO_PATADA_EXTRA_MIN, MICROESPACIO_PATADA_EXTRA_MAX, peso_micro)
+			microespacio_duracion = lerpf(0.030, MICROESPACIO_DUR_PATADA_MAX, peso_micro)
+		else:
+			microespacio_extra = lerpf(MICROESPACIO_PUNO_EXTRA_MIN, MICROESPACIO_PUNO_EXTRA_MAX, peso_micro)
+			microespacio_duracion = lerpf(0.018, MICROESPACIO_DUR_PUNO_MAX, peso_micro)
+		separacion_objetivo = minf(separacion_objetivo + microespacio_extra, MICROESPACIO_DISTANCIA_MAX)
+
 	var impulso_defensor: float = lerpf(5.5, 14.0, energia)
 	var impulso_atacante: float = lerpf(1.0, 4.0, energia)
 	if bloqueado:
@@ -3143,28 +4887,227 @@ func _aplicar_contacto_corporal_post_golpe(otro: Fighter, fuerza: float, bloquea
 		var penetracion: float = separacion_objetivo - actual
 		global_position.x -= dir * penetracion * (0.34 if bloqueado else 0.18)
 		otro.global_position.x += dir * penetracion * (0.66 if bloqueado else 0.82)
-	# Luego suma un microdesplazamiento instantáneo del defensor para que el
-	# retroceso se sienta en el mismo frame del impacto, antes del empuje total.
-	otro.global_position.x += dir * impulso_defensor
-	global_position.x -= dir * impulso_atacante
+
+		# Micro-rebote de cuerpos: cuando ya se invadieron visualmente, cada uno
+		# recibe una pequeña velocidad opuesta. No es knockback de ataque; es
+		# solamente la respuesta física de dos cuerpos que no pueden ocupar
+		# el mismo lugar.
+		var rebote_cuerpo: float = clampf(28.0 + penetracion * 1.10, 28.0, 92.0)
+		if not combo_core_activo and not en_secuencia_especial and not otro.en_secuencia_especial:
+			velocity.x = -dir * maxf(absf(velocity.x), rebote_cuerpo * 0.35)
+			otro.velocity.x = dir * maxf(absf(otro.velocity.x), rebote_cuerpo)
+	# Luego suma un microdesplazamiento instantáneo. En auto-combo lo reducimos
+	# para que el siguiente ataque no tenga que perseguir un rival que ya se
+	# alejó artificialmente antes de aplicar el knockback real.
+	if combo_core_activo:
+		otro.global_position.x += dir * minf(impulso_defensor, 4.0)
+		global_position.x -= dir * minf(impulso_atacante, 1.0)
+	else:
+		otro.global_position.x += dir * impulso_defensor
+		global_position.x -= dir * impulso_atacante
+
+	# 90.10.16 — mantener brevemente esta distancia después del frame inicial.
+	# Esto es lo que impide que el atacante vuelva a penetrar el torso durante
+	# hit-stop/recovery. En combo CORE se conserva el contacto compacto.
+	var dur_contacto: float = 0.045 if combo_core_activo else (CONTACTO_POST_GOLPE_DUR_PATADA if _atk_tipo == "patada" else CONTACTO_POST_GOLPE_DUR_PUNO)
+	if not combo_core_activo and _bonus_pushbox_pose_contacto(otro) > 0.0:
+		# Unas centésimas extra mantienen la lectura del contacto mientras la pose
+		# extendida termina; no es hitstun y no ralentiza el control del jugador.
+		dur_contacto += 0.018
+	# El microespacio no congela al jugador: solo sostiene durante unas pocas
+	# centésimas la abertura creada por el impacto. Al terminar, ambos recuperan
+	# inmediatamente el footwork normal y pueden volver a entrar.
+	dur_contacto += microespacio_duracion
+	_activar_separacion_post_golpe(otro, separacion_objetivo, dur_contacto)
+
+	# 90.10.14 — este método modifica posiciones directamente, por fuera de
+	# move_and_slide(). Nunca dejar ese desplazamiento sin revalidar los bordes.
+	_aplicar_limites_arena()
+	otro._aplicar_limites_arena()
+
+func _activar_separacion_post_golpe(otro: Fighter, distancia: float, duracion: float) -> void:
+	if not otro or not is_instance_valid(otro):
+		return
+	contacto_post_golpe_distancia = maxf(contacto_post_golpe_distancia, distancia)
+	contacto_post_golpe_timer = maxf(contacto_post_golpe_timer, duracion)
+	otro.contacto_post_golpe_distancia = maxf(otro.contacto_post_golpe_distancia, distancia)
+	otro.contacto_post_golpe_timer = maxf(otro.contacto_post_golpe_timer, duracion)
+
+func _mantener_separacion_post_golpe(delta: float) -> void:
+	if contacto_post_golpe_timer <= 0.0:
+		contacto_post_golpe_distancia = 0.0
+		return
+	contacto_post_golpe_timer = maxf(0.0, contacto_post_golpe_timer - delta)
+	if not objetivo or not is_instance_valid(objetivo):
+		return
+	if esta_derrotado or objetivo.esta_derrotado or derribo_especial_activo or objetivo.derribo_especial_activo:
+		return
+	if en_secuencia_especial or objetivo.en_secuencia_especial:
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dist: float = absf(dx)
+	if dist <= 0.01:
+		return
+	var objetivo_dist: float = contacto_post_golpe_distancia
+	if objetivo_dist <= 0.0 or dist >= objetivo_dist:
+		return
+	var dir: float = signf(dx)
+	var penetracion: float = objetivo_dist - dist
+
+	# El receptor del golpe cede más; si ambos están en estado neutro repartimos.
+	var factor_yo: float = 0.5
+	var factor_otro: float = 0.5
+	if hitstun_timer > 0.0 and objetivo.hitstun_timer <= 0.0:
+		factor_yo = 0.82
+		factor_otro = 0.18
+	elif objetivo.hitstun_timer > 0.0 and hitstun_timer <= 0.0:
+		factor_yo = 0.18
+		factor_otro = 0.82
+
+	global_position.x -= dir * penetracion * factor_yo
+	objetivo.global_position.x += dir * penetracion * factor_otro
+
+	# Cortar únicamente velocidad que intenta volver a cerrar el espacio.
+	# El knockback que se aleja del contacto permanece intacto.
+	if signf(velocity.x) == dir:
+		velocity.x = 0.0
+	if signf(objetivo.velocity.x) == -dir:
+		objetivo.velocity.x = 0.0
+
+	_aplicar_limites_arena()
+	objetivo._aplicar_limites_arena()
+
+func _activar_cruce_aereo() -> void:
+	if cruce_aereo_activo:
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		return
+	cruce_aereo_activo = true
+	add_collision_exception_with(objetivo)
+	objetivo.add_collision_exception_with(self)
+
+func _terminar_cruce_aereo() -> void:
+	if not cruce_aereo_activo:
+		return
+	cruce_aereo_activo = false
+	if not objetivo or not is_instance_valid(objetivo):
+		return
+	# Si el otro sigue cruzando, o alguno está derribado/KO, la excepción debe
+	# permanecer. El estado correspondiente la restaurará cuando sea seguro.
+	if objetivo.cruce_aereo_activo or esta_derrotado or objetivo.esta_derrotado \
+		or derribo_especial_activo or objetivo.derribo_especial_activo:
+		return
+	_restaurar_colision_con_rival()
+
+# 90.10.13 — mientras un luchador está derribado/KO no debe quedar una
+# colisión fantasma contra el rival. Usamos excepciones entre LOS DOS cuerpos
+# (no desactivamos la CollisionShape), así el luchador sigue chocando con el
+# suelo y los límites del escenario normalmente.
+func _asegurar_pushbox_manual_con_rival() -> void:
+	if not objetivo or not is_instance_valid(objetivo):
+		_objetivo_pushbox_manual_id = 0
+		return
+	var oid: int = int(objetivo.get_instance_id())
+	if _objetivo_pushbox_manual_id == oid:
+		return
+	add_collision_exception_with(objetivo)
+	objetivo.add_collision_exception_with(self)
+	_objetivo_pushbox_manual_id = oid
+	objetivo._objetivo_pushbox_manual_id = int(get_instance_id())
+
+func _ignorar_colision_con_rival() -> void:
+	# Compatibilidad con derribos/cruce aéreo: desde 90.10.82 esta excepción
+	# ya es permanente entre los dos Fighter. Se mantiene esta API porque
+	# varias rutas antiguas la llaman, pero todas convergen al mismo estado.
+	_asegurar_pushbox_manual_con_rival()
+
+
+func _restaurar_colision_con_rival() -> void:
+	# 90.10.82 — NO reactivar la colisión CharacterBody2D entre luchadores.
+	# Reactivarla después de un salto/derribo volvía a mezclar dos resolutores
+	# distintos (Godot + pushbox manual), origen del falso backdash asimétrico.
+	_asegurar_pushbox_manual_con_rival()
+
+
+# 90.10.13 — límites visuales para cuerpos derribados.
+# El límite histórico protegía solamente el ORIGEN del CharacterBody2D. Una
+# pose tumbada muy ancha podía tener el origen dentro de la arena pero todo el
+# PNG fuera de pantalla. El cuerpo físico quedaba allí y se sentía como una
+# "pared fantasma". Para derribos/KO calculamos también cuánto ocupa el alfa
+# real del sprite y mantenemos la silueta visible dentro del escenario.
+func _limites_arena_x_pose_actual() -> Vector2:
+	var limite_izq: float = ARENA_LIMITE_IZQUIERDO
+	var limite_der: float = ARENA_LIMITE_DERECHO
+	if not (esta_derrotado or derribo_especial_activo):
+		return Vector2(limite_izq, limite_der)
+	if not sprite or not sprite.texture:
+		return Vector2(limite_izq, limite_der)
+
+	var rect: Rect2 = _obtener_rect_visual(sprite.texture)
+	if rect.size.x <= 1.0:
+		return Vector2(limite_izq, limite_der)
+
+	var escala_x: float = absf(sprite.scale.x)
+	var centro_tex: float = float(sprite.texture.get_width()) * 0.5
+	var raw_izq: float = (rect.position.x - centro_tex) * escala_x
+	var raw_der: float = (rect.position.x + rect.size.x - centro_tex) * escala_x
+	var local_izq: float
+	var local_der: float
+	if sprite.flip_h:
+		local_izq = sprite.position.x - raw_der
+		local_der = sprite.position.x - raw_izq
+	else:
+		local_izq = sprite.position.x + raw_izq
+		local_der = sprite.position.x + raw_der
+
+	# Queremos que el alfa visible quede entre los mismos márgenes físicos de
+	# la arena segura, no simplemente que el pivote quede allí.
+	limite_izq = maxf(limite_izq, ARENA_LIMITE_IZQUIERDO - local_izq)
+	limite_der = minf(limite_der, ARENA_LIMITE_DERECHO - local_der)
+
+	# Resguardo para un PNG excepcionalmente ancho: nunca generar un rango
+	# invertido. En ese caso lo centramos en el área jugable.
+	if limite_izq > limite_der:
+		var centro: float = (ARENA_LIMITE_IZQUIERDO + ARENA_LIMITE_DERECHO) * 0.5
+		return Vector2(centro, centro)
+	return Vector2(limite_izq, limite_der)
+
 
 func _aplicar_limites_arena() -> void:
+	# 90.10.14 — guardia dura del mundo. El CharacterBody2D nunca debe quedar
+	# por debajo de la línea física del suelo ni fuera del rango horizontal,
+	# incluso si otro luchador lo movió directamente, hubo hit-stop o un derribo.
 	var x_anterior: float = global_position.x
-	global_position.x = clampf(global_position.x, ARENA_LIMITE_IZQUIERDO, ARENA_LIMITE_DERECHO)
-	if global_position.x == x_anterior:
+	var y_anterior: float = global_position.y
+	var limites_x: Vector2 = _limites_arena_x_pose_actual()
+	global_position.x = clampf(global_position.x, limites_x.x, limites_x.y)
+
+	# El origen del Fighter está en los pies. El piso físico está en Y=560,
+	# así que cualquier valor mayor significa que el cuerpo salió por debajo.
+	if global_position.y > SUELO_REFERENCIA_Y:
+		global_position.y = SUELO_REFERENCIA_Y
+		if velocity.y > 0.0:
+			velocity.y = 0.0
+
+	var cambio_x: bool = not is_equal_approx(global_position.x, x_anterior)
+	var cambio_y: bool = not is_equal_approx(global_position.y, y_anterior)
+	if not cambio_x and not cambio_y:
 		return
+
 	# Durante un derribo especial fuerte el cuerpo puede rebotar una vez contra
-	# el borde del escenario antes de caer/deslizar. En combate normal solo se
-	# frena para no salirse de la arena.
-	if derribo_especial_activo and derribo_especial_esperando_aterrizar and not derribo_especial_rebote_muro_usado:
-		derribo_especial_rebote_muro_usado = true
-		velocity.x = -velocity.x * FUERZA_REBOTE_MURO_ESPECIAL
-		_reaccion_impacto_timer = maxf(_reaccion_impacto_timer, 0.12)
-		_reaccion_impacto_fuerza = maxf(_reaccion_impacto_fuerza, 220.0)
-		hitstop_timer = maxf(hitstop_timer, 0.028)
-		_efecto_golpe_suelo(260.0)
-	elif signf(velocity.x) == signf(global_position.x - x_anterior):
-		velocity.x = 0.0
+	# el borde horizontal antes de caer/deslizar. La corrección vertical nunca
+	# genera rebote: solo recupera al luchador sobre el suelo válido.
+	if cambio_x:
+		if derribo_especial_activo and derribo_especial_esperando_aterrizar and not derribo_especial_rebote_muro_usado:
+			derribo_especial_rebote_muro_usado = true
+			velocity.x = -velocity.x * FUERZA_REBOTE_MURO_ESPECIAL
+			_reaccion_impacto_timer = maxf(_reaccion_impacto_timer, 0.12)
+			_reaccion_impacto_fuerza = maxf(_reaccion_impacto_fuerza, 220.0)
+			hitstop_timer = maxf(hitstop_timer, 0.028)
+			_efecto_golpe_suelo(260.0)
+		elif signf(velocity.x) == signf(global_position.x - x_anterior):
+			velocity.x = 0.0
 
 func _actualizar_profundidad_visual() -> void:
 	var base_z := int(round(global_position.y / Z_BASE_Y_DIVISOR))
@@ -3180,13 +5123,152 @@ func _actualizar_profundidad_visual() -> void:
 	z_index = base_z
 
 func _aplicar_separacion_fisica() -> void:
-	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+	# 90.10.23 — durante el cruce del doble salto permitimos que los cuerpos se
+	# atraviesen horizontalmente en el aire. Las hitboxes manuales siguen activas,
+	# así todavía se pueden golpear; solo se elimina la pared física entre ambos.
+	if cruce_aereo_activo:
 		return
-	if en_secuencia_especial or objetivo.en_secuencia_especial:
+	if objetivo and is_instance_valid(objetivo) and objetivo.cruce_aereo_activo:
 		return
+	# 90.10.13 — un luchador tumbado/KO no participa en la separación corporal
+	# preventiva. Si su pose quedó en el borde no puede seguir empujando al rival
+	# con un cuerpo invisible. El suelo y los límites de arena siguen funcionando.
+	if esta_derrotado or derribo_especial_activo:
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado or objetivo.derribo_especial_activo:
+		return
+
+	# 90.10.84 — RESOLUCIÓN ÚNICA POR PAREJA.
+	# Antes ambos Fighter ejecutaban esta función. Aunque varios subcasos ya
+	# evitaban doble corrección, seguían existiendo ventanas dependientes del
+	# orden de proceso. Ahora el lado 0 es la autoridad del par y calcula
+	# simétricamente tanto el movimiento de J1 como el de J2.
+	if indice_lado_combate >= 0 and objetivo.indice_lado_combate >= 0:
+		if indice_lado_combate > objetivo.indice_lado_combate:
+			return
+	else:
+		# Fallback para escenas antiguas que todavía no asignan lado.
+		if int(get_instance_id()) > int(objetivo.get_instance_id()):
+			return
+
+	# 90.10.70 — durante CORE II/III sí existe un PUSHBOX compacto. En 90.10.69
+	# estos dos returns anulaban toda separación justo cuando el tween automático
+	# acercaba al atacante, permitiendo que torsos grandes se fundieran. Desde
+	# 90.10.71 el objetivo del combo y el pushbox usan la MISMA distancia adaptativa,
+	# así no perdemos golpes ni generamos una corrección contradictoria.
+	var combo_core_activo: bool = en_combo_auto_visual or objetivo.en_combo_auto_visual
+
+	# Posters/recargas y otras cinemáticas puras siguen inmóviles. La excepción
+	# es únicamente la racha automática de golpes, donde necesitamos pushbox.
+	if (en_secuencia_especial or objetivo.en_secuencia_especial) and not combo_core_activo:
+		return
+
+	# 90.10.97 — PUSHBOX DE RÁFAGA CON DEFENSOR ANCLADO. El receptor del CORE
+	# nunca absorbe la penetración: cualquier corrección espacial la hace el
+	# atacante. Esto reproduce el ritmo que aparece naturalmente cuando el rival
+	# está contra la pared, pero funciona en cualquier punto del escenario.
+	if combo_core_activo:
+		var atacante_core: Fighter = self if en_combo_auto_visual else objetivo
+		var defensor_core: Fighter = objetivo if en_combo_auto_visual else self
+		if atacante_core and defensor_core and is_instance_valid(atacante_core) and is_instance_valid(defensor_core):
+			defensor_core.velocity.x = 0.0
+			defensor_core.empuje_timer = 0.0
+			defensor_core.empuje_x = 0.0
+			defensor_core.empuje_pendiente_timer = 0.0
+			defensor_core.empuje_pendiente_fuerza = 0.0
+			var dx_core: float = defensor_core.global_position.x - atacante_core.global_position.x
+			var dir_core: float = signf(dx_core)
+			if dir_core == 0.0:
+				dir_core = atacante_core.mirando if atacante_core.mirando != 0.0 else 1.0
+			var distancia_core: float = atacante_core._distancia_combo_auto_adaptativa(defensor_core)
+			if absf(dx_core) < distancia_core:
+				atacante_core.global_position.x = defensor_core.global_position.x - dir_core * distancia_core
+				atacante_core.velocity.x = 0.0
+			atacante_core._aplicar_limites_arena()
+			defensor_core._aplicar_limites_arena()
+		return
+
 	var dx := objetivo.global_position.x - global_position.x
 	var dist := absf(dx)
-	var distancia_minima: float = _distancia_minima_contextual(objetivo)
+	var yo_atacando: bool = fase_ataque != FaseAtaque.NINGUNA
+	var otro_atacando: bool = objetivo.fase_ataque != FaseAtaque.NINGUNA
+
+	# 90.10.87 — PUSHBOX NEUTRAL DURO Y SIMÉTRICO.
+	# En neutral NO usamos ningún ancho de PNG, alas, pelo, pose de carrera ni
+	# distancia visual contextual. El cuerpo físico base manda. Si sólo uno entra
+	# contra el otro, se corrige exclusivamente AL QUE ENTRA; el defensor quieto
+	# conserva exactamente su X mundial. Esto elimina de raíz el falso backdash
+	# observado con Kali/Helena y Fang/Magnus en Versus Local.
+	var neutral_puro: bool = not combo_core_activo \
+		and not yo_atacando and not otro_atacando \
+		and hitstun_timer <= 0.0 and objetivo.hitstun_timer <= 0.0 \
+		and not bloqueando and not objetivo.bloqueando
+	if neutral_puro:
+		var distancia_neutral: float = DISTANCIA_MINIMA_LUCHADORES
+		if dist <= 0.01 or dist >= distancia_neutral:
+			return
+		var dir_neutral: float = signf(dx)
+		var penetracion_neutral: float = distancia_neutral - dist
+		var yo_hacia_rival_neutral: bool = (carrera_activa and carrera_direccion * dir_neutral > 0.0) \
+			or velocity.x * dir_neutral > VELOCIDAD_NEUTRAL_EMPUJE_UMBRAL
+		var otro_hacia_rival_neutral: bool = (objetivo.carrera_activa and objetivo.carrera_direccion * dir_neutral < 0.0) \
+			or objetivo.velocity.x * dir_neutral < -VELOCIDAD_NEUTRAL_EMPUJE_UMBRAL
+
+		if yo_hacia_rival_neutral and not otro_hacia_rival_neutral:
+			# J1/self entra: self absorbe 100% de la corrección.
+			global_position.x -= dir_neutral * penetracion_neutral
+			velocity.x = 0.0
+			if carrera_activa:
+				_detener_carrera()
+		elif otro_hacia_rival_neutral and not yo_hacia_rival_neutral:
+			# J2/objetivo entra: objetivo absorbe 100% de la corrección.
+			objetivo.global_position.x += dir_neutral * penetracion_neutral
+			objetivo.velocity.x = 0.0
+			if objetivo.carrera_activa:
+				objetivo._detener_carrera()
+		elif yo_hacia_rival_neutral and otro_hacia_rival_neutral:
+			# Choque frontal real: reparto simétrico, no depende del orden de proceso.
+			global_position.x -= dir_neutral * penetracion_neutral * 0.5
+			objetivo.global_position.x += dir_neutral * penetracion_neutral * 0.5
+			velocity.x = 0.0
+			objetivo.velocity.x = 0.0
+			if carrera_activa:
+				_detener_carrera()
+			if objetivo.carrera_activa:
+				objetivo._detener_carrera()
+		# Si ninguno está cerrando distancia, no se corrige nada.
+		return
+
+	var distancia_minima: float = _distancia_combo_auto_adaptativa(objetivo) if combo_core_activo else _distancia_minima_contextual(objetivo)
+
+	# 90.10.72 — si ya hubo impacto confirmado, la pose extendida recibe un
+	# margen pequeño adicional. Antes del impacto NO se suma: el bloque de
+	# precontacto de abajo conserva exactamente la capacidad de entrar en rango.
+	if not combo_core_activo:
+		var bonus_pose_contacto: float = _bonus_pushbox_pose_contacto(objetivo)
+		if bonus_pose_contacto > 0.0:
+			distancia_minima += bonus_pose_contacto
+
+	# 90.10.17 — contacto preventivo adaptativo. Conservamos la regla crítica
+	# de 90.10.12: la separación NUNCA gana al golpe. Los chequeos de hitbox ya
+	# ocurrieron antes de llegar acá; si aún no hubo impacto, evitamos solamente
+	# que torso/cadera se fundan mientras el ataque entra en rango.
+	if not combo_core_activo:
+		if yo_atacando != otro_atacando:
+			var atacante: Fighter = self if yo_atacando else objetivo
+			if not atacante._atk_ya_conecto:
+				distancia_minima = minf(distancia_minima, _distancia_precontacto_adaptativa(objetivo, atacante))
+		elif yo_atacando and otro_atacando:
+			# Dos ataques simultáneos antes se saltaban TODA separación y eran una de
+			# las fuentes más visibles de torso dentro de torso. Como los hitboxes ya
+			# fueron evaluados en este frame, podemos conservar un colchón compacto sin
+			# impedir trades. Nunca supera 88 px.
+			if not _atk_ya_conecto and not objetivo._atk_ya_conecto:
+				distancia_minima = minf(
+					distancia_minima,
+					minf(_distancia_precontacto_adaptativa(objetivo, self), PRECONTACTO_DOBLE_ATAQUE_MAX)
+				)
+
 	if dist <= 0.01 or dist >= distancia_minima:
 		return
 	var dir: float = signf(dx)
@@ -3198,18 +5280,75 @@ func _aplicar_separacion_fisica() -> void:
 	var suma_masa: float = masa_yo + masa_otro
 	var factor_yo: float = masa_otro / suma_masa
 	var factor_objetivo: float = masa_yo / suma_masa
-	if fase_ataque == FaseAtaque.ACTIVO and objetivo.hitstun_timer > 0.0:
-		factor_yo = minf(0.28, factor_yo)
-		factor_objetivo = 1.0 - factor_yo
-	elif objetivo.fase_ataque == FaseAtaque.ACTIVO and hitstun_timer > 0.0:
-		factor_objetivo = minf(0.28, factor_objetivo)
-		factor_yo = 1.0 - factor_objetivo
+
+	# Prioridad del golpe sobre una caminata durante TODO el ciclo. Otro ATAQUE
+	# conserva prioridad propia y puede entrar normalmente.
+
+	if yo_atacando and not otro_atacando:
+		factor_yo = 0.0
+		factor_objetivo = 1.0
+		# Si el rival caminaba hacia el atacante, cortar ese avance.
+		if signf(objetivo.velocity.x) == -dir:
+			objetivo.velocity.x = 0.0
+	elif otro_atacando and not yo_atacando:
+		factor_yo = 1.0
+		factor_objetivo = 0.0
+		if signf(velocity.x) == dir:
+			velocity.x = 0.0
+	elif yo_atacando and otro_atacando:
+		# Trade real: repartimos la corrección por masa en vez de permitir que los
+		# dos centros se crucen. No cancelamos velocidades aquí; el impacto/hitstop
+		# conserva la prioridad si alguno de los dos conecta.
+		pass
 	elif hitstun_timer > 0.0:
 		factor_yo = minf(0.78, factor_yo + 0.18)
 		factor_objetivo = 1.0 - factor_yo
 	elif objetivo.hitstun_timer > 0.0:
 		factor_objetivo = minf(0.78, factor_objetivo + 0.18)
 		factor_yo = 1.0 - factor_objetivo
+	else:
+		# 90.10.84 — prioridad explícita del DASH sobre cualquier velocidad residual.
+		# Si un dash entra contra un rival quieto, SOLO el que hizo dash absorbe
+		# la penetración. Además terminamos carrera_activa: antes velocity.x se
+		# ponía a cero, pero el siguiente frame la carrera volvía a inyectar velocidad.
+		var yo_dash_hacia_rival: bool = carrera_activa and carrera_direccion * dir > 0.0
+		var otro_dash_hacia_rival: bool = objetivo.carrera_activa and objetivo.carrera_direccion * dir < 0.0
+		if yo_dash_hacia_rival and not otro_dash_hacia_rival:
+			factor_yo = 1.0
+			factor_objetivo = 0.0
+			_detener_carrera()
+			velocity.x = 0.0
+		elif otro_dash_hacia_rival and not yo_dash_hacia_rival:
+			factor_yo = 0.0
+			factor_objetivo = 1.0
+			objetivo._detener_carrera()
+			objetivo.velocity.x = 0.0
+		elif yo_dash_hacia_rival and otro_dash_hacia_rival:
+			# Dos dashes frontales se encuentran en el borde del pushbox.
+			_detener_carrera()
+			objetivo._detener_carrera()
+			velocity.x = 0.0
+			objetivo.velocity.x = 0.0
+		else:
+			# Caminata/avance normal: el rival quieto queda anclado. Si ambos
+			# avanzan uno contra otro se reparte por masa, como antes.
+			var yo_hacia_rival: bool = velocity.x * dir > VELOCIDAD_NEUTRAL_EMPUJE_UMBRAL
+			var otro_hacia_rival: bool = objetivo.velocity.x * dir < -VELOCIDAD_NEUTRAL_EMPUJE_UMBRAL
+			if yo_hacia_rival and not otro_hacia_rival:
+				factor_yo = 1.0
+				factor_objetivo = 0.0
+				velocity.x = 0.0
+			elif otro_hacia_rival and not yo_hacia_rival:
+				factor_yo = 0.0
+				factor_objetivo = 1.0
+				objetivo.velocity.x = 0.0
+			elif yo_hacia_rival and otro_hacia_rival:
+				velocity.x = 0.0
+				objetivo.velocity.x = 0.0
+			else:
+				# No hay presión neutral: no existe nada que resolver.
+				return
+
 	global_position.x -= dir * penetracion * factor_yo
 	objetivo.global_position.x += dir * penetracion * factor_objetivo
 
@@ -3273,18 +5412,30 @@ func _tex_bloqueo() -> Texture2D:
 		return textura_furia_bloqueo
 	return textura_bloqueo
 
-# Pose dedicada para la carrera (doble toque de flecha). Si el personaje no
-# tiene este arte cargado, no pasa nada: se sigue usando el ciclo normal de
-# caminata (más rápido) como hasta ahora.
+# True cuando el impulso actual se aleja del rival manteniendo la mirada
+# hacia él. Eso distingue visualmente dash de entrada y evasión/backdash.
+func _es_backdash_activo() -> bool:
+	var dir_dash: float = carrera_direccion if carrera_activa else (dash_aereo_direccion if dash_aereo_activo else 0.0)
+	return dir_dash != 0.0 and mirando != 0.0 and dir_dash * mirando < 0.0
+
+func _tex_evasion() -> Texture2D:
+	if en_fase_absoluta and textura_furia_evasion:
+		return textura_furia_evasion
+	return textura_evasion
+
+# Pose dedicada para la aceleración por doble toque. Hacia el rival usa
+# carrera/dash; alejándose usa EVASIÓN si existe. Si falta el PNG dedicado,
+# conserva el fallback anterior para no romper ningún personaje.
 func _tex_carrera() -> Texture2D:
+	if _es_backdash_activo():
+		var evasion := _tex_evasion()
+		if evasion:
+			return evasion
 	if en_fase_absoluta and textura_furia_carrera:
 		return textura_furia_carrera
 	return textura_carrera
 
-# Decide qué textura "de fondo" mostrar cuando no hay un golpe/impacto
-# puntual en curso. Prioridad: bloqueando > en el aire (salto/doble
-# salto/descenso según corresponda) > carrera (doble toque de flecha,
-# si el personaje tiene arte propio) > caminando > parado.
+# Prioridad: bloqueo > aire > aceleración > caminata > parado.
 func _tex_reposo() -> Texture2D:
 	if bloqueando:
 		var t_bloqueo := _tex_bloqueo()

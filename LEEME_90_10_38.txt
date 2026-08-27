@@ -1,0 +1,23 @@
+CORE AWAKENED — 90.10.38
+DISPLAY STARTUP PARSER FIX
+
+Corrige el error de arranque de Godot 4.7 en:
+  scripts/settings_manager.gd
+
+ERROR OBSERVADO:
+Cannot infer the type of "diferencia_mejor" variable because the value doesn't have a set type.
+
+CAMBIO:
+- diferencia_mejor y diferencia ahora son int explícitos.
+- se usa absi() para mantener cálculo entero tipado.
+
+NO SE MODIFICA:
+- resolución lógica 1280x720
+- fullscreen nativo
+- selector de resolución
+- VSync
+- audio/opciones
+- combate/cámara/IA/sprites
+
+INSTALACIÓN:
+Copiar el contenido del ZIP en la raíz del proyecto y reemplazar.

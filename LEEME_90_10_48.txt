@@ -1,0 +1,28 @@
+CORE AWAKENED 90.10.48 — AUDIO COMBAT / RECHARGE PASS
+
+Base: 90.10.47 aprobado.
+
+Cambios:
+- aura1 aportado por el creador se usa como nueva capa energética universal de recarga.
+  * CORE II: versión recortada/sincronizada de 1.20 s.
+  * CORE III: versión recortada/sincronizada de 1.60 s.
+- weakpunch aportado se agrega al pool de puños normales/livianos.
+- weakkick aportado se agrega al pool de patadas normales/livianas.
+- grito masculino aportado se recorta a 1.46 s para no invadir el combo posterior.
+- Kai conserva sus voces de recarga actuales.
+- Fang y Aethel conservan sus voces actuales.
+- Jester, Xenoid, Kali y Magnus usan el nuevo grito masculino (con pitch leve por personaje).
+- Helena no usa el grito masculino.
+- Cibor-X conserva exclusivamente su identidad robótica.
+
+Archivos modificados:
+- scripts/main.gd
+
+Assets nuevos:
+- assets/sonidos/aporte_90_10_48/aura_recarga_core2.wav
+- assets/sonidos/aporte_90_10_48/aura_recarga_core3.wav
+- assets/sonidos/aporte_90_10_48/grito_recarga_hombre.wav
+- assets/sonidos/aporte_90_10_48/weakpunch_usuario.wav
+- assets/sonidos/aporte_90_10_48/weakkick_usuario.wav
+
+No toca Fighter, cámara, IA, hitboxes, daño, movimiento ni lógica CORE.

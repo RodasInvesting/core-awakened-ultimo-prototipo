@@ -1,0 +1,26 @@
+CORE AWAKENED 90.10.56 — HELENA COMBAT VARIETY PASS
+
+OBJETIVO
+Ampliar el repertorio de Helena sin reemplazar ni eliminar los golpes actuales.
+
+NORMAL
+- 10 puños totales.
+- El nuevo doble puño se agrega como segundo golpe de la rotación.
+- 5 patadas totales.
+- Las dos patadas nuevas se intercalan con las anteriores.
+
+FURIA / CORE III
+- 8 golpes visuales totales: 4 puños + 4 patadas.
+- Los 3 nuevos sprites Furia se mezclan con los existentes para evitar poses similares consecutivas.
+- fighter.gd ya alterna puño/patada durante la racha CORE, por eso no se modifica.
+
+ARCHIVOS NUEVOS
+assets/helena/punetazo_10.png
+assets/helena/patada_4.png
+assets/helena/patada_5.png
+assets/helena/furia_punetazo_4.png
+assets/helena/furia_patada_3.png
+assets/helena/furia_patada_4.png
+
+Todos los sprites nuevos son PNG RGBA con transparencia real.
+No se modifica Fighter, cámara, IA, daño, hitboxes, audio ni lógica CORE.

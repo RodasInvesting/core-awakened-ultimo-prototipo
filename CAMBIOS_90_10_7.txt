@@ -1,0 +1,134 @@
+--- fighter.gd 90.10.6
++++ fighter.gd 90.10.7
+@@ -1,5 +1,5 @@
+ class_name Fighter
+-# CORE AWAKENED 90.10.6 — orientación + línea de combate + KO al piso.
++# CORE AWAKENED 90.10.7 — colisión corporal visual + rebote de K.O.
+ extends CharacterBody2D
+ 
+ signal impacto(fuerza: float)
+@@ -494,6 +494,11 @@
+ const DISTANCIA_MINIMA_CONTACTO := 82.0
+ const DISTANCIA_MINIMA_CONTACTO_BLOQUEO := 88.0
+ const DISTANCIA_MINIMA_CONTACTO_PESADO := 96.0
++# 90.10.7: además de la colisión física compacta, usamos el ancho REAL visible
++# del PNG para impedir que dos siluetas se metan una dentro de la otra.
++const MARGEN_SEPARACION_VISUAL := 14.0
++const MARGEN_KO_VISUAL := 24.0
++const REBOTE_KO_EXTRA := 18.0
+ const Z_BASE_Y_DIVISOR := 12.0
+ var ciclo_caminata := 0.0
+ var ciclo_reposo := 0.0
+@@ -2070,8 +2075,14 @@
+ 	if not objetivo or not is_instance_valid(objetivo):
+ 		return
+ 
++	# El centro-a-centro fijo de 190 px no alcanza para sprites acostados.
++	# Calculamos cuánto espacio ocupan REALMENTE ambos PNG en este instante.
++	var distancia_necesaria: float = maxf(
++		DISTANCIA_FINAL_GANADOR_DERRIBADO,
++		_distancia_visual_entre_cuerpos(objetivo) + MARGEN_KO_VISUAL
++	)
+ 	var distancia_actual: float = absf(global_position.x - objetivo.global_position.x)
+-	if distancia_actual >= DISTANCIA_FINAL_GANADOR_DERRIBADO:
++	if distancia_actual >= distancia_necesaria:
+ 		return
+ 
+ 	var lado_actual: float = signf(global_position.x - objetivo.global_position.x)
+@@ -2082,17 +2093,31 @@
+ 	if lado == 0.0:
+ 		lado = -objetivo.mirando if objetivo.mirando != 0.0 else 1.0
+ 
+-	# Si el lado actual no permite la distancia completa, elegimos el otro.
+-	if lado < 0.0 and espacio_izq < DISTANCIA_FINAL_GANADOR_DERRIBADO:
++	if lado < 0.0 and espacio_izq < distancia_necesaria:
+ 		lado = 1.0
+-	elif lado > 0.0 and espacio_der < DISTANCIA_FINAL_GANADOR_DERRIBADO:
++	elif lado > 0.0 and espacio_der < distancia_necesaria:
+ 		lado = -1.0
+ 
+-	global_position.x = clampf(
+-		objetivo.global_position.x + lado * DISTANCIA_FINAL_GANADOR_DERRIBADO,
++	var destino_x: float = clampf(
++		objetivo.global_position.x + lado * distancia_necesaria,
+ 		ARENA_LIMITE_IZQUIERDO,
+ 		ARENA_LIMITE_DERECHO
+ 	)
++
++	# Rebote visual corto: el cuerpo sale del ganador, se pasa unos píxeles y
++	# vuelve a asentarse. Corre incluso durante la cámara lenta del final.
++	var rebote_x: float = clampf(
++		destino_x + lado * REBOTE_KO_EXTRA,
++		ARENA_LIMITE_IZQUIERDO,
++		ARENA_LIMITE_DERECHO
++	)
++
++	var tw_rebote := create_tween()
++	tw_rebote.set_ignore_time_scale(true)
++	tw_rebote.tween_property(self, "global_position:x", rebote_x, 0.11)\
++		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
++	tw_rebote.tween_property(self, "global_position:x", destino_x, 0.09)\
++		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+ 
+ 
+ func reiniciar_para_ronda() -> void:
+@@ -2998,12 +3023,43 @@
+ 	# su sitio sin saltos.
+ 	return 0.0
+ 
++func _radio_corporal_visual() -> float:
++	# No usamos el ancho completo del PNG como cuerpo: pelo, alas y auras
++	# pueden sobresalir mucho. Tomamos una fracción del used_rect alfa.
++	if not sprite or not sprite.texture:
++		return maxf(ancho_cuerpo * _mult_cuerpo_actual() * 0.62, 40.0)
++
++	var rect: Rect2 = _obtener_rect_visual(sprite.texture)
++	if rect.size.x <= 1.0 or rect.size.y <= 1.0:
++		return maxf(ancho_cuerpo * _mult_cuerpo_actual() * 0.62, 40.0)
++
++	var ancho_visible: float = rect.size.x * absf(sprite.scale.x)
++	var alto_visible: float = rect.size.y * absf(sprite.scale.y)
++	var horizontal: bool = esta_derrotado or ancho_visible > alto_visible * 1.22
++
++	if horizontal:
++		# Un cuerpo tumbado ocupa mucho más espacio lateral.
++		return clampf(ancho_visible * 0.47, 96.0, 180.0)
++
++	# De pie protegemos principalmente torso/cadera, no alas/cabello.
++	return clampf(ancho_visible * 0.22, 40.0, 62.0)
++
++
++func _distancia_visual_entre_cuerpos(otro: Fighter) -> float:
++	if not otro or not is_instance_valid(otro):
++		return DISTANCIA_MINIMA_LUCHADORES
++	return _radio_corporal_visual() + otro._radio_corporal_visual() + MARGEN_SEPARACION_VISUAL
++
++
+ func _distancia_minima_contextual(otro: Fighter = null) -> float:
+ 	var minimo: float = DISTANCIA_MINIMA_LUCHADORES
+ 	if otro and is_instance_valid(otro):
+ 		var cuerpo_yo: float = ancho_cuerpo * _mult_cuerpo_actual()
+ 		var cuerpo_otro: float = otro.ancho_cuerpo * otro._mult_cuerpo_actual()
+ 		minimo = maxf(minimo, (cuerpo_yo + cuerpo_otro) * 0.54)
++		# Esta es la pieza clave: si los PNG son visualmente anchos, la distancia
++		# mínima crece lo suficiente para que los torsos no se tapen.
++		minimo = maxf(minimo, _distancia_visual_entre_cuerpos(otro))
+ 		if fase_ataque == FaseAtaque.ACTIVO or otro.fase_ataque == FaseAtaque.ACTIVO:
+ 			minimo = maxf(minimo, DISTANCIA_MINIMA_CONTACTO)
+ 		if hitstun_timer > 0.0 or otro.hitstun_timer > 0.0:
+@@ -3041,6 +3097,15 @@
+ 		var penetracion: float = separacion_objetivo - actual
+ 		global_position.x -= dir * penetracion * (0.34 if bloqueado else 0.18)
+ 		otro.global_position.x += dir * penetracion * (0.66 if bloqueado else 0.82)
++
++		# Micro-rebote de cuerpos: cuando ya se invadieron visualmente, cada uno
++		# recibe una pequeña velocidad opuesta. No es knockback de ataque; es
++		# solamente la respuesta física de dos cuerpos que no pueden ocupar
++		# el mismo lugar.
++		var rebote_cuerpo: float = clampf(28.0 + penetracion * 1.10, 28.0, 92.0)
++		if not en_secuencia_especial and not otro.en_secuencia_especial:
++			velocity.x = -dir * maxf(absf(velocity.x), rebote_cuerpo * 0.35)
++			otro.velocity.x = dir * maxf(absf(otro.velocity.x), rebote_cuerpo)
+ 	# Luego suma un microdesplazamiento instantáneo del defensor para que el
+ 	# retroceso se sienta en el mismo frame del impacto, antes del empuje total.
+ 	otro.global_position.x += dir * impulso_defensor

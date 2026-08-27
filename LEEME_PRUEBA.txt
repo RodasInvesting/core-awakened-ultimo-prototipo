@@ -1,0 +1,17 @@
+CORE AWAKENED — JESTER + XENOID — SOLO REEMPLAZABLES
+
+1) Cerrá Godot.
+2) Copiá la carpeta "assets" de este ZIP a la raíz de tu proyecto.
+3) Elegí REEMPLAZAR los archivos cuando Windows lo pregunte.
+4) Abrí Godot y probá Jester y Xenoid.
+
+IMPORTANTE:
+- Este paquete NO incluye scripts ni patch_payload.
+- No vuelve a crear el error de clase Xenoid duplicada.
+- No toca selector, GameState ni Fighter.
+- Xenoid usa el combo nuevo SIN modo Furia visual.
+- El remate final nuevo de Xenoid todavía falta: NO se reemplazan rematador.png,
+  remate_final_cuerpo.png, absoluto.png ni gigantografia_absoluto.png. Queda el
+  remate que ya tenía tu proyecto hasta que llegue la imagen nueva.
+- Jester sí lleva los movimientos, combo, recarga, remate y gigantografía que
+  ya me pasaste.

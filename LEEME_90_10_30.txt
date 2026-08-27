@@ -1,0 +1,37 @@
+CORE AWAKENED — 90.10.30
+GAMEPAD / CONTROLES FOUNDATION V1
+
+OBJETIVO
+Agregar soporte de mando al combate sin cambiar ni eliminar los controles de teclado actuales.
+
+MAPEO DE COMBATE
+- Stick izquierdo / D-Pad: mover
+- Doble toque izquierda/derecha (stick o D-Pad): dash/backdash
+- A / Cross / D-Pad arriba / stick arriba: salto y doble salto
+- B / Circle / LT-L2 / abajo: bloqueo
+- X / Square: puñetazo
+- Y / Triangle: patada
+- RB-R1 o RT-R2: activar CORE/poder cuando corresponde
+
+TECLADO
+Se conserva exactamente:
+- Flechas: movimiento/salto
+- Abajo: bloqueo
+- X: puño
+- C: patada
+- Z: CORE/poder
+
+MENUS
+Los selectores de personaje y escenario ya utilizan ui_left/right/up/down/accept/cancel de Godot, por lo que deben responder a D-Pad/controles UI estándar. Esta versión se concentra en validar primero el combate con un solo mando.
+
+ARCHIVOS
+- scripts/fighter.gd
+- scripts/main.gd
+
+NO MODIFICADO
+- Fang normal/furia 90.10.29
+- cámara/zoom
+- gigantografías (cerradas)
+- hitboxes/contacto
+- IA
+- K.O.

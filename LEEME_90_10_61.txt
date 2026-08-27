@@ -1,0 +1,15 @@
+CORE AWAKENED 90.10.61 — JESTER NORMAL + FURIA REWORK
+
+Contenido:
+- scripts/jester.gd
+- assets/jester/*.png (nuevos golpes normales + reemplazo total del modo Furia/Core 3)
+
+Aplicación:
+1) Copiar la carpeta scripts dentro de la raíz del proyecto.
+2) Copiar la carpeta assets dentro de la raíz del proyecto.
+3) Aceptar reemplazos.
+
+Cambios:
+- Se agregan nuevos golpes normales de Jester.
+- Se reemplaza por completo el set Furia / combo final / Core 3 por el nuevo modelo.
+- El objetivo es eliminar el problema del modelo Furia anterior que se veía demasiado grande.

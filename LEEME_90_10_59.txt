@@ -1,0 +1,14 @@
+CORE AWAKENED 90.10.59 — XENOID COMBAT VARIETY PASS
+
+Contenido:
+- scripts/xenoid.gd
+- 9 sprites nuevos en assets/xenoid/
+
+Qué hace:
+- Agrega 6 golpes normales nuevos a Xenoid (3 puños + 3 patadas).
+- Reordena la rotación para que los golpes parecidos no salgan seguidos.
+- Agrega 3 golpes nuevos al combo/furia y los deja al final de la secuencia.
+
+Aplicación:
+1) Descomprimir este ZIP en la raíz del proyecto.
+2) Reemplazar archivos cuando lo pida.

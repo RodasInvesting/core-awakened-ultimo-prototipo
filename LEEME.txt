@@ -1,0 +1,48 @@
+CORE AWAKENED 90.10.9 — PRIORIDAD DE GOLPES / CONTACTO FIEL
+
+PROBLEMA
+Ejemplo Fang vs Helena:
+Helena camina hacia Fang -> Fang tira patada -> la separación corporal empuja
+a Fang hacia atrás antes de evaluar el contacto -> la patada visualmente toca,
+pero no registra.
+
+FIX
+
+1) PRIORIDAD DEL ATAQUE SOBRE CAMINAR
+- STARTUP y ACTIVO son estados "plantados".
+- Si un rival caminando invade al atacante, cede el que camina.
+- El atacante NO retrocede por simple presión de movimiento.
+- Si ambos atacan, no hay empuje preventivo artificial.
+
+2) IMPACTO EN EL PRIMER FRAME ACTIVO
+- Cuando STARTUP cambia a ACTIVO se chequea la hitbox inmediatamente.
+- Ya no hay un frame vacío donde el rival pueda escapar por separación/marcha.
+
+3) HITBOX MÁS FIEL AL SPRITE
+- Puño: +12 px frontales.
+- Patada: +26 px frontales.
+- No cambia daño ni velocidad; solo hace coincidir mejor pie/puño visible con hit.
+
+4) FOOTWORK DURANTE GOLPE
+- Ya no frena usando el ancho visual adaptativo (cabello/alas podían frenarlo lejos).
+- Puño frena a 68 px.
+- Patada frena a 74 px.
+
+NO TOCA
+- escalas
+- carrera → →
+- CORE 2 / CORE 3
+- combo automático 90.10.8
+- orientación
+- suelo
+- rebote del K.O.
+- main.gd
+- scripts de personajes
+
+INSTALACIÓN
+1. Cerrar Godot.
+2. Abrir ZIP.
+3. Arrastrar `scripts` a la raíz.
+4. Reemplazar.
+5. Abrir Godot.
+6. Probar específicamente: rival caminando hacia vos + patada/puño.

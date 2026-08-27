@@ -1,0 +1,15 @@
+CORE AWAKENED 90.10.98 — RÁFAGA CORE CONTINUA UNIFORME
+
+CAMBIOS:
+- CORE II y CORE III dejan de heredar el cooldown individual de puño/patada durante la ráfaga.
+- Todos los golpes automáticos usan un beat fijo: startup 0.012 s, activo 0.065 s, recovery 0.010 s.
+- Poll del scheduler reducido a 0.004 s.
+- Se mantienen DOS pasadas completas antes del remate.
+- Se mantiene el receptor anclado de 90.10.97 durante la ráfaga.
+- Se mantiene el fix raíz del dash espejo de perfect_block_90_1.gd 90.10.95.
+- main.gd conserva la cámara dinámica de 90.10.96.
+
+PRUEBA RECOMENDADA:
+1) CORE II en centro del escenario: la ráfaga debe sonar/verse continua, sin pausa cada dos golpes.
+2) CORE III: misma cadencia en Furia, dos pasadas, luego Absoluto.
+3) Confirmar que el remate final todavía aplica knockback fuerte.

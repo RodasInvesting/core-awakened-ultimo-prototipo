@@ -1,0 +1,22 @@
+CORE AWAKENED 90.10.16 — CONTACT SEPARATION
+
+OBJETIVO
+Reducir la superposición de torsos DESPUÉS de un golpe confirmado sin alterar
+el alcance/timing de patadas que quedó funcionando en 90.10.12–90.10.15.
+
+CAMBIOS
+- Mantiene una distancia corporal lógica durante ~0.10 s tras puños y ~0.125 s tras patadas.
+- La distancia usa torso lógico y está limitada a 92–118 px para no contar alas/cabello/colas.
+- Durante esa breve ventana corta sólo velocidades que vuelven a meter un cuerpo dentro del otro.
+- Preserva el knockback que aleja al receptor.
+- Auto-combo CORE conserva separación compacta para no romper la secuencia.
+- No cambia hitboxes, ventanas activas, arena, victoria ni cámara.
+
+PRUEBA
+1) Fang vs Kai: buscar intercambio de puños/patadas a corta distancia.
+2) Kali vs Aethel: observar torso/cadera, ignorando alas/cabello.
+3) Confirmar que la patada de Fang sigue entrando cuando el rival avanza.
+4) Confirmar que no aparecen golpes fantasma desde lejos.
+
+SIGUIENTE PASO SI PASA QA
+90.10.17 — DYNAMIC FIGHT CAMERA (zoom y seguimiento según distancia).

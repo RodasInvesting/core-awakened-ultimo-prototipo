@@ -1,0 +1,25 @@
+CORE AWAKENED 90.11.06 — COMBO CANCEL IA: CONTACTO DETERMINISTA
+
+OBJETIVO ÚNICO
+Igualar contra IA la ráfaga rápida TA-TA del Combo Cancel ya aprobada en Versus Local.
+
+VERSUS LOCAL
+- NO se modifica.
+- NO se cambian startup, activo, recovery, hitstun, knockback, input ni ventanas.
+
+CAMBIOS EXCLUSIVOS CONTRA CPU
+1. Al confirmar x2/x3, se limpian únicamente empujes/separación residuales del primer impacto que una CPU móvil puede arrastrar.
+2. Si la IA abrió un hueco extra, se acerca SOLO al atacante hasta la distancia legal precontacto del Fighter (78–88 px). Nunca se aleja si ya estaba bien posicionado.
+3. Esta recomposición ocurre ANTES de iniciar el segundo golpe, para que _iniciar_ataque conserve su lunge y timing normal.
+4. La CPU recibe un lock de IA de 0,26 s sólo después de confirmar el cancel: sin bloqueo automático, retroceso, dash ni nueva decisión entre impactos.
+5. NO se aumenta hitstun.
+6. CORE I queda 1.22; CORE II 0.90; CORE III 0.90.
+
+ARCHIVOS MODIFICADOS
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+
+PRUEBA RECOMENDADA
+- Usar el mismo peleador y el mismo ritmo de X-X / X-C primero en Versus Local y luego contra IA.
+- Confirmar que el segundo golpe sale inmediatamente después del primero y conecta con la misma sensación TA-TA.
+- Confirmar que fuera del combo la IA vuelve a bloquear, retroceder y usar dash normalmente.

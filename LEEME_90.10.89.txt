@@ -1,0 +1,3 @@
+CORE AWAKENED 90.10.89 — DASH ESPEJO FIX
+Reemplazar SOLO scripts/fighter.gd y scripts/main.gd.
+No reemplazar menú, selectores ni GameState.

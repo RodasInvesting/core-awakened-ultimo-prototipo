@@ -1,0 +1,21 @@
+CORE AWAKENED 90.10.17 — BODY CONTACT V2
+
+OBJETIVO
+Reducir la superposición de torso/cadera durante intercambios a corta distancia sin tocar el alcance ni las ventanas activas de golpes/patadas que ya quedaron funcionando.
+
+CAMBIOS
+- Sustituye el precontacto fijo de 72 px por una distancia corporal adaptativa de 78–94 px.
+- La adaptación toma torso visual limitado + masa + altura lógica; alas, pelo, colas y auras no se convierten en paredes físicas.
+- Magnus y otros cuerpos grandes reciben un poco más de espacio preventivo.
+- Dos ataques simultáneos ya no desactivan completamente la separación corporal: conservan un colchón compacto de hasta 88 px después de evaluar hitboxes, permitiendo trades sin fundir sprites.
+- Mantiene intactos el timing, alcance y hitbox de patadas de 90.10.12.
+- Mantiene límites de arena, cuerpo fantasma, victoria bloqueada y separación post-impacto de versiones anteriores.
+
+PRUEBAS RECOMENDADAS
+1) Jester vs Magnus — buscar intercambios pegados.
+2) Kali vs Helena/Aethel — observar torso/cadera, ignorando alas/cabello.
+3) Fang vs Kai/Cibor-X — confirmar que las patadas siguen entrando.
+4) Probar dos ataques simultáneos a corta distancia.
+
+INSTALACION
+Cerrar Godot, extraer este ZIP en la raiz del proyecto y aceptar reemplazar scripts/fighter.gd.

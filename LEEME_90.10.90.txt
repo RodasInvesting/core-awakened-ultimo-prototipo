@@ -1,0 +1,25 @@
+CORE AWAKENED 90.10.90 — DIAGNOSTICO DASH ESPEJO
+
+NO ES UNA VERSION FINAL DE FIX.
+Parte de 90.10.89 y agrega solamente instrumentacion visual.
+
+Reemplazar temporalmente:
+- scripts/fighter.gd
+- scripts/main.gd
+
+En Versus Local aparece un overlay con:
+POST / INPUT / MOVE / SEP / LIM / ANC / END / INTER
+
+Cada valor es el cambio de X de J2 observado desde el frame de J1.
+Hacer dash con J1 sin tocar J2 y grabar 5-10 segundos.
+
+Interpretacion:
+POST  = separacion post-golpe
+INPUT = etapa de input de J1
+MOVE  = move_and_slide
+SEP   = pushbox/separacion corporal
+LIM   = limites de arena
+ANC   = guard/anclaje de dash
+END   = final del _physics_process de J1
+INTER = cambio entre el final del frame anterior de J1 y el inicio del siguiente
+        (esto delata movimiento fuera del frame de J1: J2, Tween, Main, etc.)

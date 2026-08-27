@@ -1,0 +1,17 @@
+CORE AWAKENED 90.10.22 — DYNAMIC CAMERA CLOSE COMBAT FINAL
+
+REEMPLAZA SOLAMENTE:
+  scripts/main.gd
+
+CAMBIOS:
+- La cámara lejana queda EXACTAMENTE igual que en 90.10.21: 0.93x.
+- La distancia normal queda igual: 1.00x.
+- El zoom base de cuerpo a cuerpo sube de 1.16x a 1.18x.
+- El techo máximo de ataque/impacto sube de 1.185x a 1.205x.
+- NO se modifica fighter.gd.
+- NO se modifican hitboxes, patadas, separación corporal, límites ni K.O.
+- NO se cambian velocidad de zoom, paneo, seguimiento ni cámaras cinematográficas.
+
+OBJETIVO:
+Dar un último toque de presencia al intercambio de golpes sin cambiar la
+apertura del escenario cuando los personajes están separados.

@@ -1,0 +1,12 @@
+CORE AWAKENED 90.10.57 — CORE I GUARANTEED HIT
+
+Corrección:
+- CORE I ahora aplica el impacto real inmediatamente después del acercamiento y la pose de golpe.
+- Luego aparece la gigantografía.
+- El daño se aplica una sola vez (no se duplica al finalizar el póster).
+- Funciona desde suelo, salto o doble salto porque conserva el homing 2D aprobado en 90.10.47.
+
+Archivo modificado:
+- scripts/fighter.gd
+
+No modifica CORE II, CORE III, cámara, IA, hitboxes, sprites ni audio.

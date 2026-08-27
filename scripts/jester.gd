@@ -1,95 +1,134 @@
 class_name Jester
 extends Fighter
 
-# PERSONAJE NUEVO (fase 92.3, WIP): Jester, la alquimista bufón. Set
-# completo de combate normal (parado, puños, patadas, caminata, salto,
-# doble salto, descenso, bloqueo, carrera, golpe_recibido x3, derribado) +
-# combo de poder CORE completo (especial, recarga, rematador, absoluto,
-# furia_parado, victoria, furia_punetazo x5, furia_patada x1).
-# Ya no falta ninguna categoría del set base. Pendiente solo si se quiere
-# ampliar el combo (más frames de furia_patada) o pulir arte puntual.
-# Sigue sin fondo propio en FONDOS (main.gd) ni póster VS definitivo: por
-# ahora usa un póster armado a partir de la pose de batalla.
+# CORE AWAKENED 90.10.61 — JESTER NORMAL EXPANSION + FURIA TOTAL REPLACEMENT
+# - Se agregan golpes normales nuevos sin eliminar los normales anteriores.
+# - Se reemplaza por completo el set de combo/Furia/Core 3 por el nuevo modelo
+#   enviado por el usuario para evitar el problema de escala del set anterior.
+
+func _cargar_tex(ruta: String) -> Texture2D:
+	if ResourceLoader.exists(ruta, "Texture2D"):
+		return load(ruta)
+	return null
+
+func _cargar_lista(rutas: Array[String]) -> Array[Texture2D]:
+	var salida: Array[Texture2D] = []
+	for ruta in rutas:
+		var tex := _cargar_tex(ruta)
+		if tex:
+			salida.append(tex)
+	return salida
+
 func _init() -> void:
 	nombre_luchador = "Jester"
-	color_base = Color(0.62, 0.16, 0.78)
-	color_fase = Color(0.95, 0.30, 0.85)
-	velocidad = 296.0
-	fuerza_salto = -445.0
-	gravedad = 1080.0
-	dano_punetazo = 7.5
-	cooldown_punetazo = 0.19
-	poder_por_golpe = 13.0
-	ia_prob_patada = 0.38
-	ia_prob_bloqueo = 0.22
-	ia_prob_retroceso = 0.30
+	color_base = Color(0.83, 0.25, 0.88)
+	color_fase = Color(1.0, 0.35, 0.95)
+
+	# Perfil: ágil, técnico y tramposo.
+	velocidad = 250.0
+	fuerza_salto = -435.0
+	gravedad = 1195.0
+	aceleracion = 2550.0
+	friccion_suelo = 2900.0
+	friccion_aire = 1320.0
+	peso_golpe = 0.95
+	dano_punetazo = 8.7
+	rango_punetazo = 92.0
+	rango_patada = 104.0
+	cooldown_punetazo = 0.21
+	cooldown_patada = 0.40
+	poder_por_golpe = 11.5
+	ia_prob_patada = 0.42
+	ia_prob_bloqueo = 0.16
+	ia_prob_retroceso = 0.20
 	vida_maxima = 200.0
 	vida = 200.0
-	# Alquimista tramposa: liviana y esquiva, pega rápido y carga CORE algo
-	# más rápido que el promedio (sus pociones son inestables), pero
-	# aguanta menos golpes y empuja poco -- riesgo alto, recompensa alta.
-	aceleracion = 3600.0
-	friccion_suelo = 3700.0
-	friccion_aire = 1850.0
-	peso_golpe = 0.80
+	escala_sprite = 0.66
 
-	escala_sprite = 0.65
-	textura_parado = load("res://assets/jester/parado.png")
-	textura_punetazo = load("res://assets/jester/punetazo_1.png")
-	texturas_punetazo_extra = [
-		load("res://assets/jester/punetazo_2.png"),
-		load("res://assets/jester/punetazo_3.png"),
-	]
-	textura_patada = load("res://assets/jester/patada_1.png")
-	texturas_patada_extra = [
-		load("res://assets/jester/patada_2.png"),
-		load("res://assets/jester/patada_3.png"),
-		load("res://assets/jester/patada_4.png"),
-	]
+	# Base / movimiento general.
+	textura_parado = _cargar_tex("res://assets/jester/parado.png")
+	texturas_caminata = _cargar_lista([
+		"res://assets/jester/caminata_1.png",
+		"res://assets/jester/caminata_2.png",
+	])
+	textura_caminata_der = _cargar_tex("res://assets/jester/caminata_1.png")
+	textura_caminata_izq = _cargar_tex("res://assets/jester/caminata_2.png")
+	textura_carrera = _cargar_tex("res://assets/jester/carrera.png")
+	textura_evasion = _cargar_tex("res://assets/jester/evasion.png")
+	textura_salto = _cargar_tex("res://assets/jester/salto.png")
+	textura_doble_salto = _cargar_tex("res://assets/jester/doble_salto.png")
+	textura_descenso = _cargar_tex("res://assets/jester/descenso.png")
+	textura_bloqueo = _cargar_tex("res://assets/jester/bloqueo.png") # 90.11.26: sprite de bloqueo recuperado
 
-	texturas_caminata = [
-		load("res://assets/jester/caminata_1.png"),
-		load("res://assets/jester/caminata_2.png"),
-		load("res://assets/jester/caminata_3.png"),
-	]
-	textura_salto = load("res://assets/jester/salto.png")
-	textura_doble_salto = load("res://assets/jester/doble_salto.png")
-	textura_descenso = load("res://assets/jester/descenso.png")
-	textura_bloqueo = load("res://assets/jester/bloqueo.png")
-	textura_carrera = load("res://assets/jester/carrera.png")
-	textura_golpe_recibido = load("res://assets/jester/golpe_recibido.png")
-	texturas_golpe_recibido_extra = [
-		load("res://assets/jester/golpe_recibido_2.png"),
-		load("res://assets/jester/golpe_recibido_3.png"),
-	]
-	textura_derribado = load("res://assets/jester/derribado.png")
+	# Reacciones.
+	textura_golpe_recibido = _cargar_tex("res://assets/jester/golpe_recibido.png")
+	texturas_golpe_recibido_extra = _cargar_lista([
+		"res://assets/jester/golpe_recibido_2.png",
+		"res://assets/jester/golpe_recibido_3.png",
+		"res://assets/jester/golpe_recibido_4.png",
+	])
+	textura_derribado = _cargar_tex("res://assets/jester/derribado.png")
+	textura_recarga = _cargar_tex("res://assets/jester/recarga.png")
+	textura_victoria = _cargar_tex("res://assets/jester/victoria.png")
 
-	textura_especial = load("res://assets/jester/especial.png")
-	textura_recarga = load("res://assets/jester/recarga.png")
-	textura_rematador = load("res://assets/jester/rematador.png")
-	textura_absoluto = load("res://assets/jester/absoluto.png")
-	textura_furia_parado = load("res://assets/jester/furia_parado.png")
-	textura_furia_punetazo = load("res://assets/jester/furia_punetazo_1.png")
-	texturas_furia_punetazo_extra = [
-		load("res://assets/jester/furia_punetazo_2.png"),
-		load("res://assets/jester/furia_punetazo_3.png"),
-		load("res://assets/jester/furia_punetazo_4.png"),
-		load("res://assets/jester/furia_punetazo_5.png"),
-	]
-	# Por ahora un solo frame de patada furia (la única patada que llegó en
-	# este lote) -- el combo automático SÍ puede usarla, a diferencia de
-	# Magnus, porque acá no hay arte vieja con la que se pueda mezclar.
-	textura_furia_patada = load("res://assets/jester/furia_patada_1.png")
-	# textura_victoria NO se carga a mano: fighter.gd la detecta sola apenas
-	# existe assets/jester/victoria.png (ver _ready(), FASE 85).
+	# Normales: se conservan los viejos y se suman los nuevos intercalados
+	# para que el combate se vea variado y no repita poses muy parecidas.
+	textura_punetazo = _cargar_tex("res://assets/jester/punetazo_1.png")
+	texturas_punetazo_extra = _cargar_lista([
+		"res://assets/jester/punetazo_2.png",
+		"res://assets/jester/punetazo_5_90_10_61.png",
+		"res://assets/jester/punetazo_3.png",
+		"res://assets/jester/punetazo_6_90_10_61.png",
+		"res://assets/jester/punetazo_4.png",
+	])
+	textura_patada = _cargar_tex("res://assets/jester/patada_1.png")
+	texturas_patada_extra = _cargar_lista([
+		"res://assets/jester/patada_2.png",
+		"res://assets/jester/patada_4_90_10_61.png",
+		"res://assets/jester/patada_3.png",
+		"res://assets/jester/patada_5_90_10_61.png",
+		"res://assets/jester/patada_6_90_10_61.png",
+	])
+
+	# Especial / remate / gigantografía: se apuntan al nuevo modelo Furia.
+	textura_especial = _cargar_tex("res://assets/jester/furia_especial_90_10_61.png")
+	textura_rematador = _cargar_tex("res://assets/jester/furia_punetazo_2_90_10_61.png")
+	textura_absoluto = _cargar_tex("res://assets/jester/gigantografia_core3_final_90_10_62.png")
+
+	# Reemplazo TOTAL del set Furia / Core 3.
+	textura_furia_parado = _cargar_tex("res://assets/jester/furia_especial_90_10_61.png")
+	textura_furia_punetazo = _cargar_tex("res://assets/jester/furia_punetazo_1_90_10_61.png")
+	texturas_furia_punetazo_extra = _cargar_lista([
+		"res://assets/jester/furia_punetazo_2_90_10_61.png",
+		"res://assets/jester/furia_punetazo_3_90_10_61.png",
+	])
+	textura_furia_patada = _cargar_tex("res://assets/jester/furia_patada_1_90_10_61.png")
+	texturas_furia_patada_extra = _cargar_lista([
+		"res://assets/jester/furia_patada_2_90_10_61.png",
+		"res://assets/jester/furia_patada_3_90_10_61.png",
+	])
+	# Fallbacks del set Furia si existen artes específicos en el proyecto.
+	textura_furia_carrera = _cargar_tex("res://assets/jester/furia_carrera.png")
+	textura_furia_golpe_recibido = _cargar_tex("res://assets/jester/furia_golpe_recibido.png")
+	textura_furia_derribado = _cargar_tex("res://assets/jester/furia_derribado.png")
+	textura_furia_bloqueo = _cargar_tex("res://assets/jester/furia_bloqueo.png")
+	textura_furia_salto = _cargar_tex("res://assets/jester/furia_salto.png")
+	textura_furia_doble_salto = _cargar_tex("res://assets/jester/furia_doble_salto.png")
+	textura_furia_descenso = _cargar_tex("res://assets/jester/furia_descenso.png")
+	texturas_furia_caminata = _cargar_lista([
+		"res://assets/jester/furia_caminata_1.png",
+		"res://assets/jester/furia_caminata_2.png",
+	])
+	textura_furia_caminata_der = _cargar_tex("res://assets/jester/furia_caminata_1.png")
+	textura_furia_caminata_izq = _cargar_tex("res://assets/jester/furia_caminata_2.png")
 
 func _procesar_entrada(_delta: float, vel_actual: float) -> void:
 	if controlado_por_jugador:
 		_entrada_jugador(vel_actual)
 		return
-	_comportamiento_ia_basico(_delta, vel_actual, 88.0, 310.0)
+	_comportamiento_ia_basico(_delta, vel_actual, 92.0, 290.0)
 	if poder >= poder_maximo:
 		intentar_poder_especial()
 
 func _ejecutar_especial() -> void:
-	_efecto_estallido(Color(0.95, 0.30, 0.85, 0.85), 150.0, 24.0)
+	_efecto_estallido(Color(1.0, 0.25, 0.90, 0.88), 160.0, 28.0)

@@ -1,0 +1,96 @@
+--- fighter.gd antes
++++ fighter.gd 90.10
+@@ -584,15 +584,15 @@
+ var friccion_aire := 1100.0
+ var _delta_actual := 0.0166
+ var _rect_visual_cache: Dictionary = {}
+-const DISTANCIA_MINIMA_LUCHADORES := 46.0
++# FASE 90.10 — separación física más legible.
++# Los cuerpos nunca deben fundirse visualmente cuando están cuerpo a cuerpo.
++const DISTANCIA_MINIMA_LUCHADORES := 62.0
+ const ARENA_LIMITE_IZQUIERDO := 58.0
+ const ARENA_LIMITE_DERECHO := 1222.0
+ const FUERZA_REBOTE_MURO_ESPECIAL := 0.42
+-# FASE 78: al impactar, los cuerpos no deben sentirse como dos papeles
+-# superpuestos. Estas distancias extra fuerzan mejor lectura del contacto.
+-const DISTANCIA_MINIMA_CONTACTO := 58.0
+-const DISTANCIA_MINIMA_CONTACTO_BLOQUEO := 62.0
+-const DISTANCIA_MINIMA_CONTACTO_PESADO := 66.0
++const DISTANCIA_MINIMA_CONTACTO := 82.0
++const DISTANCIA_MINIMA_CONTACTO_BLOQUEO := 88.0
++const DISTANCIA_MINIMA_CONTACTO_PESADO := 96.0
+ const Z_BASE_Y_DIVISOR := 12.0
+ var ciclo_caminata := 0.0
+ var ciclo_reposo := 0.0
+@@ -1756,7 +1756,8 @@
+ 	if puede_conectar and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+ 		var dano: float = dano_patada * MULT_DANO_GLOBAL * mult_dano_fase * 2.4
+ 		objetivo.recibir_dano(dano, 520.0, 0.75, direccion, "rematador")
+-		objetivo.recibir_derribo_especial(direccion, 620.0 if not bloqueado else 360.0, 420.0 if not bloqueado else 250.0, 0.95 if not bloqueado else 0.45, true)
++		# CORE 2: remate con desplazamiento mucho más visible.
++		objetivo.recibir_derribo_especial(direccion, 900.0 if not bloqueado else 500.0, 470.0 if not bloqueado else 290.0, 1.05 if not bloqueado else 0.50, true)
+ 		_efecto_chispas(bloqueado, objetivo.global_position)
+ 		await get_tree().create_timer(0.10, true, false, true).timeout
+ 	rematador_conectado.emit()
+@@ -1813,7 +1814,9 @@
+ 		if direccion == 0.0:
+ 			direccion = mirando
+ 		objetivo.recibir_dano(999.0, 980.0, 1.2, direccion, "absoluto")
+-		objetivo.recibir_derribo_especial(direccion, 880.0, 520.0, 99.0, false)
++		# CORE 3 ABSOLUTO: lanzamiento extremo. Con el slow-motion del cierre
++		# este impulso permite recorrer aproximadamente media arena o más.
++		objetivo.recibir_derribo_especial(direccion, 2850.0, 610.0, 99.0, false)
+ 		_efecto_chispas(false, objetivo.global_position)
+ 		_onda_impacto_local(objetivo.global_position, color_energia_poder(), 1.6)
+ 		impulso_visual = 1.3
+@@ -1859,7 +1862,8 @@
+ 	empuje_pendiente_timer = 0.0
+ 	empuje_pendiente_fuerza = 0.0
+ 	mirando = -signf(direccion)
+-	velocity.x = clampf((fuerza_x / maxf(_masa_corporal(), 0.65)) * direccion, -760.0, 760.0)
++	# Los remates especiales pueden lanzar mucho más lejos que un golpe normal.
++	velocity.x = clampf((fuerza_x / maxf(_masa_corporal(), 0.65)) * direccion, -1900.0, 1900.0)
+ 	velocity.y = -fuerza_y
+ 	hitstun_timer = maxf(hitstun_timer, 0.9 if se_levanta else 1.35)
+ 	var t: Texture2D = _tex_golpe_recibido()
+@@ -2072,6 +2076,17 @@
+ func _derrotado() -> void:
+ 	esta_derrotado = true
+ 	en_pose_victoria = false
++	# FASE 90.10 — anclaje final al suelo.
++	# El Absoluto puede cerrar el K.O. mientras el rival todavía está volando.
++	# Antes de fijar derribado.png alineamos su origen Y con el del adversario,
++	# que comparte la misma línea de piso.
++	velocity = Vector2.ZERO
++	empuje_timer = 0.0
++	empuje_x = 0.0
++	empuje_pendiente_timer = 0.0
++	empuje_pendiente_fuerza = 0.0
++	if objetivo and is_instance_valid(objetivo):
++		global_position.y = objetivo.global_position.y
+ 	if tween_victoria and is_instance_valid(tween_victoria):
+ 		tween_victoria.kill()
+ 	tween_victoria = null
+@@ -3017,7 +3032,10 @@
+ func _aplicar_contacto_corporal_post_golpe(otro: Fighter, fuerza: float, bloqueado: bool) -> void:
+ 	if not otro or not is_instance_valid(otro):
+ 		return
+-	if en_secuencia_especial or otro.en_secuencia_especial:
++	# Durante el combo automático sí conservamos separación corporal.
++	# Solo los posters/cinemáticas puras mantienen los cuerpos completamente fijos.
++	if (en_secuencia_especial or otro.en_secuencia_especial) \
++		and not (en_combo_auto_visual or otro.en_combo_auto_visual):
+ 		return
+ 	var dir: float = signf(otro.global_position.x - global_position.x)
+ 	if dir == 0.0:
+@@ -3079,7 +3097,9 @@
+ func _aplicar_separacion_fisica() -> void:
+ 	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+ 		return
+-	if en_secuencia_especial or objetivo.en_secuencia_especial:
++	# Durante el combo automático sí conservamos separación corporal.
++	if (en_secuencia_especial or objetivo.en_secuencia_especial) \
++		and not (en_combo_auto_visual or objetivo.en_combo_auto_visual):
+ 		return
+ 	var dx := objetivo.global_position.x - global_position.x
+ 	var dist := absf(dx)

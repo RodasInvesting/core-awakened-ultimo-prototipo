@@ -1,0 +1,34 @@
+CORE AWAKENED — 90.10.41
+CORE II RECARGA + BACKDASH EVASIÓN VISUAL
+
+CORE I
+- Especial normal + gigantografía.
+
+CORE II
+- Recarga de energía.
+- Combo automático usando SOLO puños/patadas normales.
+- Remate Core II.
+- Gigantografía Core II.
+- No entra en Furia/Aura.
+
+CORE III
+- Recarga de energía primero.
+- Luego entra Furia/Aura.
+- Combo con repertorio Furia.
+- Gigantografía absoluta final.
+
+BACKDASH / EVASIÓN
+- Dash hacia adelante: mantiene textura_carrera.
+- Doble toque alejándose del rival: usa textura_evasion dedicada si existe.
+- El personaje continúa mirando al rival mientras retrocede.
+- Detección automática de nombres habituales: evasion.png, backdash.png, dash_atras.png, retroceso.png, aceleracion_atras.png, evasiva.png, esquiva.png.
+- Si un peleador no tiene uno de esos nombres, conserva el fallback de sprint actual sin romper el juego.
+
+NO MODIFICA
+- hitboxes
+- daño
+- distancia/duración física de dash
+- cámara
+- IA
+- KO
+- gigantografías/encuadre

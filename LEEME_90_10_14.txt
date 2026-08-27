@@ -1,0 +1,25 @@
+CORE AWAKENED 90.10.14 — LIMITE DE ARENA / ANTI-SALIDA
+
+Objetivo:
+- Evitar que cualquier luchador salga visual/fisicamente del area de combate.
+- Evitar que un personaje empujado por el proceso del rival quede fuera durante hit-stop.
+- Mantener las mejoras de contacto y patadas de 90.10.12/90.10.13.
+
+Cambios:
+1. Zona horizontal segura ajustada a X=110..1170.
+2. Los limites se aplican incluso durante hit-stop.
+3. Despues de la separacion entre cuerpos se revalidan LOS DOS luchadores.
+4. Despues del microdesplazamiento de un golpe se revalidan LOS DOS luchadores.
+5. Guardia vertical: el origen fisico nunca puede caer por debajo de Y=560.
+6. Se conserva el sistema 90.10.13 de cuerpo derribado sin colision fantasma.
+
+Instalacion:
+- Cerrar Godot.
+- Extraer este ZIP sobre la carpeta raiz del proyecto.
+- Reemplazar scripts/fighter.gd.
+
+Prueba recomendada:
+- Fang vs Xenoid.
+- Llevar a Xenoid a ambos extremos con golpes/patadas.
+- Derribarlo contra el borde.
+- Confirmar que nunca desaparece por fuera/abajo y que no queda un empuje invisible.

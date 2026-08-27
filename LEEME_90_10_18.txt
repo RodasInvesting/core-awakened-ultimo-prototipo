@@ -1,0 +1,15 @@
+CORE AWAKENED 90.10.18 — KO BODY FREEZE
+
+CAMBIO:
+- El personaje derrotado ya no hace un rebote/desplazamiento lateral artificial
+  después de quedar tendido en el K.O. final.
+- Conserva exactamente la posición X en la que terminó la caída.
+- Velocity/empujes siguen en cero.
+- Sigue sin colisionar ni empujar al ganador.
+- Se conservan íntegros BODY CONTACT V2, hitboxes de patadas, límites de arena
+  y bloqueo de pose de victoria.
+
+INSTALACIÓN:
+1. Cerrar Godot.
+2. Extraer este ZIP en la raíz del proyecto.
+3. Reemplazar scripts/fighter.gd.

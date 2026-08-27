@@ -1,0 +1,33 @@
+CORE AWAKENED — 90.10.32
+PAUSE SYSTEM + OPCIONES RÁPIDAS
+
+PAUSA:
+- Teclado: ESC
+- Xbox One: botón MENU / START
+
+MENÚ DE PAUSA:
+- CONTINUAR
+- OPCIONES
+- REINICIAR PELEA
+- VOLVER AL MENÚ
+
+MANDO:
+- D-Pad / Stick: navegar
+- A: confirmar
+- B: volver
+- MENU / START: pausar / continuar
+
+OPCIONES RÁPIDAS INCLUIDAS:
+- Volumen general
+- Pantalla completa
+- VSync
+
+IMPORTANTE:
+- La pelea completa se congela al pausar: IA, físicas, animaciones/tweens y audio de escena.
+- No se modifica fighter.gd.
+- No se modifica cámara, hitboxes, IA, movilidad, Fang ni gigantografías.
+- En 90.10.33 se ampliarán las opciones (música/SFX/voces, guardado persistente, etc.).
+
+ARCHIVOS:
+- project.godot
+- scripts/pause_manager.gd

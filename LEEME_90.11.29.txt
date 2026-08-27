@@ -1,0 +1,9 @@
+CORE AWAKENED 90.11.29 — FIX GUARDIA DE ESQUINA
+
+Base: 90.11.27 (selector recalibrado + bloqueo Jester + Guardia de Escape en Esquina).
+
+Corrección:
+- fighter.gd: se reemplaza la llamada inexistente _limites_x_por_hurtbox() por
+  _limites_arena_x_pose_actual(), que es la API real del Fighter estable.
+- Se descartan los parches de compatibilidad de 90.11.28 en main.gd/jester.gd.
+- No se modifica la lógica de CORE, dash, IA, golpes, escenarios ni músicas.

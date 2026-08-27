@@ -1,0 +1,36 @@
+CORE AWAKENED 90.11.09 — AIR DASH AISLADO
+
+BASE: 90.11.08 aprobada.
+
+NO SE TOCA:
+- Coreografía CORE II/III trifásica (puños -> patadas -> mezcla -> remate).
+- Cadencia del combo CORE.
+- Versus Local en suelo.
+- Combo Cancel.
+- IA.
+- Daño / hitstun / knockback / hitboxes / CORE.
+- Altura, gravedad y fuerza del salto/doble salto.
+
+NUEVO:
+- Un AIR DASH por permanencia en el aire.
+- Mismo doble toque izquierda/derecha del dash terrestre.
+- Funciona después de salto o doble salto.
+- No consume el doble salto.
+- Conserva velocity.y: no congela ni modifica la caída/subida.
+- Usa la misma velocidad y duración del dash terrestre (MULT_CARRERA / DASH_DURACION).
+- Al aterrizar se recarga el air dash.
+- Hacia el rival usa pose de carrera si existe; alejándose usa pose de evasión/backdash si existe.
+- La IA NO recibe air dash en esta versión.
+
+PRUEBAS:
+1) Salto -> doble salto -> doble toque hacia el rival.
+2) Salto -> doble salto -> doble toque alejándose del rival.
+3) Salto simple -> air dash -> doble salto (el dash no debe consumirlo).
+4) Aterrizar -> volver a saltar -> air dash debe estar disponible otra vez.
+5) Confirmar que dash terrestre y Versus Local siguen exactamente iguales.
+
+NOTA DURACIÓN CORE 90.11.08 (sin cambios en 90.11.09):
+- Helena CORE II: 20 -> 30 beats respecto de 90.11.07 (+50%).
+- Xenoid CORE II: 21 -> 32 beats (+52.4%).
+- Helena CORE III: 12 -> 16 beats (+33.3%).
+- Xenoid CORE III: 14 -> 18 beats (+28.6%).

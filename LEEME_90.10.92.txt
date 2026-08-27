@@ -1,0 +1,17 @@
+CORE AWAKENED 90.10.92 — PRUEBA INPUT INVERTIDO
+
+Objetivo: aislar si el dash espejo sigue al teclado o al jugador J1.
+
+Con UN mando conectado en VERSUS LOCAL:
+- J1 = MANDO exclusivamente
+- J2 = TECLADO exclusivamente (WASD / F / G / H)
+
+No se modificó Fighter, pushbox, cámara, golpes, daño, CORE ni sprites.
+Solo se modificó scripts/main.gd respecto de 90.10.91.
+
+Prueba recomendada:
+1) Conectar un solo mando Xbox.
+2) J1: hacer doble toque hacia adelante con D-pad o stick.
+3) No tocar el teclado de J2.
+4) Observar si J2 hace el supuesto dash-back.
+5) Luego, con J2 usando WASD, hacer doble D hacia J1 y observar si el efecto se invierte.
