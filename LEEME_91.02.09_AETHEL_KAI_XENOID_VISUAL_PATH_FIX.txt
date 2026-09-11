@@ -1,0 +1,38 @@
+CORE AWAKENED 91.02.09 — AETHEL + KAI/XENOID VISUAL PATH FIX
+
+CAUSA ENCONTRADA
+- El rediseño final de Aethel estaba dentro de 91.02.08, pero se empaquetó bajo
+  assets/aethel/. El script final de Aethel apunta deliberadamente a
+  res://assets/aethel_redesign_final/. Por eso el fighter activo podía seguir
+  resolviendo el set viejo/no usar el set nuevo.
+- Kai sí tenía el PNG nuevo empaquetado, pero seguía resolviendo la referencia
+  histórica de recarga.
+- Xenoid no quedó incluido en el pass de recargas de 91.02.08.
+
+CAMBIADO
+- Se agrega assets/aethel_redesign_final/ con todo el set nuevo esperado.
+- Fighter aplica un override visual de seguridad para Aethel al entrar en _ready,
+  de modo que el set final se use aunque quede una referencia antigua en su script.
+- Kai y Xenoid usan rutas de recarga nuevas y dedicadas:
+  assets/recharge_redesign_final/kai.png
+  assets/recharge_redesign_final/xenoid.png
+- No se rediseña ninguna imagen: se usan exactamente los archivos ya entregados.
+
+CONGELADO
+- daño / vida / CORE
+- hitboxes y colisiones
+- velocidades y gravedad
+- timings de ataques / CORE
+- rollback_snapshot.gd
+- perfect_block_90_1.gd
+- main.gd
+- dash/backdash lógico
+- VS Krovan/Nekhar
+
+PRUEBA
+1. Aethel: comprobar inmediatamente que la pose parada ya es el rediseño nuevo.
+2. Probar caminar/levitación, puños, patadas, bloqueo, salto, doble salto,
+   descenso, recibir golpe, derrotado, dash/backdash, recarga, combo y victoria.
+3. Kai: activar recarga y confirmar el rediseño nuevo.
+4. Xenoid: activar recarga y confirmar el rediseño nuevo.
+5. Confirmar que el resto de recargas que ya funcionaban sigue igual.

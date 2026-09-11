@@ -1,0 +1,29 @@
+CORE AWAKENED 91.02.13 — PASS 1: PESO AÉREO / CAÍDA ASIMÉTRICA
+
+OBJETIVO
+Quitar sensación de flotación al salto SIN acelerar todavía golpes, combos, hitstun ni CORE.
+
+CAMBIO ÚNICO DE GAMEPLAY
+- Se mantiene fuerza_salto = -420.0 y gravedad base = 1200.0.
+- Durante DESCENSO LIBRE NORMAL se aplica gravedad x1.35.
+- La subida conserva exactamente el impulso y gravedad anteriores.
+- Derribos especiales y estados de hitstun quedan excluidos de este primer pass.
+
+NO TOCADO
+- Dash / Backdash terrestre y aéreo.
+- Dobles toques.
+- Altura/impulso del salto y doble salto.
+- Ataques, daño, hitstop, hitstun, knockback.
+- CORE I / II / III y sus timings.
+- Sprites, escalas, recargas, sonidos, VS.
+- main.gd y módulos rollback/tácticos.
+
+PRUEBA RECOMENDADA
+Probar Kai, Dax, Aethel y Nekhar:
+1) salto normal quieto;
+2) salto avanzando;
+3) doble salto;
+4) ataque aéreo y caída normal.
+
+Buscamos una caída visiblemente más firme, sin sensación de piedra ni pérdida incómoda de control.
+Si esta base convence, el PASS 2 de dinámica aérea decidirá si hace falta tocar sólo vértice/doble salto.

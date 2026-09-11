@@ -1,0 +1,23 @@
+CORE AWAKENED 91.02.01 — NEKHAR PNG + ROSTER DEFINITIVO
+
+CORRECCIONES:
+1) assets/nekhar/parado.png
+   - El archivo anterior tenía extensión .png pero bytes JPEG.
+   - Godot 4.7.1 lo rechazaba con "Not a PNG file / ERR_FILE_CORRUPT".
+   - Se reemplaza por PNG RGBA real usando el mismo arte de Nekhar.
+
+2) assets/ui/selector_personajes_nuevo.png
+   - Se instala el roster definitivo suministrado por el usuario.
+   - Normalizado exactamente a 1280x720.
+
+3) scripts/selector_personajes.gd
+   - Orden visual definitivo:
+     Kai, Cibor-X, Fang, Kali, Aethel, Magnus, Helena, Jester, Xenoid, Dax, Krovan, Nekhar, Varkhos.
+   - 13 zonas de selección recalibradas exactamente a los separadores del nuevo roster.
+   - Se eliminan las tarjetas temporales procedurales de Krovan/Nekhar.
+   - Varkhos sigue bloqueado por nombre.
+
+ROLLBACK CONGELADO:
+- scripts/fighter.gd: sin cambios.
+- scripts/perfect_block_90_1.gd: sin cambios.
+- scripts/rollback_snapshot.gd: sin cambios.

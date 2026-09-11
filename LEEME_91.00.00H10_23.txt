@@ -1,0 +1,37 @@
+CORE AWAKENED 91.00.00-H10.23 — CORE III FIFTH BEAT END DIAGNOSTIC
+
+OBJETIVO
+- Diagnóstico puro de la frontera CORE III FIFTH BEAT END (stage 7->8).
+- H10.22 certificó FOURTH BEAT END (stage 6->7) en J1/J2.
+- El quinto beat físico snapshotable queda intacto.
+- Stage 8 sigue siendo continuación async histórica desde coreografia[5] (sexto beat).
+
+ARQUITECTURA CORE III
+1 recarga
+2 approach
+3 primer beat físico
+4 segundo beat físico
+5 tercer beat físico
+6 cuarto beat físico
+7 quinto beat físico
+8 continuación async histórica desde el sexto beat
+
+CAMBIO H10.23
+- Sólo scripts/main.gd: observador/localizador y clasificación rollback FIFTH BEAT END 7->8.
+- scripts/fighter.gd idéntico a H10.22.
+- rollback_snapshot.gd, PerfectBlock y GameState intactos.
+- NO convierte todavía el sexto beat.
+
+PRUEBA
+1. Reemplazar scripts con este ZIP completo.
+2. Versus Local.
+3. NO presionar F11.
+4. Ejecutar CORE III completo con J1 y después con J2.
+5. Enviar el log completo.
+
+RESULTADO A OBSERVAR
+CORE III FIFTH BEAT END AUTO MARCADO
+CORE III FIFTH BEAT END LOCALIZADO — stage 7->8
+TACTICAL ROLLBACK OK/DESYNC — CORE III FIFTH BEAT END — 8 ticks
+
+Si falla, el primer causal decidirá si coreografia[5] (sexto beat) debe convertirse a FSM física.

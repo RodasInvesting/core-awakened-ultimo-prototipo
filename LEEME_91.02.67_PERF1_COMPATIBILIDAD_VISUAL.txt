@@ -1,0 +1,66 @@
+CORE AWAKENED 91.02.67 — PERF-1 / COMPATIBILIDAD VISUAL
+================================================================
+
+OBJETIVO
+Comprobar si la PC 2 puede mantener la pelea a velocidad normal sin tocar
+ninguna mecánica certificada.
+
+ACTIVACIÓN
+PERFIL BAJO se activa automáticamente cuando:
+- Godot usa renderer gl_compatibility (PC antigua / fallback OpenGL-ANGLE), o
+- el modo es ONLINE (en ambos peers, para usar el mismo perfil visual de QA).
+
+PERFIL BAJO DESACTIVA SOLO PRESENTACIÓN COSTOSA
+- shader animado del fondo;
+- glow / post-proceso;
+- luces 2D ambientales;
+- partículas y brumas ambientales;
+- capas procedurales del escenario;
+- halos del piso/luchadores;
+- viñeta y flash de pantalla;
+- ondas/estallidos visuales ambientales;
+- actualizaciones decorativas por frame.
+
+SE CONSERVA
+- sprites de luchadores;
+- escenario base PNG;
+- cámara y UI;
+- audio;
+- física a 60 Hz;
+- input;
+- daño;
+- hitboxes;
+- velocidades;
+- CORE;
+- proyectiles;
+- Fighter;
+- rollback 91.02.60;
+- lógica online 91.02.66.
+
+ARCHIVO MODIFICADO
+- scripts/main.gd
+
+PRUEBA 1 — PC 2 OFFLINE
+1. Instalar ZIP ROOT en el proyecto principal.
+2. Reexportar Windows como 91.02.67.
+3. Copiar la MISMA build a PC 2.
+4. En PC 2 abrir VERSUS LOCAL, sin red.
+5. Jugar 2-3 minutos.
+6. Confirmar si la pelea ahora corre a velocidad normal.
+
+LOG ESPERADO EN PC 2
+[91.02.67-PERF1] PERFIL VISUAL=BAJO renderer=gl_compatibility online=false
+[91.02.67-PERF1] FPS=... perfil=BAJO renderer=gl_compatibility
+
+PRUEBA 2 — SOLO SI PRUEBA 1 ES FLUIDA
+Usar la misma build 91.02.67 en PC1 y PC2 y repetir ONLINE LAN.
+En ONLINE ambos peers fuerzan PERFIL BAJO durante este PASS.
+
+CRITERIO
+- Si PC 2 Versus Local queda fluido: PERF-1 confirma cuello gráfico.
+- Si continúa lento aun con PERFIL BAJO: no tocar red; PERF-2 deberá atacar
+  costo de sprites/texturas/resolución de render con medición adicional.
+
+NOTA
+No se certifica aún rollback remoto. Este PASS existe únicamente para devolver
+la PC 2 a una velocidad de simulación utilizable antes de revalidar online.

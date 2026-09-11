@@ -1,0 +1,24 @@
+CORE AWAKENED 91.00.00-H10.37
+CORE III — ELEVENTH BEAT END DIAGNOSTIC
+
+Objetivo único:
+- Diagnosticar rollback de 8 ticks en CORE III ELEVENTH BEAT END.
+- Frontera exacta: stage 13 -> stage 14.
+- stage 13 = undécimo beat físico snapshotable.
+- stage 14 = continuación histórica desde el duodécimo beat.
+
+Cambio de esta build:
+- Diagnóstico puro en main.gd para detectar/localizar stage 13 -> 14.
+- fighter.gd queda byte por byte igual a H10.36.
+- Snapshot, PerfectBlock, GameState, Input Recorder/Replay, Ring Buffer, Motion Guard y Resultado sin cambios.
+
+Prueba:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar la pelea.
+5. Repetir CORE III completo con J2 y dejar terminar la pelea.
+6. Enviar el runtime completo.
+
+Resultado objetivo en ambos lados:
+TACTICAL ROLLBACK OK — CORE III ELEVENTH BEAT END — 8 ticks; estado presente idéntico

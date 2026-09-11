@@ -1,0 +1,73 @@
+CORE AWAKENED 91.00.00-H3.2 — EXPLICIT COUNTER EVENT
+
+RESULTADO H3.1
+--------------
+El usuario logró ventanas donde aparecían ambos ataques, pero el tester decía:
+  ataque simultáneo sin ventana Counter
+
+La razón es el orden de physics:
+1. PerfectBlock90_1 procesa antes de Main.
+2. _intentar_counter consume counter_disponible=true -> false.
+3. En ESA MISMA función llama intentar_punetazo/patada y aplica multiplicadores.
+4. Main recién después captura el snapshot.
+
+Por eso puede no existir ningún snapshot con la transición observable que H3.1 buscaba.
+
+CAMBIO H3.2
+-----------
+PerfectBlock90_1 recibe TRES variables diagnósticas:
+- _rollback_counter_event_serial
+- _rollback_counter_event_fighter_id
+- _rollback_counter_event_tipo
+
+Sólo se actualizan cuando _intentar_counter() REALMENTE acepta el Counter,
+lanza el ataque y aplica todos sus multiplicadores.
+
+NO gobiernan gameplay.
+NO cambian:
+- VENTANA_COUNTER
+- startup
+- daño
+- empuje
+- hitstun
+- recovery
+- input
+- Perfect Block
+- Combo Cancel
+- Combat Feel
+
+El snapshot guarda/restaura también este sello.
+
+F11 busca el cambio de serial dentro de los últimos 30 ticks y arma
+automáticamente una ventana de 8 ticks alrededor del Counter verdadero.
+
+PRUEBA
+------
+1. J1 ataca.
+2. J2 hace PERFECT!
+3. Soltar bloqueo.
+4. J2 pulsa X o C.
+5. CONFIRMAR que en pantalla aparezca COUNTER!
+6. Pulsar F11.
+
+En Output primero debe aparecer, al ejecutar el Counter real:
+  COUNTER EVENT MARCADO — serial=...
+
+Al pulsar F11:
+  COUNTER EVENT LOCALIZADO — serial=...
+  TACTICAL ROLLBACK — COUNTER ...
+
+Meta:
+  TACTICAL ROLLBACK OK — COUNTER — 8 ticks; estado presente idéntico
+
+Hacer 4-6 pruebas alternando X/C.
+
+IMPORTANTE
+----------
+Este ZIP ahora SÍ incluye:
+  scripts/perfect_block_90_1.gd
+
+Está basado exactamente en la versión certificada 90.11.29 y sólo añade
+el marcador diagnóstico descrito arriba.
+
+fighter.gd NO se modifica.

@@ -1,0 +1,29 @@
+CORE AWAKENED 91.02.45 — PASS 12B / PROYECTIL HELENA MÁS GRANDE
+================================================================
+
+VIDEO 12A
+- Pose de Helena: APROBADA.
+- Spawn desde las manos: APROBADO.
+- Trayectoria/velocidad: APROBADA.
+- Lectura visual del proyectil: demasiado chica.
+
+CAMBIO ÚNICO
+- Radio visual: 27 px -> 42 px (~56 % más grande).
+- Aura exterior y anillos crecen en la misma proporción.
+- Cola de energía: 70 px -> 102 px.
+
+IMPORTANTE
+- Hitbox permanece EXACTAMENTE en 27 px.
+- No cambia daño.
+- No cambia velocidad.
+- No cambia hitstun.
+- No cambia empuje.
+- No cambia startup/recovery/cooldown.
+- No cambia Fighter, Helena, IA, CORE ni rollback.
+
+INSTALACIÓN
+Abrir ZIP -> arrastrar todo a la raíz -> aceptar reemplazar.
+
+PRUEBA
+Lanzar varias veces a media y larga distancia y confirmar que ahora el poder
+se lea como un ataque especial importante sin tapar excesivamente al rival.

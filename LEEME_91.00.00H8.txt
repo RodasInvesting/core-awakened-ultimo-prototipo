@@ -1,0 +1,98 @@
+CORE AWAKENED 91.00.00-H8 — CORE I ENTRY ROLLBACK
+
+BASE CERRADA
+------------
+H6.1:
+- Launcher / Air Combo simétrico J1/J2: certificado para 8 ticks.
+- 0 DESYNC en la batería final.
+
+H7.1:
+- scripts activos: 254 RNG sites.
+- fighter.gd: 48
+- main.gd: 200
+- perfect_block_90_1.gd: 6
+- RNG lógico de combate encontrado en ramas IA.
+- RNG de main.gd observado: audio/ambiente/cámara/partículas.
+- Para PvP humano no se modifica RNG todavía.
+
+OBJETIVO H8
+-----------
+Primer contacto del rollback con CORE I.
+
+NO intentamos resolver todo CORE.
+Queremos saber exactamente qué pasa cuando el rollback atraviesa:
+  poder lleno -> botón Especial -> _activar_fase_absoluta()
+  -> veces_fase_absoluta 0 a 1
+  -> _secuencia_poder_simple()
+  -> bloqueo cinematográfico / congelar rival / acercamiento
+
+RIESGO ESPERADO
+---------------
+CORE I usa:
+- await
+- Tween
+- secuencia async
+
+Snapshot/restore puede recuperar variables, pero NO representa por sí solo
+la continuación suspendida de una coroutine ni el progreso interno de un Tween.
+
+Por eso H8 es diagnóstico estructural.
+
+CAMBIOS
+-------
+- fighter.gd NO se incluye ni modifica.
+- se amplía el ring únicamente para CORE I (nivel 1).
+- CORE II/III siguen prohibidos.
+- Furia sigue prohibida.
+- no cambia daño, carga, velocidad ni arte.
+- Historical-X Guard queda DESACTIVADO para CORE I.
+
+CÓMO PROBAR
+-----------
+PRUEBA J1:
+1. Entrar Versus Local.
+2. Llenar la PRIMERA barra CORE de J1 jugando normalmente.
+3. Cuando esté lista, activar el poder Especial / CORE I.
+4. Apenas arranque la secuencia/poder, presionar F11.
+5. No hace falta esperar al final de la gigantografía.
+
+Queremos ver:
+  CORE I EVENT LOCALIZADO — tick=... J1
+  TACTICAL ROLLBACK — CORE I ENTRY — J1 CORE I ...
+y luego:
+  TACTICAL ROLLBACK OK
+o un DESYNC detallado.
+
+Hacer 2 intentos J1.
+
+PRUEBA J2:
+Repetir con el segundo jugador.
+Hacer 2 intentos J2.
+
+MUY IMPORTANTE
+--------------
+Si aparece DESYNC, NO es un fracaso del proyecto.
+Es precisamente el dato que buscamos: cuál es el primer estado async/Tween
+que no puede reconstruir el snapshot actual.
+
+No usar CORE II ni CORE III en esta build.
+Después de probar el primer CORE, reiniciar pelea si hace falta para mantener
+la prueba limpia.
+
+META H8
+-------
+A) Si 4/4 salen OK:
+   ampliamos H8.1 hacia la gigantografía/impacto CORE I.
+
+B) Si aparece DESYNC:
+   el log PRETICK mostrará:
+   - nivel CORE
+   - poder
+   - en_secuencia_especial
+   - bloqueo_cinematico
+   - congelado_por_rival
+   - pose recarga
+   además de posición/velocidad/ataque.
+
+Con ese primer DESYNC convertimos sólo la parte necesaria de CORE I a
+estado explícito por physics ticks, sin tocar CORE II/III todavía.

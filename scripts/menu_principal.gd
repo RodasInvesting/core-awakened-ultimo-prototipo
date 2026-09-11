@@ -55,12 +55,12 @@ func estilo_boton(boton: Button) -> void:
 	boton.add_theme_color_override("font_focus_color", Color.WHITE)
 
 func crear_menu_centrado() -> void:
-	# 90.10.78: se suma VERSUS LOCAL como modo oficial. El panel crece hacia
-	# arriba para mantener cinco botones completos sin pisar la ayuda inferior.
+	# 91.02.61 — PASS 14B: ONLINE entra como sexto modo del menú.
+	# El panel crece hacia arriba; la ayuda inferior conserva su posición.
 	const PANEL_ANCHO := 560.0
-	const PANEL_ALTO := 306.0
+	const PANEL_ALTO := 353.0
 	const PANEL_X := (1280.0 - PANEL_ANCHO) * 0.5
-	const PANEL_Y := 378.0
+	const PANEL_Y := 331.0
 
 	var panel := Panel.new()
 	panel.position = Vector2(PANEL_X, PANEL_Y)
@@ -92,6 +92,7 @@ func crear_menu_centrado() -> void:
 		["MODO ARCADE", Callable(self, "_arcade")],
 		["BATALLA RÁPIDA", Callable(self, "_rapida")],
 		["VERSUS LOCAL", Callable(self, "_versus_local")],
+		["ONLINE", Callable(self, "_online")],
 		["CÓMO JUGAR", Callable(self, "_como_jugar")],
 		["SALIR", Callable(self, "_salir")],
 	]
@@ -99,7 +100,7 @@ func crear_menu_centrado() -> void:
 	const BTN_X := 410.0
 	const BTN_W := 460.0
 	const BTN_H := 38.0
-	const BTN_Y := 419.0
+	const BTN_Y := 372.0
 	const BTN_SEP := 47.0
 	for i in range(datos.size()):
 		var b := Button.new()
@@ -168,6 +169,16 @@ func _versus_local() -> void:
 		b.disabled = true
 	await get_tree().create_timer(0.35).timeout
 	get_tree().change_scene_to_file("res://scenes/SelectorPersonajes.tscn")
+
+func _online() -> void:
+	var estado = get_node("/root/GameState")
+	estado.modo = "online"
+	estado.reproducir_sfx_global("res://assets/sonidos/menu/start.mp3", -3.0)
+	for b in botones:
+		b.disabled = true
+	await get_tree().create_timer(0.35).timeout
+	get_tree().change_scene_to_file("res://scenes/OnlineLobby.tscn")
+
 
 func _como_jugar() -> void:
 	if not botones.is_empty():

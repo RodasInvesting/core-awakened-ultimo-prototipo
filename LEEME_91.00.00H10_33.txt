@@ -1,0 +1,29 @@
+CORE AWAKENED 91.00.00-H10.33 — CORE III NINTH BEAT END DIAGNOSTIC
+
+Objetivo único:
+- Diagnosticar la frontera CORE III NINTH BEAT END.
+- Cruce observado: stage 11 -> stage 12.
+- stage 11 = noveno beat físico snapshotable (certificado como entrada por H10.32).
+- stage 12 = continuación histórica desde el décimo beat.
+
+Sin cambios de gameplay respecto de H10.32:
+- fighter.gd idéntico.
+- rollback_snapshot.gd idéntico.
+- perfect_block_90_1.gd idéntico.
+- game_state.gd idéntico.
+- sólo main.gd agrega instrumentación de diagnóstico y versión H10.33.
+
+Prueba:
+1. NO presionar F11.
+2. Ejecutar CORE I y CORE II normalmente.
+3. Ejecutar CORE III completo con J1.
+4. Ejecutar CORE III completo con J2.
+5. Dejar terminar ambas secuencias naturalmente.
+6. Enviar runtime completo.
+
+Marcadores esperados:
+CORE III NINTH BEAT END AUTO MARCADO
+CORE III NINTH BEAT END LOCALIZADO — stage 11->12
+TACTICAL ROLLBACK OK — CORE III NINTH BEAT END — 8 ticks; estado presente idéntico
+
+Si falla, el runtime debe usarse para localizar el primer subtick causal antes de convertir el décimo beat.

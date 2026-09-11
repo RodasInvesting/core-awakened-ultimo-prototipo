@@ -1,0 +1,53 @@
+CORE AWAKENED 91.02.28 — PASS 9.3D HIT-STOP / IMPACTO NORMAL
+============================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar VS LOCAL o contra IA.
+
+OBJETIVO
+Hacer que el contacto normal tenga el patrón:
+velocidad -> IMPACTO corto -> velocidad
+sin volver lenta la pelea.
+
+IMPORTANTE
+El juego YA tenía hit-stop local. Este PASS no agrega un segundo sistema:
+recalibra únicamente el existente en golpes normales limpios.
+
+NUEVA CALIBRACION NORMAL
+- Puño limpio: aprox. 0.033 a 0.041 s según intensidad.
+  Equivale aproximadamente a 2 frames a 60 Hz.
+- Patada limpia: aprox. 0.038 a 0.051 s según intensidad.
+  Equivale aproximadamente a 2-3 frames a 60 Hz.
+- El receptor se sincroniza al menos al 92 % del freeze del atacante para
+  que el contacto no se vea desfasado.
+
+SIN CAMBIOS
+- Bloqueo: conserva la fórmula anterior.
+- CORE II/III y Furia: conservan el hit-stop anterior.
+- CORE I/especiales/remates/Absoluto: sin cambios.
+- Hitstun: sin cambios.
+- Daño: sin cambios.
+- Knockback/empuje: sin cambios.
+- Recovery normal PASS 9.3A: 0.64 / 0.60.
+- Aceleracion/freno PASS 9.3B: +15 % / +18 %.
+- Continuidad visual CORE PASS 9.3C.
+- Pushbox PASS 9.2C: 78 / 80 / 84.
+- Rollback/netcode/snapshots/RPC/serializacion: sin cambios.
+
+PRUEBA RECOMENDADA
+A) Puños simples separados: mirar si el impacto se siente más seco.
+B) Patadas simples: deben pesar más que los puños sin sentirse lentas.
+C) Puño -> puño / puño -> patada: confirmar que PASS 9.3A sigue fluido.
+D) Intercambio rápido 30-60 s: buscar que no haya sensación de congelamiento.
+E) Bloquear varios golpes: debe sentirse igual que antes.
+F) Golpes muy cerca: confirmar pushbox 78/80/84.
+G) CORE II al final: confirmar que su cadencia/continuidad 9.3C no cambió.
+
+CRITERIO DE APROBACION
+- El contacto se lee con más fuerza.
+- La pelea vuelve a moverse inmediatamente después.
+- Patada se siente más pesada que puño.
+- No aparecen pausas pegajosas ni cortes de combo.

@@ -1,0 +1,29 @@
+CORE AWAKENED 91.00.00-G2 — ROLLBACK TICK BOUNDARY
+
+Hallazgo de G
+-------------
+Muchas pruebas dieron LOCAL ROLLBACK OK. Una prueba aislada terminó con ~6.7 px
+de diferencia en X y la siguiente volvió a dar OK.
+
+Corrección G2
+-------------
+- F11 ya no ejecuta rollback desde el ciclo de teclado/render.
+- F11 sólo deja una solicitud.
+- El rollback empieza al comienzo exacto del siguiente physics tick.
+- Se amplió el snapshot con estados de borde de dash, input, derribo y ataque.
+- Se compara cada subtick de la ventana de 8 ticks, no sólo el estado final.
+- fighter.gd NO se modifica.
+- Combat Feel NO se modifica.
+
+Prueba
+------
+1. Copiar encima de G y reemplazar archivos.
+2. Versus Local.
+3. Caminar, saltar, dash/backdash o bloquear sin impactos.
+4. Presionar F11 entre 10 y 20 veces en momentos distintos.
+5. Meta:
+   [91.00.00-G2] LOCAL ROLLBACK OK ...
+   sin ningún SUBTRACE DESYNC ni LOCAL ROLLBACK DESYNC.
+
+Si aparece un error, enviar captura completa del Output.
+Después de certificar G2 pasamos a 91.00.00-H: rollback atravesando un golpe real.

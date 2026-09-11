@@ -1,0 +1,77 @@
+CORE AWAKENED 91.00.00-H — NORMAL ATTACK ROLLBACK
+
+BASE
+----
+G12 queda certificado para el alcance probado de movilidad/neutral:
+8 ticks (~133 ms), con múltiples LOCAL ROLLBACK OK y recuperación histórica X.
+
+OBJETIVO H
+----------
+Primera prueba de rollback atravesando un golpe NORMAL real:
+- puño o patada;
+- startup / activo / recovery;
+- puede atravesar IMPACTO;
+- puede atravesar hitstop e hitstun normal.
+
+TODAVÍA EXCLUIDO
+----------------
+- CORE I/II/III
+- combo automático
+- Furia
+- bloqueo / Perfect Block
+- Counter
+- derribos especiales
+- KO / victoria
+- cinemáticas
+
+CAMBIOS
+-------
+- NO se modifica fighter.gd.
+- NO se cambia daño, rango, startup, active, recovery, hitstun, knockback ni velocidad.
+- El ring buffer de H permite estados de ataque normal/hitstop/hitstun.
+- F11 exige que los últimos 8 ticks contengan UN solo atacante normal.
+- Si atacan J1 y J2 simultáneamente, la prueba se cancela para aislar variables.
+- El log clasifica la ventana:
+    WHIFF/FASE
+    IMPACTO
+- El subtrace imprime fase/timer/tipo/conexión/hitstop/hitstun/vida/contacto
+  esperado vs actual para ambos Fighter.
+
+PRUEBA RECOMENDADA
+------------------
+Primero confirmar que el gameplay sigue normal.
+
+A) WHIFF / CICLO DE ATAQUE — 5 pruebas
+1. Alejar a los luchadores.
+2. J1 ejecuta UN puño o patada.
+3. Inmediatamente presionar F11.
+4. Buscar:
+   NORMAL ATTACK ROLLBACK OK — WHIFF/FASE
+
+B) IMPACTO REAL — 8 a 10 pruebas
+1. Acercar a J1 al rango normal.
+2. J2 debe quedar neutral: sin atacar y sin bloquear.
+3. J1 conecta UN puño o patada.
+4. Presionar F11 inmediatamente al contacto / reacción.
+5. Buscar:
+   NORMAL ATTACK ROLLBACK OK — IMPACTO
+
+IMPORTANTE
+----------
+Durante esta fase de diagnóstico, al re-simular un impacto pueden repetirse
+efectos visuales/sonoros de prueba. Eso todavía NO es el netcode final; H busca
+demostrar determinismo del ESTADO DE COMBATE.
+
+SI FALLA
+--------
+Enviar desde:
+[91.00.00-H] ROLLBACK CAUSAL DESYNC
+hasta:
+NORMAL ATTACK ROLLBACK DESYNC
+
+Ese bloque ya muestra el estado completo del ataque.
+
+SI PASA
+-------
+Siguiente etapa: H2 / contacto competitivo:
+bloqueo, Perfect Block y Counter antes de entrar en CORE.

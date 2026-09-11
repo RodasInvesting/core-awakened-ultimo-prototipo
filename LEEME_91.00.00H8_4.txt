@@ -1,0 +1,90 @@
+CORE AWAKENED 91.00.00-H8.4 — CORE I TARGET END ROLLBACK
+
+RESULTADO H8.3
+--------------
+Helena vs Xenoid:
+
+J1:
+  TACTICAL ROLLBACK OK — CORE I ENTRY — 8 ticks; estado presente idéntico
+
+J2:
+  TACTICAL ROLLBACK OK — CORE I ENTRY — 8 ticks; estado presente idéntico
+
+Conclusión:
+- el Tween del Target Lock fue reemplazado correctamente por physics ticks;
+- la entrada CORE I ya es determinista en ambos lados;
+- el primer DESYNC de H8.2 (30/39 px esperados vs 0 px) desapareció.
+
+OBJETIVO H8.4
+-------------
+Probar el SIGUIENTE límite estructural:
+
+  Target Lock activo
+      ->
+  Target Lock termina
+      ->
+  signal core1_target_lock_finalizado
+      ->
+  continúa _secuencia_poder_simple()
+      ->
+  pose final + especial + impacto garantizado + comienzo de gigantografía
+
+No corregimos esa continuación todavía.
+Primero la cruzamos con rollback para ver si la coroutine suspendida se
+reconstruye o si aparece el siguiente DESYNC.
+
+CAMBIOS H8.4
+------------
+- fighter.gd de H8.3 queda igual en lógica de combate.
+- se conecta el signal ya existente core1_target_lock_finalizado a Main
+  sólo como marcador diagnóstico.
+- el marcador NO forma parte del snapshot.
+- durante catch-up el signal se observa pero no altera seriales.
+- Historical-X Guard sigue apagado en la prueba CORE.
+
+NO CAMBIA
+---------
+- destino del CORE I
+- velocidad / curva del Target Lock
+- daño
+- impacto
+- poster/gigantografía
+- CORE II
+- CORE III
+- controles
+- Combat Feel
+
+CÓMO PROBAR
+-----------
+IMPORTANTE: activar CORE I desde LEJOS, para obligar al Target Lock a moverse.
+
+J1:
+1. Entrar Versus Local.
+2. Llenar primer CORE.
+3. Alejarse del rival (más de ~210 px).
+4. Activar CORE I.
+5. Dejar que TODO el CORE I termine y recuperar control.
+6. Presionar F11 UNA VEZ.
+7. Repetir 2 veces.
+
+J2:
+Repetir igual, 2 veces.
+
+Queremos ver:
+  CORE I TARGET END MARCADO — ...
+  CORE I TARGET END LOCALIZADO — ...
+  TACTICAL ROLLBACK — CORE I TARGET END — ...
+
+Luego:
+A) OK
+   => la continuación signal/await también sobrevivió y avanzamos al poster.
+
+B) DESYNC
+   => el primer bloque causal nos dirá exactamente qué estado lógico no se
+      reconstruye después de finalizado el Target Lock.
+
+META
+----
+2 pruebas J1 + 2 pruebas J2.
+
+No usar CORE II/III.

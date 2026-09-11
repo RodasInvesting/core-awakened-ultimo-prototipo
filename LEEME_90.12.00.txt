@@ -1,0 +1,53 @@
+CORE AWAKENED 90.12.00 — AUDITORÍA / MANTENIMIENTO
+=====================================================
+
+BASE: 90.11.29 Local Combat Baseline.
+
+OBJETIVO
+- Mantenimiento puro.
+- NO modifica Fighter, daño, hitstun, Combo Cancel, Guardia de Esquina, IA, CORE ni cadencia del combate.
+
+CAMBIOS
+1) Pantalla completa
+   - project.godot arranca por defecto en pantalla completa (display/window/size/mode = 3).
+   - settings_manager migra una sola vez configuraciones antiguas que habían guardado fullscreen=false.
+   - Se preservan volúmenes, VSync, resolución y el resto de preferencias.
+   - El nombre interno antiguo del proyecto se conserva por ahora para NO cambiar la ruta user:// en plena auditoría.
+
+2) Resultado / Versus Local
+   - J1 y J2 ahora pueden figurar como ganador real.
+   - La victoria de J2 ya no se presenta como una derrota genérica desde la perspectiva de J1.
+   - Revancha conserva personajes y escenario.
+   - El fondo de Resultado en Versus usa el escenario elegido.
+   - Fondos rediseñados actualizados (Helena, Aethel, Kali, Cibor-X).
+   - Dax agregado al mapa de fondos de Resultado.
+
+3) Cómo Jugar
+   - 5 páginas actualizadas.
+   - Air Dash / Back Dash aéreo.
+   - Perfect Block y Counter.
+   - Quick Recovery.
+   - Guardia de Escape en esquina.
+   - Combo Cancel.
+   - Launcher y Air Combo.
+   - Controles J1/J2 y CORE actualizados.
+
+4) GitHub
+   - Se incluye .gitignore para .godot/, *.tmp y *.bak.
+   - La carpeta .godot histórica aún debe eliminarse físicamente del repositorio y confirmarse en un commit separado; no afecta al juego.
+
+XENOID CORE III — NO MODIFICADO
+- Auditoría de xenoid.gd: 5 puños Furia + 4 patadas Furia.
+- Fighter ejecuta puños completos + patadas completas + pasada mixta completa.
+- Total esperado: 18 beats antes del remate.
+- Como el código y los assets están presentes, NO se cambia a ciegas. Validar visualmente con video si todavía parece omitir poses.
+
+PRUEBAS RECOMENDADAS
+A. Cerrar Godot y reemplazar estos archivos sobre el repo 90.11.29.
+B. Abrir desde project.godot.
+C. Confirmar arranque fullscreen.
+D. Versus Local: hacer ganar J1 y luego J2; comprobar nombre correcto del ganador.
+E. Elegir escenario distinto al luchador rival y comprobar que Resultado conserve ese fondo.
+F. Probar Dax y los fondos rediseñados en Resultado.
+G. Abrir CÓMO JUGAR y recorrer las 5 páginas.
+H. Probar un CORE III de Xenoid y, si parece faltar una pose, grabar esa pelea.

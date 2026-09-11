@@ -1,0 +1,38 @@
+CORE AWAKENED 91.02.39 — PASS 10.3V VARKHOS SPRITES FINALES
+================================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar archivos.
+4. Abrir Godot y esperar la reimportacion de PNG.
+
+INTEGRA
+- reposo/inicio real de Varkhos -> assets/varkhos_final/parado.png
+- recarga de energia real -> recarga.png
+- pose de victoria real -> victoria.png
+- derrotado real -> derribado.png
+- 3 reacciones de golpe reales
+- bloqueo real
+- puño 4 nuevo
+- puño 5 nuevo (se agrega al repertorio visual)
+- patada 4 nueva
+- gigantografia suministrada para CORE I y CORE II:
+  * CORE I -> assets/core2_entrada_flash/varkhos.png
+  * CORE II final -> assets/varkhos_final/rematador.png
+
+NO TOCA
+- fighter.gd
+- gameplay congelado 91.02.37
+- daño / hitstun / hit-stop / recuperación
+- pushbox 78/80/84
+- CORE I/II/III lógica y timings
+- rollback / snapshots / RPC / netcode
+- IA general
+- selector (Varkhos ya queda desbloqueado por 91.02.38)
+
+PRUEBA FINAL PASS 10
+A) Varkhos gana: reposo, recarga, ataques, CORE I, CORE II, CORE III y victoria.
+B) Varkhos pierde: bloqueo, 3 reacciones, derribo/KO estable en suelo.
+
+Si ambas pasan, PASS 10 ROSTER COMPLETO queda certificado y se avanza a PASS 11 IA FINAL.

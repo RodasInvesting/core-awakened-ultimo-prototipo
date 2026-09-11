@@ -1,0 +1,28 @@
+CORE AWAKENED 91.00.00-H10.30 — CORE III EIGHTH BEAT PHYSICS
+
+OBJETIVO
+- Corregir únicamente la frontera CORE III SEVENTH BEAT END (stage 9 -> 10).
+- H10.29 demostró que el beat 8 histórico aún puede introducir desplazamiento externo no restaurable.
+- El octavo beat pasa a FSM física/snapshotable.
+- El bloque histórico comienza recién desde el beat 9 (stage 11).
+
+CAMBIO DE GAMEPLAY DETERMINISTA
+- stage 9  = séptimo beat físico
+- stage 10 = octavo beat físico (NUEVO)
+- stage 11 = continuación histórica desde coreografia[8] / beat 9
+- No se modifica PerfectBlock, rollback_snapshot.gd, game_state.gd ni los demás scripts certificados.
+- No se ejecuta diagnóstico EIGHTH BEAT END en este build: primero se revalida stage 9->10.
+
+PRUEBA
+1. Reemplazar los scripts con este ZIP completo.
+2. Abrir Versus Local.
+3. NO presionar F11.
+4. Ejecutar CORE I y CORE II normalmente.
+5. Ejecutar CORE III completo con J1.
+6. Repetir con J2.
+7. Dejar que cada secuencia termine naturalmente y enviar el runtime completo.
+
+MARCADOR OBJETIVO
+TACTICAL ROLLBACK OK — CORE III SEVENTH BEAT END — 8 ticks; estado presente idéntico
+
+en J1 y J2, sin ROLLBACK CAUSAL DESYNC ni TEMPORAL DESYNC para esa frontera.

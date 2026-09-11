@@ -1,0 +1,70 @@
+CORE AWAKENED 91.00.00-H8.1 — CORE I SAFE ENTRY
+
+CORRECCIÓN DE REGRESIÓN H8
+--------------------------
+H8 experimental podía dejar pantalla negra después del VS.
+
+H8.1 está REBASADA directamente sobre H6.1 certificada.
+
+La función:
+  _snapshot_estado_rollback_h_seguro()
+
+queda EXACTAMENTE con el alcance H6.1.
+No se amplía ni se toca.
+
+NUEVO MÉTODO
+------------
+Fighter ya emite:
+  fase_activada
+
+Main ya escuchaba esa señal.
+
+H8.1 solamente añade un observador inerte:
+- si veces_fase_absoluta == 1,
+- marca CORE I con serial, lado y tick_hint,
+- no modifica Fighter ni gameplay.
+
+El ring H6.1 ya captura snapshots aunque estén marcados como "unsafe".
+Cuando F11 localiza exactamente el CORE I marcado, sólo ESA ventana concreta
+puede saltar el chequeo ventana_es_segura.
+
+Esto evita que CORE afecte el arranque normal de la pelea.
+
+NO TOCA
+-------
+- fighter.gd
+- función safe-state H6.1
+- daño
+- carga CORE
+- especiales
+- velocidad
+- hitboxes
+- RNG
+- arte
+
+PRIMERA PRUEBA
+--------------
+Antes de cargar CORE:
+1. Entrar Versus Local.
+2. Confirmar que después del VS aparece READY/FIGHT y empieza la pelea.
+3. Si vuelve a quedar negro, NO seguir y copiar Output.
+
+Si la pelea inicia normal:
+4. Llenar SOLO el primer CORE de J1.
+5. Activarlo.
+6. Debe aparecer:
+     CORE I EVENT MARCADO — ...
+7. Apenas empieza CORE I, presionar F11.
+8. Hacer 2 intentos J1.
+
+Luego repetir 2 con J2.
+
+Esperado:
+  CORE I EVENT LOCALIZADO — ...
+  TACTICAL ROLLBACK — CORE I ENTRY — ...
+y luego OK o un DESYNC diagnóstico.
+
+IMPORTANTE
+----------
+No usar CORE II/III.
+Si aparece un DESYNC, detener esa variante y pasar Output completo.

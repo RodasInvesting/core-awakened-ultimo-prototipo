@@ -1,0 +1,85 @@
+CORE AWAKENED 91.00.00-H8.6 — CORE I POSTER END ROLLBACK
+
+RESULTADO H8.5
+--------------
+Tres pruebas válidas visibles:
+- J1 CORE I TARGET END -> ROLLBACK OK
+- J2 CORE I TARGET END -> ROLLBACK OK
+- J2 CORE I TARGET END -> ROLLBACK OK
+
+El bloque crítico ya coincide:
+- daño
+- hitstop
+- hitstun
+- empuje
+- pose
+- core1_secuencia_etapa
+- core1_poster_timer
+- reloj táctico
+
+H8.5 queda certificado para la transición:
+Target Lock -> Impacto -> inicio/avance del póster,
+en J1 y J2, ventana de 8 ticks.
+
+OBJETIVO H8.6
+-------------
+Probar el ÚLTIMO tramo lógico de CORE I:
+
+  POSTER (etapa 2)
+      ->
+  timer llega a 0
+      ->
+  descongelar rival
+      ->
+  desbloquear cinematográfica
+      ->
+  en_secuencia_especial=false
+      ->
+  INACTIVO (etapa 0)
+      ->
+  control normal
+
+H8.6 NO modifica la lógica de Fighter.
+
+El tester detecta directamente en snapshots:
+  etapa 2 + secuencia=true
+      ->
+  etapa 0 + secuencia=false
+
+Por eso no necesitamos agregar signal ni tocar gameplay.
+
+PRUEBA
+------
+J1:
+1. Llenar primer CORE.
+2. Activar CORE I desde lejos (>210 px).
+3. Dejar terminar TODO el póster.
+4. Apenas el personaje vuelva a responder, F11 UNA VEZ.
+5. Repetir 2 veces.
+
+J2:
+Igual, 2 veces.
+
+Esperado:
+  CORE I POSTER END LOCALIZADO — tick=... J1/J2
+  TACTICAL ROLLBACK — CORE I POSTER END — ...
+  TACTICAL ROLLBACK OK — CORE I POSTER END — 8 ticks; estado presente idéntico
+
+IMPORTANTE
+----------
+Presionar F11 apenas vuelve el control.
+El ring conserva 180 ticks y el póster dura ~109 ticks, así que hay margen,
+pero cuanto más inmediato sea el F11 más limpia queda la prueba.
+
+Si H8.6 pasa J1 + J2:
+CORE I queda certificado de punta a punta para el alcance de rollback actual:
+- activación
+- Target Lock
+- impacto
+- daño/reacción
+- póster lógico
+- devolución de control
+
+Después de eso pasamos a CORE II.
+
+NO usar CORE II/III todavía.

@@ -1,0 +1,29 @@
+CORE AWAKENED 91.00.00-H10.13 — CORE III APPROACH END / FIRST BEAT PHYSICS
+
+Objetivo
+- Mantener congelados CORE I, CORE II, CORE III ENTRY y CORE III RECARGA END.
+- Corregir únicamente la divergencia temporal detectada por H10.12 al cruzar
+  el fin del Target Lock CORE III (stage 2 -> 3).
+- El primer beat de la ráfaga Furia ahora usa una FSM física snapshotable:
+  preparar -> acercar -> esperar ataque.
+- El resto de la ráfaga continúa por la implementación histórica desde el
+  segundo paso. No se refactoriza todavía el resto del combo ni el Absoluto.
+
+Diagnóstico automático
+- No usar F11.
+- Ejecutar CORE III una vez con J1 y una vez con J2.
+- Buscar:
+  CORE III ENTRY ... OK
+  CORE III RECARGA END ... OK
+  CORE III APPROACH END AUTO MARCADO
+  CORE III APPROACH END LOCALIZADO
+  TACTICAL ROLLBACK OK — CORE III APPROACH END — 8 ticks
+
+Archivos funcionales modificados respecto a H10.12
+- scripts/fighter.gd
+- scripts/rollback_snapshot.gd
+- scripts/main.gd
+
+Nota
+- La continuación desde el segundo beat sigue siendo async/Tween histórica a
+  propósito. Se certificará en la frontera siguiente.

@@ -1,0 +1,33 @@
+CORE AWAKENED 91.00.00-H10.34 — CORE III TENTH BEAT PHYSICS
+
+Objetivo único:
+- Revalidar la frontera CORE III NINTH BEAT END.
+- Cruce observado: stage 11 -> stage 12.
+- stage 11 = noveno beat físico snapshotable.
+- stage 12 = décimo beat físico snapshotable NUEVO en H10.34.
+- stage 13 = continuación histórica desde el undécimo beat.
+
+Cambio determinista único:
+- El décimo beat deja de usar Tween/coroutine histórico.
+- Ejecuta coreografia[9] mediante la FSM física/snapshotable ya certificada.
+- La continuación async se desplaza a stage 13 y comienza desde coreografia[10].
+
+Sin cambios en:
+- rollback_snapshot.gd
+- perfect_block_90_1.gd
+- game_state.gd
+- input_recorder/input_replay
+- rollback ring buffer / motion guard
+
+Prueba:
+1. NO presionar F11.
+2. Ejecutar CORE I y CORE II normalmente.
+3. Ejecutar CORE III completo con J1.
+4. Ejecutar CORE III completo con J2.
+5. Dejar terminar ambas secuencias naturalmente.
+6. Enviar runtime completo.
+
+Resultado objetivo:
+TACTICAL ROLLBACK OK — CORE III NINTH BEAT END — 8 ticks; estado presente idéntico
+
+En H10.34 NO se diagnostica todavía TENTH BEAT END (12->13).

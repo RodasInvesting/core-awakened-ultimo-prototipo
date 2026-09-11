@@ -1,0 +1,46 @@
+CORE AWAKENED 91.00.00-G10 — ROLLBACK-ONLY NATIVE RECOVERY
+
+POR QUÉ G9 SE DESCARTA
+----------------------
+G9 seguía ralentizando el juego y afectando dash/backdash. Aunque el observer
+no escribía position en LIVE, seguía ejecutando inspecciones de estado en cada
+physics tick de ambos Fighter. Eso no es aceptable para el Combat Feel.
+
+ARQUITECTURA G10
+----------------
+Durante gameplay LIVE:
+- RollbackNeutralMotionGuard tiene physics_process DESACTIVADO.
+- No inspecciona Fighter.
+- No registra residuals.
+- No escribe position/velocity.
+- Costo por tick: CERO.
+
+Al presionar F11:
+- Main ya tiene snapshots consecutivos del ring buffer.
+- El residual histórico se calcula retrospectivamente:
+    residual(t) = X(t+1) - X(t) - last_motion(t)
+- Sólo entonces se activa el guard durante los 8 ticks del catch-up.
+- Reproduce exactamente esos residuals históricos y se vuelve a apagar.
+
+Esto devuelve el gameplay LIVE al camino de G7 y conserva la posibilidad de
+reproducir el collision recovery nativo durante rollback.
+
+PRUEBA EN DOS FASES
+-------------------
+FASE 1 — ANTES DE F11
+1. Iniciar una pelea NUEVA.
+2. Jugar 30-60 segundos SIN usar F11.
+3. Confirmar:
+   - caminar a velocidad normal;
+   - dash normal;
+   - backdash normal;
+   - salto/doble salto/air dash normales.
+4. Si sigue lento, NO probar F11: enviar Output y detener prueba.
+
+FASE 2 — SÓLO SI FASE 1 ESTÁ PERFECTA
+5. Hacer 15-20 F11 en movimiento/salto/dash.
+6. Meta: LOCAL ROLLBACK OK.
+7. Puede aparecer NATIVE RECOVERY REPRODUCIDO: es correcto.
+
+fighter.gd NO se modifica.
+Combat Feel LIVE NO se modifica.

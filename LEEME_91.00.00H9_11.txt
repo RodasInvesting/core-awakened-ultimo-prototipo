@@ -1,0 +1,96 @@
+CORE AWAKENED 91.00.00-H9.11 — CORE II SEQUENCE END
+
+RESULTADO H9.10
+---------------
+J1:
+- RECARGA END -> OK
+- COMBO ENTRY -> OK
+- FIRST BEAT END -> OK
+- REMATADOR ENTRY -> OK
+- REMATADOR POSTER END -> OK
+
+J2:
+- RECARGA END -> OK
+- COMBO ENTRY -> OK
+- FIRST BEAT END -> OK
+- REMATADOR ENTRY -> OK
+- REMATADOR POSTER END -> OK
+
+0 DESYNC en el log recibido.
+
+La FSM del rematador ya reproduce correctamente:
+- poster lógico;
+- impacto;
+- hitstun;
+- knockback;
+- derribo especial;
+- entrada a espera final de 0.10 s.
+
+OBJETIVO H9.11
+--------------
+Certificar el ÚLTIMO borde de CORE II:
+
+  REMATADOR_FSM stage 4
+  subfase ESPERA_FINAL = 1
+  timer 0.10
+      ->
+  rematador_conectado
+      ->
+  _core2_finalizar_secuencia()
+      ->
+  stage 0
+  en_secuencia_especial=false
+  descongelado
+  cinemática desbloqueada
+  control normal
+
+H9.11 ES DIAGNÓSTICO PURO.
+No modifica Fighter ni rollback_snapshot.
+Sólo Main detecta stage 4/sub1 -> stage 0.
+
+PRUEBA
+------
+NO usar F11.
+
+J1:
+1. CORE I.
+2. Cargar CORE II.
+3. Activar CORE II.
+4. Dejar terminar TODO.
+5. Después del impacto del rematador, el test SEQUENCE END se dispara solo.
+6. Comprobar que vuelve el control.
+7. Una vez es suficiente.
+
+J2:
+Igual, una vez.
+
+BUSCAMOS
+--------
+  CORE II SEQUENCE END AUTO MARCADO
+  CORE II SEQUENCE END LOCALIZADO
+  TACTICAL ROLLBACK — CORE II SEQUENCE END
+  TACTICAL ROLLBACK OK — CORE II SEQUENCE END — 8 ticks
+
+Y además:
+- stage 0 esperado/actual
+- en_secuencia_especial=false esperado/actual
+- control normal después de la prueba
+- 0 DESYNC
+
+SI H9.11 PASA J1 + J2
+---------------------
+CORE II queda CERTIFICADO de punta a punta para el alcance local actual
+de rollback de 8 ticks:
+
+activación
+-> recarga
+-> acercamiento
+-> ráfaga completa
+-> rematador
+-> poster
+-> impacto/derribo
+-> devolución de control
+
+Después de eso pasamos a CORE III.
+
+CORE III no se toca en H9.11.

@@ -1,0 +1,76 @@
+CORE AWAKENED 91.02.76 — PASS 14D5B / DESCONEXIÓN SEGURA
+==========================================================================
+
+EVIDENCIA 91.02.75
+A) Rival desconectado en combate:
+- ENet detecta RIVAL DESCONECTADO.
+- El jugador restante queda en Main sin rival.
+- Main, correctamente, deja de aceptar gameplay online y aplica input neutral.
+- Resultado visible: la pelea queda bloqueada aunque el usuario todavía puede
+  salir manualmente al menú.
+
+B) Rival desconectado durante PAUSA:
+- PauseManager libera SceneTree.
+- Pero al volver a Main ya no existe rival; por seguridad el router online
+  inyecta neutral a J1/J2.
+- Resultado visible: vuelve la imagen del combate pero PC1 no puede moverse.
+
+DECISIÓN DE DISEÑO
+Una pelea ONLINE no continúa después de perder al rival.
+La sesión termina de forma controlada.
+
+QUÉ HACE 91.02.76
+- OnlineFlowManager escucha RIVAL DESCONECTADO globalmente.
+- Funciona en Selector, VS, Main y Resultado.
+- Si ocurre durante PAUSA, fuerza SceneTree.paused=false.
+- Muestra overlay:
+    RIVAL DESCONECTADO
+    La pelea terminó.
+    Volviendo al menú principal...
+- Espera 2 segundos reales.
+- Cierra ENet local.
+- Limpia GameState.
+- Vuelve automáticamente a MenuPrincipal.
+- Absorbe señales residuales para evitar doble transición.
+
+IMPORTANTE PARA RANKED FUTURO
+Todavía NO suma victoria/derrota por abandono. Cuando exista Ranked,
+este mismo evento será la base para:
+- desconectado = derrota/abandono;
+- rival restante = victoria;
+- registro en historial competitivo.
+
+ARCHIVO ÚNICO
+- scripts/online_flow_manager.gd
+
+NO TOCADO
+- network_manager.gd 91.02.75
+- main.gd 91.02.70
+- pause_manager_online.gd 91.02.73
+- rollback_snapshot.gd 91.02.60
+- Fighter / PerfectBlock / CORE / proyectiles / físicas
+
+PRUEBA 1 — CLIENTE CIERRA EN COMBATE
+1. Exportar 91.02.76 en ambas PCs.
+2. Jugar 20-30 s.
+3. Cerrar PC2 con Alt+F4/X.
+4. PC1 debe mostrar RIVAL DESCONECTADO.
+5. Aproximadamente 2 s después debe volver sola al menú.
+6. NO debe quedar en pelea inmóvil.
+
+PRUEBA 2 — HOST CIERRA EN COMBATE
+7. Nueva sesión.
+8. Cerrar PC1.
+9. PC2 debe mostrar el mismo aviso y volver sola al menú.
+
+PRUEBA 3 — DESCONECTAR DURANTE PAUSA
+10. Nueva sesión.
+11. Pausar ambas.
+12. Cerrar una PC mientras sigue la pausa.
+13. La PC restante debe salir de la pausa, mostrar aviso y volver al menú.
+14. NO debe reaparecer una pelea inmóvil.
+
+LOGS ESPERADOS
+[91.02.62-P14C] ONLINE — RIVAL DESCONECTADO ...
+[91.02.76-P14D5B] ABANDONO DETECTADO — ...
+[91.02.76-P14D5B] ABANDONO CIERRE OK — sesión cerrada; menú principal

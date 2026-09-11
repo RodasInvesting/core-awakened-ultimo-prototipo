@@ -1,0 +1,47 @@
+CORE AWAKENED 91.02.33 — PASS 9.4D GIGANTOGRAFIA CORE II SCREEN-SAFE
+=====================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd y assets/core2_entrada_flash/.
+4. Abrir Godot y esperar importacion si corresponde.
+
+CORRECCION
+La gigantografia exclusiva de CORE II ahora vive en coordenadas de pantalla.
+Ya NO depende de:
+- altura del Fighter;
+- salto/doble salto;
+- posicion en esquina;
+- global_position;
+- zoom puntual de Camera2D.
+
+ZONA SEGURA
+- margen lateral: 4.5 %;
+- margen superior: 3.5 %;
+- reserva inferior: 24.5 %;
+- ancho maximo: 47 % del viewport;
+- alto maximo: 66 % del viewport;
+- lado izquierdo/derecho segun orientacion del atacante;
+- clamp final del rectangulo VISIBLE del PNG.
+
+SE CONSERVA
+- tamano/identidad visual grande de PASS 9.4B;
+- camara abierta CORE II PASS 9.4C: 0.88–1.00;
+- recarga: 1.05 s;
+- flash: 0.50 / 0.08 / 0.24 / 0.10;
+- combo: 0.012 / 0.065 / 0.010 / 0.004;
+- CORE III y zoom epico;
+- daño / hitstun / hit-stop / knockback;
+- pushbox 78 / 80 / 84;
+- salto / doble salto / gravedad / air dash;
+- receiver lock / KO;
+- rollback / netcode / snapshots / RPC / serializacion.
+
+PRUEBA CRITICA
+A) Suelo.
+B) Doble salto/apice.
+C) Esquina izquierda.
+D) Esquina derecha.
+E) Side-switch y repetir.
+F) CORE III para regresion.

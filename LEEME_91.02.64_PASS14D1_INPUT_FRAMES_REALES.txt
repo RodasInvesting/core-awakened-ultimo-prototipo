@@ -1,0 +1,111 @@
+CORE AWAKENED 91.02.64 — PASS 14D1 / INPUT FRAMES REALES HOST <-> CLIENTE
+=============================================================================
+
+BASE
+- PASS 14B Host/Join: CERTIFICADO.
+- PASS 14C personajes/escenario/seed/VS: CERTIFICADO.
+- Rollback 91.02.60: CONGELADO.
+
+OBJETIVO DE ESTE PASS
+Primera pelea realmente controlada desde DOS instancias.
+
+Flujo:
+HOST/CLIENTE -> Selector -> Escenario -> VS -> PantallaCarga -> Main
+-> barrera MAIN -> READY/FIGHT -> Input Frames reales.
+
+J1 CANÓNICO = HOST.
+J2 CANÓNICO = CLIENTE.
+
+CADA PC LEE SÓLO SU CONTROL LOCAL
+- teclado: flechas + X/C/Z y abajo para bloqueo/comando proyectil;
+- si existe mando, usa el primer mando de ESA máquina.
+
+TRANSPORTE
+Sólo se envía la máscara compacta de intención:
+izquierda/derecha/salto/bloqueo/puño/patada/especial.
+
+NO se envían:
+- posiciones;
+- velocidad;
+- vida;
+- CORE;
+- sprites;
+- proyectiles.
+
+INPUT DELAY DE QA
+Este primer PASS usa 4 ticks (~67 ms a 60 Hz).
+El input local se captura para un tick futuro y tiene 4 ticks para llegar al rival.
+En localhost/LAN esperamos 0 paquetes tardíos.
+
+Si un paquete llega tarde:
+- 14D1 usa temporalmente el último frame remoto;
+- lo registra como REMOTE INPUT LATE;
+- NO se certifica rollback remoto todavía.
+La corrección de inputs tardíos mediante rollback es PASS 14D2.
+
+BARRERA MAIN
+Ambas instancias pueden cargar a velocidades diferentes.
+NetworkManager espera MAIN LISTO de ambos peers y recién entonces emite COMBATE GO.
+En COMBATE GO:
+- ambos resetean RNG a la misma seed;
+- ambos arrancan tick online 0;
+- recién entonces comienza READY/FIGHT.
+
+ARCHIVOS MODIFICADOS
+- scripts/network_manager.gd
+- scripts/presentacion_vs.gd
+- scripts/main.gd
+
+NO TOCADO
+- fighter.gd
+- rollback_snapshot.gd 91.02.60
+- rollback_ring_buffer.gd
+- rollback_neutral_motion_guard.gd
+- input_recorder.gd
+- input_replay.gd
+- proyectil_energia.gd
+- PerfectBlock
+- CORE / daño / hitstun / pushbox / gameplay
+- selectores ya certificados
+
+PRUEBA PASS 14D1
+1. Cerrar las 2 instancias.
+2. Instalar ZIP ROOT.
+3. Abrir 2 instancias.
+4. A = ONLINE -> HOST.
+5. B = ONLINE -> 127.0.0.1 -> CONECTAR.
+6. Elegir personajes diferentes y escenario.
+7. Ambas pasan por VS y luego deben entrar solas a la pelea.
+8. Esperar READY/FIGHT.
+
+PRUEBA DE CONTROL
+A) En ventana HOST:
+- mover izquierda/derecha;
+- salto;
+- puño;
+- patada;
+- bloqueo.
+Sólo J1 debe responder.
+
+B) En ventana CLIENTE:
+- usar LAS MISMAS teclas principales (flechas/X/C/Z).
+Sólo J2 debe responder.
+
+C) Mirar ambas ventanas:
+- movimientos/ataques deben verse iguales en las dos.
+
+CONSOLA
+En ambos:
+[91.02.64-P14D1] MAIN LISTO ...
+[91.02.64-P14D1] COMBATE GO ...
+[91.02.64-P14D1] INPUT ONLINE ACTIVO — delay=4 ticks ...
+[91.02.64-P14D1] NET INPUT ... late=0
+
+CRITERIO
+- Si controles cruzados funcionan y late=0: PASS 14D1 certificado.
+- Si aparece REMOTE INPUT LATE, copiar esas líneas y NET INPUT.
+- Si una ventana muestra algo distinto de la otra, mandar video/capturas y log.
+
+SIGUIENTE
+PASS 14D2 = corrección real de input remoto tardío mediante rollback,
+reutilizando exactamente el ring/snapshot 91.02.60 ya certificados.

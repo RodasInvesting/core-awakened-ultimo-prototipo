@@ -1,0 +1,38 @@
+CORE AWAKENED 91.00.00-H10.50
+CORE III — DECIMOCTAVO BEAT PHYSICS / REVALIDACIÓN SEVENTEENTH BEAT END
+
+OBJETIVO
+- Revalidar la MISMA frontera que falló en H10.49:
+  CORE III SEVENTEENTH BEAT END — stage 19 -> 20.
+- H10.49 localizó en J2 el primer desync causal en subtick 1/8:
+  movimiento externo no snapshotable al entrar al beat 18 histórico.
+- H10.50 convierte ÚNICAMENTE el beat 18 a la FSM física/snapshotable ya existente.
+
+CAMBIO DETERMINISTA
+- Beats CORE III 1..18: FSM física, sin Tween/coroutine para el acercamiento por beat.
+- stage 19 = beat 17 físico.
+- stage 20 = beat 18 físico.
+- stage 21 = continuación histórica desde beat 19.
+- La coreografía del beat 18 usa coreografia[17].
+- El resto histórico comienza con _core3_racha_restante_desde(18).
+
+CONGELADO
+- CORE I completo.
+- CORE II completo.
+- CORE III ENTRY, RECARGA END, APPROACH END y beats anteriores certificados.
+- SIXTEENTH BEAT END stage 18->19 certificado por H10.48 J1/J2.
+- PerfectBlock, snapshot, historical delta y auxiliares NO se modifican.
+
+PRUEBA
+1. Reemplazar la raíz con este ZIP.
+2. NO pulsar F11; la captura es automática.
+3. Completar CORE I y CORE II normalmente.
+4. Completar CORE III con J1.
+5. Repetir y completar CORE III con J2.
+
+RESULTADO ESPERADO
+[91.00.00-H10.50] CORE III SEVENTEENTH BEAT END LOCALIZADO — stage 19->20
+[91.00.00-H10.50] TACTICAL ROLLBACK OK — CORE III SEVENTEENTH BEAT END — 8 ticks; estado presente idéntico
+
+Si H10.50 pasa J1 y J2, se certifica/congela stage 19->20.
+Después se avanza una sola frontera.

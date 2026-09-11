@@ -1,0 +1,78 @@
+CORE AWAKENED 91.02.56 — PASS 12M / CIERRE SISTEMA DE PROYECTILES
+===================================================================
+
+DECISIÓN DE DISEÑO FINAL
+VARKHOS queda EXCLUIDO del proyectil especial.
+
+El video confirma que funciona técnicamente, pero el personaje se lee mejor
+como jefe pesado de corto alcance:
+- gran tamaño;
+- golpes y patadas pesadas;
+- presión física;
+- sin proyectil.
+
+scripts/varkhos.gd se restaura al script actual que el usuario entregó ANTES
+de la integración del proyectil. Por tanto:
+- ↓ → + PUÑO ya NO lanza proyectil con Varkhos;
+- sus controles vuelven a su comportamiento original;
+- no se toca su CORE, bloqueo, carrera ni golpes.
+
+GRITO CORTO AL LANZAR
+Todos los personajes que SÍ tienen proyectil reciben una capa vocal breve al
+NACER el proyectil, además del SFX de energía ya aprobado.
+
+No se agrega audio nuevo:
+- se reutilizan los mismos bancos de GRITO DE RECARGA que ya existen;
+- sólo se reproduce la fracción inicial aprox. 0.28–0.32 s;
+- volumen bajo (~ -9 dB) para no tapar el sonido del proyectil.
+
+HELENA:
+- usa el inicio de su recarga femenina CORE II.
+
+KAI/FANG/AETHEL/MAGNUS/JESTER/XENOID/KALI/DAX/KROVAN/NEKHAR:
+- reutilizan sus mismas voces/pitch de recarga.
+
+CIBOR-X:
+- mantiene identidad robótica; usa un burst electrónico corto en vez de una
+  voz humana.
+
+IMPLEMENTACIÓN
+Fighter agrega únicamente la señal de presentación:
+  signal proyectil_disparado
+
+Se emite justo después de crear el proyectil.
+Main escucha esa señal y reproduce/corta la voz.
+No altera posición, daño, hitbox, input, recovery ni lógica CORE.
+
+ARCHIVOS MODIFICADOS
+- scripts/fighter.gd
+- scripts/main.gd
+- scripts/varkhos.gd
+
+NO SE TOCA
+- proyectil_energia.gd
+- scripts de Helena/Kai/Fang/Cibor-X/Aethel/Magnus/Kali/Dax/Jester/Xenoid/Krovan/Nekhar
+- daño/hitstun/empuje
+- velocidad 805 px/s
+- hitbox/evasión aérea
+- IA
+- CORE I/II/III
+- PerfectBlock
+- rollback/snapshots/RPC/serialización
+
+ASSETS DE VARKHOS
+Los PNG de proyectil que ya quedaron copiados en assets/varkhos_final pueden
+permanecer: al no existir referencias en varkhos.gd no se cargan ni afectan
+el juego. Se pueden limpiar más adelante en la auditoría de publicación.
+
+PRUEBA FINAL
+1. Varkhos: ↓ → + PUÑO NO debe lanzar ningún proyectil.
+2. Varkhos: puños/patadas/bloqueo/carrera/CORE siguen normales.
+3. Cualquier usuario de proyectil:
+   pose -> pequeño grito/esfuerzo + SFX de energía -> proyectil.
+4. El grito debe cortarse rápido y NO continuar durante el vuelo.
+5. Probar 2-3 personajes distintos para confirmar que no corta otros sonidos.
+
+Si pasa:
+- ROSTER LOCAL DE PROYECTILES: CERRADO/CERTIFICADO.
+- Varkhos: jefe pesado SIN proyectil, diseño final.

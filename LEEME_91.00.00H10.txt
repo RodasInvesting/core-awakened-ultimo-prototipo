@@ -1,0 +1,80 @@
+CORE AWAKENED 91.00.00-H10 — CORE III ENTRY
+
+CORE II — CERTIFICADO
+---------------------
+H9.11:
+- J1 SEQUENCE END -> OK
+- J2 SEQUENCE END -> OK
+- 0 TACTICAL ROLLBACK DESYNC
+
+CORE II queda certificado de punta a punta para el rollback local actual
+de 8 ticks.
+
+OBJETIVO H10
+------------
+Comenzar CORE III sin modificar gameplay.
+
+Ruta CORE III todavía original:
+  nivel 2 -> 3
+  -> _secuencia_absoluta()
+  -> _mostrar_recarga_energia(true) [SceneTreeTimer 1.55 s]
+  -> _entrar_furia()
+  -> _acercar_para_combo_auto() [Tween]
+  -> _racha_combo_auto() [async]
+  -> _ejecutar_finalizacion_absoluta()
+     [poster 2.80 + daño 999 + derribo absoluto]
+
+H10 prueba SOLO:
+  tercera activación
+  + primeros 8 ticks de la recarga lenta.
+
+No cruza el final de la recarga.
+
+CAMBIOS
+-------
+- fighter.gd: preservado.
+- rollback_snapshot.gd: preservado.
+- main.gd: marcador/localizador CORE III ENTRY.
+- test automático.
+- CORE I/II intactos.
+
+PRUEBA
+------
+NO usar F11.
+
+J1:
+1. Ejecutar CORE I.
+2. Cargar y ejecutar CORE II completo.
+3. Cargar por tercera vez.
+4. Activar CORE III.
+5. El test CORE III ENTRY se dispara solo.
+6. Una prueba es suficiente.
+
+J2:
+Igual, una vez.
+
+Durante CORE II seguirán apareciendo sus auto-tests certificados. Es normal.
+
+BUSCAMOS
+--------
+  CORE III EVENT MARCADO
+  CORE III ENTRY AUTO — esperando 1 physics tick de captura
+  CORE III EVENT LOCALIZADO
+  TACTICAL ROLLBACK — CORE III ENTRY
+  CORE III ENTRY RESIM
+  TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks
+
+En PRETICK:
+- nivel=3
+- sec=true
+- recarga=true
+- furia=false todavía
+- bloqueo_cinematico=true
+
+SI PASA
+-------
+El siguiente test localizará el FIN de la recarga lenta 1.55 s:
+recarga true -> false + _entrar_furia() + comienzo del acercamiento Tween.
+Ese es el primer bloqueo estructural esperado de CORE III.
+
+NO tocar CORE III todavía.

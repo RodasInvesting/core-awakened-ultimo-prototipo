@@ -1,0 +1,66 @@
+CORE AWAKENED 91.00.00-G9 — RECORDED NATIVE RECOVERY
+
+Por qué G8 queda descartado
+---------------------------
+G8 consiguió múltiples LOCAL ROLLBACK OK, pero alteró el gameplay:
+- caminata lenta;
+- dash/backdash anulados o muy debilitados.
+
+La causa fue que NeutralMotionCanon escribía position también durante la
+simulación ORIGINAL. Eso cambia Combat Feel y no es aceptable.
+
+Diseño correcto de G9
+---------------------
+G9 jamás corrige la pelea original.
+
+LIVE:
+1. captura X al inicio del physics tick;
+2. deja que Fighter/Godot hagan exactamente lo de siempre;
+3. calcula el residual nativo:
+   position_final.x - (position_inicio.x + get_last_motion().x)
+4. guarda ese residual dentro del mismo tick del ring buffer;
+5. NO modifica posición ni velocidad.
+
+ROLLBACK:
+1. restaura snapshot;
+2. reproduce input histórico;
+3. deja correr Fighter/Godot;
+4. al terminar el tick, aplica el residual NATIVO que realmente ocurrió en
+   la simulación original de ese mismo tick.
+
+Esto conserva el gameplay original y hace reproducible el comportamiento
+no determinista de CharacterBody2D.
+
+Protecciones
+------------
+El residual sólo se registra/reproduce en neutral lejano:
+- distancia >=150 px;
+- fuera de bordes;
+- sin golpes/ataques;
+- sin bloqueo;
+- sin hitstun;
+- sin CORE/cinemática;
+- sin derribo/KO;
+- sin empuje;
+- sin contacto post-golpe.
+
+Nunca se interpreta como native recovery un delta absoluto >24 px.
+
+PRUEBA OBLIGATORIA
+------------------
+1. Copiar G9 encima de G8.
+2. Iniciar una PELEA NUEVA.
+3. Antes de probar F11, confirmar:
+   - velocidad normal;
+   - dash normal;
+   - backdash normal;
+   - salto/doble salto normal.
+4. Si el gameplay está normal, hacer 15-20 F11 durante movimiento/salto/dash.
+5. Meta:
+   LOCAL ROLLBACK OK en todas.
+6. Puede aparecer:
+   NATIVE RECOVERY REPRODUCIDO J1/J2 — histórico X px
+   Eso es correcto: significa que rollback reprodujo el residual del original.
+
+NO modifica fighter.gd.
+NO modifica Combat Feel.

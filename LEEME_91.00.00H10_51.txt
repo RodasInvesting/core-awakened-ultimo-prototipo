@@ -1,0 +1,37 @@
+CORE AWAKENED 91.00.00-H10.51
+CORE III — DECIMOCTAVO BEAT END / DIAGNÓSTICO PURO
+
+OBJETIVO
+- Diagnosticar una sola frontera nueva:
+  CORE III EIGHTEENTH BEAT END — stage 20 -> 21.
+- H10.50 certificó J1/J2 la frontera anterior stage 19 -> 20.
+- H10.51 NO cambia Fighter ni gameplay; sólo localiza/restaura/compara el cruce 20 -> 21.
+
+ESTADO DETERMINISTA
+- Beats CORE III 1..18: FSM física/snapshotable, sin Tween/coroutine para el acercamiento por beat.
+- stage 20 = beat 18 físico.
+- stage 21 = continuación histórica desde beat 19.
+- La frontera actual prueba exactamente la entrega del beat 18 físico al beat 19 histórico.
+
+CONGELADO
+- CORE I completo.
+- CORE II completo.
+- CORE III ENTRY, RECARGA END, APPROACH END y beats anteriores certificados.
+- SEVENTEENTH BEAT END stage 19->20 certificado por H10.50 J1/J2.
+- Fighter, PerfectBlock, snapshot, historical delta y auxiliares NO se modifican.
+
+PRUEBA
+1. Reemplazar la raíz con este ZIP.
+2. NO pulsar F11; la captura es automática.
+3. Completar CORE I y CORE II normalmente.
+4. Completar CORE III con un personaje cuya coreografía alcance stage 20->21, primero como J1.
+5. Repetir con ese personaje como J2.
+
+RESULTADO BUSCADO
+[91.00.00-H10.51] CORE III EIGHTEENTH BEAT END LOCALIZADO — stage 20->21
+
+Si termina en:
+[91.00.00-H10.51] TACTICAL ROLLBACK OK — CORE III EIGHTEENTH BEAT END — 8 ticks; estado presente idéntico
+la frontera pasa para ese lado.
+
+Si aparece DESYNC, el runtime manda: localizar el primer tick/subtick causal y modificar sólo la siguiente frontera probada.

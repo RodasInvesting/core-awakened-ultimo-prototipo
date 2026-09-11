@@ -1,0 +1,41 @@
+CORE AWAKENED 91.00.00-H10.47
+CORE III — SIXTEENTH BEAT END DIAGNOSTIC
+
+Certificación H10.46:
+- FIFTEENTH BEAT END stage 17->18 PASS J1.
+- FIFTEENTH BEAT END stage 17->18 PASS J2.
+- Ambos: 8 ticks, estado presente idéntico.
+- Sin ROLLBACK CAUSAL DESYNC.
+- Sin TEMPORAL DESYNC.
+- Frontera stage 17->18 congelada.
+
+H10.47 es diagnóstico puro:
+- Fighter queda byte por byte idéntico a H10.46.
+- No cambia gameplay.
+- Se observa únicamente SIXTEENTH BEAT END stage 18->19.
+- stage 18 = beat 16 físico ya implementado.
+- stage 19 = continuación histórica desde beat 17.
+
+Sin cambios en:
+- Fighter.
+- PerfectBlock.
+- Snapshot.
+- GameState.
+- Input Recorder/Replay.
+- Ring Buffer.
+- Motion Guard.
+- Resultado.
+
+PRUEBA:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar naturalmente.
+5. Ejecutar CORE III completo con J2 y dejar terminar naturalmente.
+6. Enviar el runtime completo.
+
+OBJETIVO DIAGNÓSTICO:
+- Localizar stage 18->19.
+- Ejecutar rollback automático de 8 ticks.
+- Si PASS: congelar SIXTEENTH BEAT END y avanzar a la siguiente frontera.
+- Si FAIL: usar el primer subtick causal para corregir únicamente el componente probado por runtime.

@@ -1,0 +1,40 @@
+CORE AWAKENED 91.00.00-A — INPUT RECORDER
+==========================================
+
+BASE REQUERIDA
+- CORE AWAKENED 90.12.00 aprobada.
+
+OBJETIVO
+- Primera capa técnica para online/rollback.
+- Registrar exactamente los Input Frames normalizados que Main YA inyecta a J1/J2.
+- No cambia Fighter, daño, hitstun, movimiento, CORE, Combo Cancel, IA ni timing.
+
+QUÉ AGREGA
+- scripts/input_recorder.gd
+- modificación mínima de scripts/main.gd
+- En Versus Local se registra 1 paquete por physics tick:
+  [mascara_J1, mascara_J2]
+- 7 bits por jugador: izquierda, derecha, salto, bloqueo, puño, patada, CORE/especial.
+- Guarda metadata: personajes, escenario, physics Hz, rondas, ganador y motivo de fin.
+- Marca el tick exacto de inicio de cada ronda.
+
+ARCHIVO DE SALIDA
+Al terminar una partida Versus Local se crea/reemplaza:
+user://replays/last_input_recording.json
+
+En Output de Godot deben aparecer mensajes similares a:
+[91.00.00-A] Input Recorder ACTIVO — Kai vs Xenoid
+[91.00.00-A] Input Recorder GUARDADO — 12345 ticks — user://replays/last_input_recording.json
+
+PRUEBA RECOMENDADA
+1. Copiar esta actualización encima de CORE AWAKENED 90.12.00 y reemplazar.
+2. Abrir el proyecto y confirmar que no hay errores de parser.
+3. Jugar una partida completa de Versus Local.
+4. Usar movimiento, salto/doble salto, dash/backdash, bloqueo, puño, patada y CORE.
+5. Terminar la partida normalmente o con CORE III.
+6. Confirmar que el combate se sintió idéntico a 90.12.00.
+7. Confirmar en Output las líneas ACTIVO y GUARDADO.
+
+IMPORTANTE
+Esta versión TODAVÍA NO reproduce la pelea. Primero certificamos que capturar inputs no modifica el gameplay.
+91.00.00-B será el lector/reproductor de estos mismos frames.

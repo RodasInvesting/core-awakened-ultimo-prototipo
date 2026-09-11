@@ -1,0 +1,22 @@
+CORE AWAKENED 91.02.12 — HELENA RECARGA CORTE EXACTO
+
+Corrección:
+- El grito femenino de Helena ya no invade el combo.
+- CORE II: voz recortada a 1.05 s.
+- CORE III: voz recortada a 1.55 s.
+- Se eliminó el silencio inicial perceptible del clip original y se agregó un fade-out corto para evitar un corte seco.
+- Además, Main aplica un corte de seguridad al terminar exactamente la ventana de recarga.
+
+Archivos del parche root:
+- scripts/main.gd
+- assets/sonidos/helena_real/helena_recarga_core2.wav
+- assets/sonidos/helena_real/helena_recarga_core3.wav
+
+No modifica:
+- sprites
+- daño
+- física
+- IA
+- timings del combo
+- timings de CORE
+- audios de otros personajes

@@ -1,0 +1,38 @@
+CORE AWAKENED 91.00.00-H10.58
+CORE III ABSOLUTE FINISHER ENTRY — TARGET ONLY
+
+Base: H10.56. Fighter y gameplay SIN CAMBIOS.
+
+H10.56 probó que Kai consume toda su coreografía en los 18 beats físicos:
+stage 20->21 y luego stage 21->0 sin fase_ataque. Por tanto no existe un beat 19
+adicional para Kai. Stage 21 entrega directamente a _ejecutar_finalizacion_absoluta().
+
+Objetivo H10.58:
+- capturar la señal finalizacion_absoluta;
+- localizar el snapshot siguiente con ronda_activa true->false;
+- activador CORE III permanece en stage 21;
+- cruzar el reveal que lleva Engine.time_scale a 0.18;
+- restaurar un tick antes y re-simular 8 ticks.
+
+Arnés target-only:
+- CORE I/II/CORE III ENTRY y beats certificados no disparan rollback;
+- sólo CORE III ABSOLUTE FINISHER ENTRY puede dispararlo;
+- trazas stage 17->21 quedan pasivas.
+
+Prueba:
+1) Kai vs Dax — completar CORE I, II y III con Kai/J1.
+2) Dax vs Kai — completar CORE I, II y III con Kai/J2.
+3) No usar F11.
+
+Buscar:
+CORE III ABSOLUTE FINISHER ENTRY AUTO MARCADO
+CORE III ABSOLUTE FINISHER ENTRY LOCALIZADO
+TACTICAL ROLLBACK OK/DESYNC — CORE III ABSOLUTE FINISHER ENTRY
+
+
+H10.58 — CORE III ABSOLUTE FINISHER ENTRY REVALIDATION
+- Corrige SOLO el localizador histórico de la frontera finalizacion_absoluta.
+- H10.57 marcó la señal correctamente en J1/J2 pero buscaba erróneamente stage 21->21.
+- El snapshot del tick de señal contiene stage 20->21, ronda_activa true->false y time_scale 1.00->0.18.
+- Fighter/gameplay/PerfectBlock/Snapshot permanecen byte-identical.
+- Prueba: Kai como J1 y luego Kai como J2; CORE I -> CORE II -> CORE III completo; NO F11.

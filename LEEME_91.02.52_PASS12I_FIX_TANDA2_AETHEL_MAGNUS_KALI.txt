@@ -1,0 +1,70 @@
+CORE AWAKENED 91.02.52 — PASS 12I / FIX TANDA 2
+==================================================
+
+AUDITORÍA DE LOS DOS VIDEOS
+1) MAGNUS
+   - Confirmado: el proyectil azul podía atravesar al rival sin impacto.
+   - Causa: Magnus tiene altura visual 1.15x. El spawn común multiplicaba esa
+     altura por 0.54, dejando el centro del proyectil unos ~20 px más alto que
+     la línea usada por el roster normal. Con la hitbox vertical fina de 15 px
+     (necesaria para permitir evasión por salto), el solapamiento era frágil.
+   - Solución: spawn configurable por personaje.
+   - Default sigue 0.54 para TODOS.
+   - Magnus usa 0.47, alineándolo con el pecho del roster estándar.
+   - NO se agranda la hitbox, así se conserva la evasión aérea.
+
+2) AETHEL
+   - Confirmado: la pose de lanzamiento se veía claramente más chica.
+   - Su PNG contiene alas + esfera/VFX y la normalización geométrica reducía
+     demasiado el cuerpo.
+   - proyectil_pose_escala_mult: 1.02 -> 1.34.
+   - Es ajuste VISUAL únicamente.
+
+3) KALI
+   - Se percibe una reducción menor.
+   - proyectil_pose_escala_mult: 1.03 -> 1.12.
+   - Ajuste VISUAL únicamente.
+
+ARCHIVOS
+- scripts/fighter.gd
+- scripts/aethel.gd
+- scripts/magnus.gd
+- scripts/kali.gd
+
+IMPORTANTE
+El cambio de Fighter agrega sólo:
+  var proyectil_spawn_altura_mult := 0.54
+y reemplaza el 0.54 literal del spawn por esa variable.
+
+Por lo tanto Helena, Kai, Fang, Cibor-X, Aethel y Kali conservan EXACTAMENTE
+la altura anterior. Sólo Magnus pisa el valor con 0.47.
+
+NO SE TOCA
+- proyectil_energia.gd
+- tamaño/hitbox común
+- velocidad 805 px/s
+- sonido
+- daño
+- hitstun
+- empuje
+- startup/recovery/cooldown
+- IA
+- CORE
+- PerfectBlock
+- rollback/netcode
+
+PRUEBA
+MAGNUS:
+- Disparar varias veces contra personaje quieto y bloqueando.
+- Debe impactar normalmente.
+- A larga distancia el doble salto debe seguir pudiendo pasar por encima.
+
+AETHEL:
+- Comparar reposo vs pose de lanzamiento.
+- El cuerpo debe conservar aproximadamente el mismo tamaño visual.
+
+KALI:
+- Comparar reposo vs pose de lanzamiento.
+- Debe desaparecer la leve reducción de escala.
+
+Si pasa: TANDA 2 CERRADA.

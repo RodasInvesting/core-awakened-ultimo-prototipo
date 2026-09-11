@@ -1,0 +1,78 @@
+CORE AWAKENED 91.00.00-H9.8 — CORE II REMATADOR ENTRY
+
+RESULTADO H9.7
+--------------
+Log recibido:
+- 4 x RECARGA END -> OK
+- 4 x COMBO ENTRY -> OK
+- 4 x FIRST BEAT END -> OK
+- 0 x TACTICAL ROLLBACK DESYNC
+
+La ráfaga FSM de CORE II queda certificada en ambos lados para el alcance
+probado de rollback de 8 ticks.
+
+Además, el estado snapshotable avanzó correctamente dentro de stage 3:
+- core2_combo_paso_idx
+- core2_combo_total_pasos
+- core2_combo_subfase
+- acercamiento interno
+
+El congelamiento de H9.6 quedó resuelto.
+
+OBJETIVO H9.8
+-------------
+Probar el siguiente borde:
+
+  CORE2_ETAPA_COMBO_FSM = 3
+      ->
+  termina toda la coreografía
+      ->
+  CORE2_ETAPA_REMATADOR_ASYNC = 4
+      ->
+  _core2_iniciar_rematador_async()
+      ->
+  _ejecutar_rematador()
+
+H9.8 NO modifica Fighter ni snapshot.
+Es diagnóstico puro sobre H9.7.
+
+AUTO CAPTURE
+------------
+No usar F11.
+
+Cuando stage 3 pasa a stage 4:
+  CORE II REMATADOR ENTRY AUTO MARCADO
+y el tester cruza automáticamente el borde.
+
+PRUEBA
+------
+J1:
+1. CORE I.
+2. Llenar CORE II.
+3. Activar CORE II.
+4. Dejar ejecutar TODO el combo.
+5. No tocar F11.
+6. Esperar la prueba REMATADOR ENTRY.
+7. Repetir al menos 1 vez.
+
+J2:
+Igual, al menos 1 vez.
+
+BUSCAMOS
+--------
+  CORE II REMATADOR ENTRY AUTO MARCADO
+  CORE II REMATADOR ENTRY LOCALIZADO
+  TACTICAL ROLLBACK — CORE II REMATADOR ENTRY
+
+y luego:
+  TACTICAL ROLLBACK OK — CORE II REMATADOR ENTRY — 8 ticks
+o DESYNC causal.
+
+INTERPRETACIÓN
+--------------
+Si ENTRY pasa:
+la transición 3->4 puede recrear la coroutine del rematador.
+El siguiente test cruzará DENTRO del rematador, especialmente el fin del
+póster/await, que es donde esperamos encontrar el último bloqueo de CORE II.
+
+CORE III sigue intacto.

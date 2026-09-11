@@ -1,0 +1,67 @@
+CORE AWAKENED 91.00.00-H3.1 — COUNTER EVENT LOCATOR
+
+RESULTADO H3
+------------
+El log mostró:
+- múltiples BLOQUEO OK;
+- 5 PERFECT BLOCK OK;
+- 0 ROLLBACK DESYNC;
+- ningún COUNTER fue clasificado.
+También aparecía:
+  TACTICAL TEST — no hay ataque normal dentro de los últimos 8 ticks
+
+Esto NO prueba que Counter falle.
+
+CAUSA DEL TEST
+--------------
+Perfect Block abre una ventana Counter de ~0.34 s.
+El test F11 mira sólo 8 ticks = ~0.133 s.
+
+Si el usuario:
+1. logra PERFECT!;
+2. suelta bloqueo;
+3. pulsa X/C;
+4. ve COUNTER!;
+5. recién ahí pulsa F11,
+
+el golpe que originó el Perfect puede estar fuera de los últimos 8 ticks.
+
+H3.1
+----
+No cambia gameplay.
+No modifica Fighter.
+No modifica PerfectBlock90_1.
+
+Al pulsar F11:
+- primero prueba los últimos 8 ticks;
+- si no puede clasificar Counter, busca retrospectivamente 30 ticks (~0.5 s);
+- detecta la transición:
+    counter_disponible=true
+        ->
+    counter_disponible=false + inicio de ataque normal del mismo Fighter
+- construye automáticamente una ventana de 8 ticks alrededor de ese Counter;
+- restaura y re-simula ESA ventana histórica.
+
+Por eso ahora F11 puede pulsarse después de que aparezca COUNTER!.
+
+PRUEBA
+------
+1. J1 ataca a J2.
+2. J2 logra PERFECT!
+3. Soltar bloqueo.
+4. J2 pulsa X (puño) o C (patada).
+5. Verificar que aparezca COUNTER!
+6. Pulsar F11 inmediatamente después.
+
+Debe aparecer primero:
+  COUNTER EVENT LOCALIZADO — tick ...
+
+y luego:
+  TACTICAL ROLLBACK — COUNTER ...
+
+Meta:
+  TACTICAL ROLLBACK OK — COUNTER — 8 ticks; estado presente idéntico
+
+Hacer 4-6 Counters, alternando puño y patada.
+
+NO modifica Combat Feel.

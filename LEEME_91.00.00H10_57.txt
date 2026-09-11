@@ -1,0 +1,30 @@
+CORE AWAKENED 91.00.00-H10.57
+CORE III ABSOLUTE FINISHER ENTRY — TARGET ONLY
+
+Base: H10.56. Fighter y gameplay SIN CAMBIOS.
+
+H10.56 probó que Kai consume toda su coreografía en los 18 beats físicos:
+stage 20->21 y luego stage 21->0 sin fase_ataque. Por tanto no existe un beat 19
+adicional para Kai. Stage 21 entrega directamente a _ejecutar_finalizacion_absoluta().
+
+Objetivo H10.57:
+- capturar la señal finalizacion_absoluta;
+- localizar el snapshot siguiente con ronda_activa true->false;
+- activador CORE III permanece en stage 21;
+- cruzar el reveal que lleva Engine.time_scale a 0.18;
+- restaurar un tick antes y re-simular 8 ticks.
+
+Arnés target-only:
+- CORE I/II/CORE III ENTRY y beats certificados no disparan rollback;
+- sólo CORE III ABSOLUTE FINISHER ENTRY puede dispararlo;
+- trazas stage 17->21 quedan pasivas.
+
+Prueba:
+1) Kai vs Dax — completar CORE I, II y III con Kai/J1.
+2) Dax vs Kai — completar CORE I, II y III con Kai/J2.
+3) No usar F11.
+
+Buscar:
+CORE III ABSOLUTE FINISHER ENTRY AUTO MARCADO
+CORE III ABSOLUTE FINISHER ENTRY LOCALIZADO
+TACTICAL ROLLBACK OK/DESYNC — CORE III ABSOLUTE FINISHER ENTRY

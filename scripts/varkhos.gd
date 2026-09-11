@@ -1,6 +1,10 @@
 class_name Varkhos
 extends Fighter
 
+# VARKHOS — PASS 10.3V / 91.02.39 — SPRITES FINALES DE QA.
+# Integra el set visual definitivo suministrado por el usuario para reposo,
+# recarga, victoria, derrota, bloqueo, reacciones, puños y patada adicional.
+# No modifica timings, daño, física, CORE, pushbox, rollback ni netcode.
 # VARKHOS — HOTFIX 90.9.4.1.
 # Compatible con el Fighter actual: elimina la referencia a un miembro inexistente
 # que impedía compilar/instanciar la clase con Varkhos.new().
@@ -43,6 +47,8 @@ func _init() -> void:
 		load(RUTA_VARKHOS + "punetazo_2.png"),
 		load(RUTA_VARKHOS + "punetazo_3.png"),
 		load(RUTA_VARKHOS + "punetazo_4.png"),
+		# 91.02.39 — quinto arte de puño agregado sin alterar su lógica.
+		load(RUTA_VARKHOS + "punetazo_5.png"),
 	]
 
 	textura_patada = load(RUTA_VARKHOS + "patada_1.png")

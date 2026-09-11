@@ -1,0 +1,37 @@
+CORE AWAKENED 91.00.00-H10.46
+CORE III — SIXTEENTH BEAT PHYSICS / FIFTEENTH BEAT END REVALIDATION
+
+Diagnóstico H10.45 confirmado:
+- FIFTEENTH BEAT END stage 17->18 falló en J1.
+- Primer causal: subtick 1/8, sólo posición J1.
+- Movimiento externo esperado=0.0000 / actual=+0.0968.
+- Inputs, ataque, hitstop/hitstun y reloj táctico coincidieron.
+- No hubo TEMPORAL DESYNC.
+- J2 inició CORE III pero el runtime terminó antes de llegar a stage 17->18.
+
+Cambio único de gameplay en H10.46:
+- El beat 16 de CORE III pasa a FSM física/snapshotable.
+- stage 17 = beat 15 físico.
+- stage 18 = beat 16 físico.
+- stage 19 = continuación histórica desde beat 17.
+- La prueba especializada se mantiene exactamente en stage 17->18 para revalidar H10.45.
+
+Sin cambios en:
+- PerfectBlock.
+- Snapshot.
+- GameState.
+- Input Recorder/Replay.
+- Ring Buffer.
+- Motion Guard.
+- Resultado.
+
+PRUEBA:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar naturalmente.
+5. Ejecutar CORE III completo con J2 y dejar terminar naturalmente.
+6. Enviar el runtime completo.
+
+OBJETIVO J1 Y J2:
+TACTICAL ROLLBACK OK — CORE III FIFTEENTH BEAT END — 8 ticks; estado presente idéntico

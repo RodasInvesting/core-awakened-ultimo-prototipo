@@ -1,0 +1,19 @@
+CORE AWAKENED 91.00.00-H10.12 — CORE III APPROACH END DIAGNOSTIC
+
+CERTIFICADO / CONGELADO:
+- CORE I completo.
+- CORE II completo.
+- CORE III ENTRY (H10.8).
+- CORE III RECARGA END (H10.11), J1 y J2: 8 ticks idénticos.
+
+H10.12:
+- Diagnóstico puro de la siguiente frontera CORE III.
+- Detecta core3_secuencia_etapa 2 -> 3: fin del Target Lock físico e ingreso a _racha_combo_auto().
+- Rollback automático de 8 ticks, sin F11.
+- Conserva delta histórico explícito H10.11 también para esta ventana, porque un approach corto puede incluir el borde 0.32 -> 1.0 ya certificado.
+- No refactoriza aún la ráfaga Furia ni la finalización absoluta.
+
+PRUEBA:
+- Ejecutar CORE III una vez con J1 y una vez con J2.
+- No usar F11.
+- Buscar CORE III APPROACH END AUTO MARCADO / LOCALIZADO y el resultado OK o DESYNC.

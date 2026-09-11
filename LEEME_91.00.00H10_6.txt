@@ -1,0 +1,34 @@
+CORE AWAKENED 91.00.00-H10.6 — CORE III TWO-FRAME COMMIT BARRIER
+
+Objetivo
+- Corregir exclusivamente la frontera determinista CORE III ENTRY observada en H10.5.
+- CORE I y CORE II permanecen certificados y sin cambios de gameplay.
+- fighter.gd, rollback_snapshot.gd, perfect_block_90_1.gd y resto de scripts de simulación permanecen byte-identical a H10.5.
+
+Hallazgo H10.5
+- La activación CORE III ya coincidía.
+- La reactivación deferred podía dejar un tick táctico administrativo antes del subtick 0.
+- El primer tick de Fighter seguía heredando el delta lento 0.005333 en lugar de 0.016667.
+
+Cambio H10.6 (solo scripts/main.gd)
+1. FRAME A: restore histórico, Engine.time_scale=1.0 y Fighter/PB pausados.
+2. FRAME B: segundo frame completo de estabilización a time_scale=1.0, todavía sin simuladores.
+3. Deferred: se schedulan sólo los Fighters; PerfectBlock sigue pausado.
+4. COMMIT (siguiente Main): tercer restore completo antes de Fighter/PB, se reactiva PerfectBlock y comienza catch-up en ese mismo frame.
+
+Esto busca que:
+- el delta del primer subtick ya nazca a 1/60;
+- ningún callback de PerfectBlock avance antes del snapshot 0;
+- el input CORE III se consuma exactamente una vez;
+- el cambio LIVE 1.0 -> 0.32 ocurra dentro del tick de activación, no antes.
+
+Prueba
+- No usar F11.
+- Ejecutar una activación CORE III automática con J1 y otra con J2.
+- Resultado objetivo:
+  CORE III BARRIER FRAME A
+  CORE III BARRIER FRAME B
+  CORE III BARRIER DEFERRED ARM
+  CORE III BARRIER COMMIT RESTORE
+  CORE III ENTRY RESIM
+  TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks

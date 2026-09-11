@@ -1,0 +1,69 @@
+CORE AWAKENED 91.02.59 — PASS 13B / F11 PROYECTIL
+====================================================
+
+QUÉ PASÓ EN LA PRUEBA ANTERIOR
+No hubo DESYNC.
+F11 nunca llegó a ejecutar rollback: el arnés H10.88 seguía cayendo en
+_analizar_ventana_ataque_normal_h(), por eso imprimía:
+  "no hay ataque normal dentro de los últimos 8 ticks"
+
+Eso es una limitación del DIAGNÓSTICO, no del snapshot 91.02.58.
+
+QUÉ CAMBIA 91.02.59
+Sólo scripts/main.gd.
+F11 ahora localiza en el ring:
+- PROYECTIL STARTUP
+- PROYECTIL VUELO
+- PROYECTIL IMPACTO CORE
+- PROYECTIL BLOQUEO
+
+El lookback para LOCALIZAR puede mirar ~0.60 s hacia atrás, pero el rollback
+que se ejecuta sigue siendo EXACTAMENTE 8 ticks (~133 ms).
+
+NO CAMBIA
+- gameplay
+- Fighter
+- proyectil_energia.gd
+- rollback_snapshot.gd 91.02.58
+- ring buffer
+- input recorder/replay
+- PerfectBlock
+- CORE
+- IA
+- daño / velocidad / hitbox / sonido
+- Varkhos
+
+INSTALACIÓN
+Abrir ZIP -> arrastrar todo a la raíz -> aceptar reemplazar.
+
+PRUEBA 1 — VUELO
+1. Separar Kai y Helena.
+2. Lanzar proyectil.
+3. Mientras esté en vuelo, F11 una vez.
+Esperado:
+  [91.02.59-P13B] PROYECTIL VUELO LOCALIZADO ...
+  TACTICAL ROLLBACK — PROYECTIL VUELO ...
+  TACTICAL ROLLBACK OK — PROYECTIL VUELO — 8 ticks...
+
+PRUEBA 2 — IMPACTO LIMPIO + CORE
+1. CORE lejos de 100 para ver incremento.
+2. Lanzar proyectil limpio.
+3. F11 al impacto o hasta ~0.5 s después.
+Esperado:
+  PROYECTIL IMPACTO CORE LOCALIZADO
+  CORE antes -> después debe mostrar aumento
+  TACTICAL ROLLBACK OK — PROYECTIL IMPACTO CORE
+
+PRUEBA 3 — BLOQUEO
+1. Rival mantiene bloqueo.
+2. Lanzar proyectil.
+3. F11 al contacto o poco después.
+Esperado:
+  PROYECTIL BLOQUEO LOCALIZADO
+  CORE antes -> después debe quedar igual
+  TACTICAL ROLLBACK OK — PROYECTIL BLOQUEO
+
+IMPORTANTE
+Si aparece TACTICAL TEMPORAL DESYNC o TACTICAL ROLLBACK DESYNC:
+copiar desde "... LOCALIZADO" hasta las diferencias impresas.
+Ese resultado sí será evidencia causal para el siguiente fix.

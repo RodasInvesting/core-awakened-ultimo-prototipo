@@ -1,0 +1,90 @@
+CORE AWAKENED 91.00.00-H4 — TACTICAL PHYSICS CLOCK
+
+BASE CERTIFICADA
+----------------
+H3.3 quedó validado para:
+- movimiento neutral rollback 8 ticks
+- ataque normal / impacto / hitstop / hitstun
+- bloqueo normal
+- Perfect Block
+- Counter de puño y patada
+- J1 y J2
+
+CAMBIO ESTRUCTURAL H4
+---------------------
+PerfectBlock90_1 deja de usar:
+    Time.get_ticks_msec()
+
+Ahora _ahora() devuelve un reloj táctico propio:
+- avanza una vez por _physics_process
+- se guarda en cada snapshot
+- se restaura exactamente durante rollback
+- todos los deadlines tácticos usan ese mismo reloj
+
+Incluye ventanas de:
+- Perfect Block
+- Counter
+- Combo Cancel
+- Back Dash cooldown/invulnerabilidad
+- Launcher
+- Air Combo
+- Quick Recovery
+- IA táctica
+
+PRESERVACIÓN DE COMBAT FEEL
+---------------------------
+No se cambia ninguna constante de duración.
+No se cambia daño, startup, recovery, hitstun, empuje ni input.
+El avance compensa Engine.time_scale para aproximar la semántica temporal
+que tenía el antiguo reloj real, pero ahora a través de physics steps.
+
+SNAPSHOT H4
+-----------
+Antes H2/H3 tenían que desplazar deadlines según cuánto tiempo real había
+pasado entre captura y restore.
+
+H4 elimina esa compensación.
+Se restauran EXACTAMENTE:
+- reloj táctico
+- deadlines
+- estado táctico completo
+
+El checksum ahora compara también reloj y deadlines.
+
+PRUEBA 1 — COMBAT FEEL
+----------------------
+Jugar 20-30 segundos SIN F11.
+Confirmar:
+- Perfect Block con mismo timing percibido
+- Counter responde igual
+- Combo Cancel se siente igual
+- velocidad general normal
+
+PRUEBA 2 — COUNTER J2
+---------------------
+Hacer 2 Counters: 1 puño + 1 patada.
+F11 después de COUNTER!.
+Meta:
+  TACTICAL ROLLBACK OK — COUNTER
+
+PRUEBA 3 — COUNTER J1
+---------------------
+Invertir roles.
+1 puño + 1 patada.
+Meta:
+  TACTICAL ROLLBACK OK — COUNTER
+
+PRETICK H4
+----------
+Debe aparecer además:
+  TACTICAL CLOCK esperado tick=N t=X | actual tick=N t=X
+
+Si reloj esperado/actual difieren, mandar el bloque completo.
+
+IMPORTANTE
+----------
+H4 SÍ modifica:
+  scripts/perfect_block_90_1.gd
+  scripts/rollback_snapshot.gd
+
+fighter.gd NO se modifica.

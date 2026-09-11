@@ -1,0 +1,72 @@
+CORE AWAKENED 91.02.61 — PASS 14B / ONLINE TRANSPORT HOST-JOIN
+================================================================
+
+AUDITORÍA PASS 14A
+Los archivos actuales confirman:
+- menú sin ONLINE;
+- GameState sin modo online real;
+- project.godot sin autoload de red;
+- scenes/ sin lobby/host/join;
+- rollback actual = simulación local determinista, no transporte entre PCs.
+
+PASS 14B AGREGA SÓLO LA CAPA DE CONEXIÓN
+- scripts/network_manager.gd
+- scripts/online_lobby.gd
+- scenes/OnlineLobby.tscn
+- botón ONLINE en menu_principal.gd
+- GameState.es_online()
+- NetworkManager como autoload
+
+TECNOLOGÍA
+Godot ENetMultiplayerPeer.
+Puerto predeterminado: UDP 7777.
+Máximo: 1 cliente + host = 2 jugadores.
+
+IMPORTANTE
+Este PASS NO inicia todavía una pelea online.
+Su único objetivo es certificar que dos instancias/PCs pueden establecer
+el transporte real antes de conectar selección + Input Frames + rollback.
+
+PRUEBA MÁS SEGURA — MISMA PC
+1. Abrir dos instancias del juego.
+2. En instancia A: ONLINE -> HOST.
+3. En instancia B: ONLINE -> dejar IP 127.0.0.1 -> CONECTAR.
+4. Ambas deben mostrar:
+   TRANSPORTE OK — 2 PEERS CONECTADOS
+5. Consola host debe mostrar:
+   [91.02.61-P14B] ONLINE — RIVAL CONECTADO — PEER ...
+6. Consola cliente:
+   [91.02.61-P14B] ONLINE — CONECTADO AL HOST
+7. VOLVER debe cerrar la conexión sin crash.
+
+PRUEBA LAN — DOS PCs
+- Host pulsa HOST.
+- El lobby muestra IP LAN del host.
+- Cliente escribe esa IP y puerto 7777.
+- Ambos deben quedar conectados.
+
+INTERNET PÚBLICO
+ENet directo usa UDP. Entre redes distintas puede requerir abrir/reenviar
+el puerto 7777 UDP en el router del host. Relay/NAT traversal/Steam Networking
+NO se agrega en este PASS.
+
+NO TOCADO
+- main.gd
+- fighter.gd
+- proyectil_energia.gd
+- rollback_snapshot 91.02.60
+- rollback_ring_buffer
+- input recorder/replay
+- PerfectBlock
+- gameplay
+- IA
+- CORE
+- balance
+- roster
+
+SI PASS 14B PASA
+Siguiente:
+PASS 14C — sincronizar selección de J1/J2 + escenario + seed y entrar juntos
+a PresentacionVS/Main.
+Después:
+PASS 14D — intercambio real de Input Frames + rollback remoto.

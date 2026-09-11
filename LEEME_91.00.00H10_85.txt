@@ -1,0 +1,29 @@
+CORE AWAKENED — 91.00.00-H10.85
+NORMAL BLOCK RECOVERY / RETURN NEUTRAL — SEMANTIC AUTO REVALIDATION
+
+OBJETIVO
+Certificar la frontera real posterior a una PATADA bloqueada normal:
+  bloqueando true -> false
+con hitstun_timer <= 0, input de bloqueo ya suelto y retorno a neutral.
+
+POR QUÉ H10.85
+- H10.84 sólo llegó a PREPARADO: el detector exigía soltar bloqueo dentro de una ventana temporal demasiado estrecha.
+- H10.85 no cambia gameplay. Corrige únicamente el arnés para observar _detener_bloqueo() directamente.
+- H10.83 ya certificó el impacto de patada bloqueada J1/J2.
+- Fighter, PerfectBlock y RollbackSnapshot permanecen congelados.
+- NO usar F11.
+
+PRUEBA J1
+1. Kai vs Dax (Kai = J1).
+2. Mantené BLOQUEO antes de recibir una PATADA normal de Dax.
+3. Cuando conecte la patada, soltá BLOQUEO y quedate completamente neutral. No hace falta acertar un instante exacto.
+4. El arnés imprime NORMAL BLOCK RECOVERY PREPARADO y luego observa automáticamente bloqueando true->false.
+
+PRUEBA J2
+1. Dax vs Kai (Kai = J2).
+2. Mantené BLOQUEO antes de recibir una PATADA normal de Dax.
+3. Después del impacto soltá BLOQUEO y quedate neutral.
+4. NO usar F11.
+
+RESULTADO ESPERADO EN AMBOS
+TACTICAL ROLLBACK OK — NORMAL BLOCK RECOVERY — 8 ticks; estado presente idéntico

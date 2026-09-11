@@ -1,0 +1,39 @@
+CORE AWAKENED 91.00.00-F — SNAPSHOT + RESTORE
+
+Estado previo
+-------------
+91.00.00-E logró un replay completo 3757/3757 ticks con resultado idéntico.
+
+Objetivo F
+----------
+Demostrar que el estado lógico de una pelea puede fotografiarse en memoria y
+restaurarse exactamente sin reiniciar la escena.
+
+IMPORTANTE
+----------
+- No modifica fighter.gd.
+- No cambia daño, hitstun, CORE, Combo Cancel, dash, guardia ni Combat Feel.
+- Snapshot sólo se habilita en Versus Local y fuera de Replay.
+- Para evitar coroutines/cinemáticas en esta primera prueba, se captura/restaura
+  únicamente cuando ambos luchadores están en un instante neutral.
+
+PRUEBA
+------
+1. Abrir Versus Local y comenzar una pelea.
+2. Cuando ambos estén de pie y sin atacar, presionar F9.
+   Output esperado:
+   [91.00.00-F] SNAPSHOT GUARDADO ...
+3. Mover a ambos, saltar o cambiar de posición.
+4. Soltar controles y esperar que ambos vuelvan a estado neutral.
+5. Presionar F10.
+6. Ambos deben volver a las posiciones/vida/CORE/estado guardados.
+7. Output buscado:
+   [91.00.00-F] SNAPSHOT RESTORE OK — estado lógico restaurado exactamente
+
+Si F9/F10 se presionan durante golpe, hitstun, CORE o K.O., el sistema no altera
+la pelea y pide esperar un estado neutral.
+
+Próximo paso
+------------
+91.00.00-G: ring buffer de snapshots + rollback local simulado, rebobinando
+varios ticks y reinyectando los inputs almacenados.

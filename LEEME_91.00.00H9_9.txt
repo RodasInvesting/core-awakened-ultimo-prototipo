@@ -1,0 +1,109 @@
+CORE AWAKENED 91.00.00-H9.9 — CORE II REMATADOR POSTER END
+
+RESULTADO H9.8
+--------------
+REMATADOR ENTRY:
+- J1 OK
+- J2 OK
+- 0 DESYNC
+
+La transición stage 3 -> stage 4 es determinista.
+El rollback que cruza esa transición vuelve a crear correctamente la
+coroutine del rematador.
+
+OBJETIVO H9.9
+-------------
+Probar DENTRO de stage 4, exactamente al terminar la gigantografía:
+
+  stage 4
+  _ejecutar_rematador()
+      ->
+  await _mostrar_poder_reemplazando(...)
+      ->
+  POSTER END
+      ->
+  descongelar rival
+      ->
+  aplicar daño
+      ->
+  derribo especial
+      ->
+  await 0.10
+      ->
+  rematador_conectado
+      ->
+  cierre CORE II
+
+H9.9 agrega un signal diagnóstico inmediatamente DESPUÉS del await del póster.
+
+PRUEBA ESTRUCTURAL
+------------------
+Cuando el signal LIVE ocurre:
+- Main guarda el tick.
+- Se captura el snapshot post-póster.
+- El tester restaura justo antes de ese borde.
+- Se incrementa rollback_core2_rematador_epoch.
+- La continuation async LIVE queda anulada.
+
+Esto obliga al snapshot restaurado dentro de stage 4 a continuar SIN
+instruction pointer de coroutine.
+
+RESULTADO ESPERADO
+------------------
+Probablemente DESYNC.
+
+Esperamos que LIVE tenga:
+- daño/vida modificada
+- hitstun
+- derribo especial
+- velocidad/knockback
+
+y el catch-up restaurado NO pueda recrear esas mutaciones porque stage 4
+todavía no es una FSM explícita.
+
+IMPORTANTE
+----------
+Esta build es DIAGNÓSTICA y puede dejar CORE II detenido después del test,
+igual que H9.6 hizo deliberadamente con el combo.
+
+NO usar H9.9 como build jugable.
+Después de obtener el log, reiniciar la pelea.
+
+PRUEBA
+------
+NO usar F11.
+
+J1:
+1. CORE I.
+2. Cargar CORE II.
+3. Activar CORE II.
+4. Dejar correr combo + rematador.
+5. El test POSTER END se dispara solo.
+6. Una prueba es suficiente.
+
+Reiniciar pelea.
+
+J2:
+Mismo procedimiento.
+Una prueba es suficiente.
+
+BUSCAMOS
+--------
+CORE II REMATADOR ENTRY -> OK
+
+Luego:
+  CORE II REMATADOR POSTER END MARCADO
+  CORE II REMATADOR POSTER END AUTO
+  CORE II REMATADOR POSTER END LOCALIZADO
+  CORE II REMATADOR EPOCH INVALIDADO
+  TACTICAL ROLLBACK — CORE II REMATADOR POSTER END
+
+y después:
+- DESYNC causal esperado, o
+- OK inesperado.
+
+Si aparece DESYNC:
+H9.10 convertirá el rematador completo a FSM/timers físicos snapshotables,
+incluyendo póster lógico, daño/derribo y devolución de control.
+
+CORE III sigue intacto.

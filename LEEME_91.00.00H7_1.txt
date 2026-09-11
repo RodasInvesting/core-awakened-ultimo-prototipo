@@ -1,0 +1,72 @@
+CORE AWAKENED 91.00.00-H7.1 — ACTIVE RNG AUDIT
+
+RESULTADO H7
+------------
+H7 encontró:
+  total=648
+  global=644
+  dedicado=0
+  seed/state=4
+
+Pero los primeros 120 sites provenían de:
+  res://backup_pre_xenoid_20260821_011912/...
+
+Es decir: el scanner funcionó, pero el inventario quedó contaminado por
+copias históricas dentro de res://.
+
+H7.1 CORRIGE EL AUDITOR, NO EL GAMEPLAY
+---------------------------------------
+Ahora se ignoran directorios cuyo nombre sea/presente patrones:
+- backup / backups / backup_*
+- bak / bak_*
+- old / old_*
+- archive / archive_*
+- legacy
+- copia / copia_*
+- respaldo / respaldo_*
+- .godot
+- addons
+
+También:
+- las llamadas de RandomNumberGenerator dedicado se clasifican ANTES que
+  randf/randi global, evitando falsos "GLOBAL";
+- se imprime un resumen por archivo;
+- el límite del informe limpio sube a 240 sites.
+
+NO CAMBIA
+---------
+- fighter.gd NO se incluye.
+- no cambia seed.
+- no consume RNG.
+- no cambia daño.
+- no cambia movimiento.
+- no cambia Combat Feel.
+- no cambia rollback.
+- no cambia CORE.
+- no elimina backups.
+
+PRUEBA
+------
+1. Reemplazar H7.1.
+2. Ejecutar una sola pelea Versus Local.
+3. No hace falta F11.
+4. Copiar TODO desde:
+     [91.00.00-H7.1] RNG AUDIT ACTIVO — inicio
+   hasta:
+     [91.00.00-H7.1] RNG AUDIT ACTIVO — FIN
+
+Queremos ver solamente scripts activos, por ejemplo:
+  res://scripts/main.gd
+  res://scripts/fighter.gd
+  scripts específicos de personajes/autoloads
+
+SIGUIENTE
+---------
+Con el inventario limpio:
+H7.2 separará cada site en:
+A) PRESENTACIÓN — audio, partículas, pitch, decorado, cámara, polvo.
+B) GAMEPLAY — decisiones, índices, posiciones/velocidades lógicas, daño,
+   IA o cualquier rama que pueda afectar checksum.
+
+Recién después convertimos el RNG GAMEPLAY a un RandomNumberGenerator
+dedicado con state snapshotable.

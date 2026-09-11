@@ -1,0 +1,37 @@
+CORE AWAKENED 91.02.20 — PASS 8
+CONTINUIDAD VISUAL DEL REMATE CORE II + APOYO DEL DERRIBO
+
+BASE:
+- 91.02.19 PASS 7 RECUPERACION RECEPTOR NORMAL.
+
+ARCHIVO FUNCIONAL MODIFICADO:
+- scripts/fighter.gd
+
+CAMBIOS:
+1) CORE II — continuidad entre ultimo impacto y derribo.
+   - El rival ya no debe volver visualmente a parado/reposo durante el hueco final del poster.
+   - Conserva su ultima pose de golpe recibido mientras sigue congelado por la FSM del rematador.
+   - NO se prolonga hitstun.
+   - NO se mueve el tick logico del impacto.
+   - NO se cambia el timer CORE2_REM_POSTER_DURACION_LOGICA.
+
+2) Derribo CORE — apoyo visual en suelo.
+   - Al entrar en la textura horizontal de derribado se suma un apoyo Y puramente visual.
+   - No mueve CharacterBody2D.
+   - No cambia gravedad, velocidad, colisiones, hitboxes, damage ni tiempo tendido.
+   - La pose de reposo recalcula automaticamente el ancla normal al levantarse.
+
+PRUEBA PRIORITARIA:
+A) Ejecutar CORE II completo.
+   Esperado: ultimo golpe -> pose recibida continua -> vuelo/caida, sin frame de parado entre medio.
+B) Mirar el cuerpo ya tendido.
+   Esperado: torso visualmente apoyado en el piso, sin sensacion de flotar.
+C) Esperar levantada.
+   Esperado: recupera escala/ancla normales sin desplazamiento residual.
+D) Repetir una vez desde cada lado de la arena y, si es posible, con dos personajes de silueta distinta.
+
+ROLLBACK:
+- Este PASS evita tocar los timings logicos del CORE II.
+- La correccion de continuidad es de seleccion de textura/presentacion.
+- El apoyo del cuerpo es offset local del Sprite2D.
+- Aun asi, antes de darlo por cerrado conviene una regresion corta de CORE II J1/J2 porque fighter.gd fue modificado.

@@ -1,0 +1,28 @@
+CORE AWAKENED 91.00.00-H10.22 — CORE III FIFTH BEAT PHYSICS
+
+OBJETIVO
+- Corregir exclusivamente la frontera CORE III FOURTH BEAT END (stage 6->7).
+- H10.21 probó que el DESYNC nace al entregar al quinto beat histórico/Tween.
+- H10.22 convierte únicamente coreografia[4] (quinto beat) a FSM física snapshotable.
+
+ARQUITECTURA CORE III
+1 recarga
+2 approach
+3 primer beat físico
+4 segundo beat físico
+5 tercer beat físico
+6 cuarto beat físico
+7 quinto beat físico
+8 continuación async histórica desde el sexto beat
+
+PRUEBA
+1. Reemplazar scripts con este ZIP completo.
+2. Versus Local.
+3. NO presionar F11.
+4. Ejecutar CORE III completo con J1 y después con J2.
+5. Enviar el log completo.
+
+RESULTADO BUSCADO EN AMBOS LADOS
+TACTICAL ROLLBACK OK — CORE III FOURTH BEAT END — 8 ticks; estado presente idéntico
+
+Si pasa, FOURTH BEAT END queda certificado y el siguiente build será diagnóstico puro de FIFTH BEAT END (stage 7->8).

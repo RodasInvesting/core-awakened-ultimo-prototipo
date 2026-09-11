@@ -1,0 +1,53 @@
+CORE AWAKENED 91.02.57 — PASS 12N
+DAX NUEVO SPRITE + CORE POR IMPACTO DE PROYECTIL
+=================================================
+
+1) DAX
+- Se reemplaza assets/dax/poder_proyectil.png por el nuevo diseño enviado.
+- El nuevo PNG tiene mejor proporción cuerpo/VFX.
+- proyectil_pose_escala_mult: 1.27 -> 1.10.
+- No cambia su proyectil rojo, velocidad, hitbox ni sonido.
+
+2) CORE POR PROYECTIL
+- Impacto LIMPIO: suma CORE al atacante.
+- Impacto BLOQUEADO: NO suma CORE.
+- Cada proyectil cuenta una sola vez.
+- Usa la misma carga base que un PUÑO NORMAL confirmado.
+- Conserva la curva existente por CORE I / II / III.
+- Conserva el rendimiento decreciente de combo x2/x3+.
+- No recarga CORE durante una secuencia CORE activa.
+
+IMPLEMENTACIÓN
+- Fighter agrega _registrar_proyectil_conectado().
+- proyectil_energia.gd lo llama sólo si el rival NO estaba bloqueando.
+
+NO TOCADO
+- daño del proyectil
+- velocidad 805 px/s
+- empuje
+- hitstun
+- startup/recovery/cooldown
+- evasión por salto/doble salto
+- sonido/grito de salida
+- IA
+- CORE I/II/III en sí
+- PerfectBlock
+- Varkhos sigue SIN proyectil
+- rollback/snapshots/RPC/serialización
+
+PRUEBA FINAL
+A) DAX
+1. Reposo -> ↓ → + PUÑO.
+2. La silueta/cuerpo debe mantener prácticamente el mismo tamaño.
+3. Revisar pies/suelo y regreso a reposo.
+
+B) CORE
+1. Anotar visualmente el nivel de CORE.
+2. Impactar un proyectil limpio: debe subir.
+3. Lanzar otro contra bloqueo: NO debe subir.
+4. Probar 2 personajes distintos.
+5. Confirmar que un solo proyectil no suma dos veces.
+
+Si pasa:
+- Dax cerrado.
+- Sistema local de proyectiles completo cerrado.

@@ -1,0 +1,55 @@
+CORE AWAKENED 91.02.29 — PASS 9.3E MOVILIDAD AEREA / ATERRIZAJE
+================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar.
+
+OBJETIVO
+Mejorar la transición:
+suelo -> salto -> ataque/dash aéreo -> descenso -> aterrizaje -> acción
+sin modificar el arco de salto.
+
+CAMBIOS
+1. Si un ataque normal aterriza YA en RECOVERY:
+   - el recovery restante se limita a 0.033 s máximo;
+   - aprox. 2 frames a 60 Hz;
+   - STARTUP y ACTIVO jamás se cancelan.
+
+2. Si al aterrizar queda retenida una pose de movilidad aérea:
+   - salto / doble salto / descenso / air dash;
+   - se libera en el mismo aterrizaje;
+   - pasa inmediatamente a caminata o parado según el estado real.
+
+SIN CAMBIOS
+- fuerza/altura del primer salto;
+- MULT_DOBLE_SALTO_ALTURA = 1.25;
+- gravedad normal, vértice y caída final;
+- velocidad/duración del air dash;
+- velocidad máxima terrestre;
+- hitbox, daño, hitstun, hit-stop y knockback;
+- PASS 9.3A recovery terrestre;
+- PASS 9.3B aceleración/freno;
+- PASS 9.3C continuidad visual CORE;
+- PASS 9.3D hit-stop;
+- pushbox 78/80/84;
+- CORE I/II/III, remates, Absoluto y KO;
+- rollback / netcode / snapshots / RPC / serialización.
+
+PRUEBA RECOMENDADA
+A) Salto normal -> caer -> caminar de inmediato.
+B) Salto -> puño aéreo -> aterrizar -> puño terrestre.
+C) Salto -> patada aérea -> aterrizar -> caminar/retroceder.
+D) Doble salto -> aterrizar -> ataque.
+E) Air dash -> aterrizar -> caminar.
+F) Air dash -> aterrizar -> ataque.
+G) Pelea libre 45-60 s.
+H) CORE II al final para confirmar que PASS 9.3C sigue intacto.
+
+CRITERIO DE APROBACION
+- No debe verse una pose aérea pegada al piso.
+- El luchador debe recuperar control rápidamente al aterrizar.
+- Los ataques aéreos deben conservar compromiso durante STARTUP/ACTIVO.
+- No debe aumentar altura, flotación ni velocidad máxima.

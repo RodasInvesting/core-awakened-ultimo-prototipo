@@ -1,6 +1,6 @@
 extends Node
 
-const ROSTER: Array[String] = ["Kai", "Cibor-X", "Fang", "Kali", "Aethel", "Magnus", "Helena", "Jester", "Xenoid", "Dax"]
+const ROSTER: Array[String] = ["Kai", "Cibor-X", "Fang", "Kali", "Aethel", "Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar"]
 
 # Jefe final de Arcade. A propósito NO está en ROSTER: no es seleccionable
 # ni entra al sorteo de Batalla Rápida. Se agrega únicamente al final del
@@ -11,7 +11,7 @@ const JEFE_FINAL := "Varkhos"
 # de Varkhos. Los IDs coinciden con las claves que usa main.gd.
 const ESCENARIOS_VERSUS: Array[String] = [
 	"Kai", "Cibor-X", "Fang", "Kali", "Aethel",
-	"Magnus", "Helena", "Jester", "Xenoid", "Dax", "Varkhos"
+	"Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar", "Varkhos"
 ]
 
 var flujo_menu_activo: bool = true
@@ -23,12 +23,41 @@ var personaje_jugador: String = "Kai"
 var personaje_jugador2: String = "Cibor-X"
 var rival_actual: String = "Cibor-X"
 var escenario_actual: String = "Cibor-X"
+# 91.02.62 — PASS 14C: configuración canónica compartida HOST/CLIENTE.
+var online_seed: int = 0
+
+# 91.02.40 — PASS 11B / dificultad IA centralizada.
+# 0 = Fácil, 1 = Medio, 2 = Difícil. Por ahora el selector visual se integra
+# en el PASS siguiente; este valor ya gobierna toda CPU de Batalla Rápida/Arcade.
+const IA_FACIL := 0
+const IA_MEDIA := 1
+const IA_DIFICIL := 2
+# 91.02.41 — QA temporal: arrancar en DIFÍCIL para certificar este perfil.
+# El selector final restaurará la elección explícita Fácil/Medio/Difícil.
+var dificultad_ia: int = IA_DIFICIL
+
+func configurar_dificultad_ia(nivel: int) -> void:
+	dificultad_ia = clampi(nivel, IA_FACIL, IA_DIFICIL)
+
+func nombre_dificultad_ia() -> String:
+	match dificultad_ia:
+		IA_DIFICIL: return "DIFÍCIL"
+		IA_MEDIA: return "MEDIO"
+		_: return "FÁCIL"
 
 var arcade_oponentes: Array[String] = []
 var arcade_indice: int = 0
 var arcade_victorias: int = 0
 var ultimo_rival: String = ""
 var ultimo_resultado: String = ""
+# 90.12.00 — ganador explícito para que Versus Local sea neutral: J1 y J2
+# pueden cerrar la pelea como vencedores sin convertir la victoria de J2 en
+# una pantalla genérica de derrota desde la perspectiva de J1.
+var ultimo_ganador: String = ""
+# 91.00.00-B — solicitud efímera para reproducir el último Input Recording.
+# La bandera sobrevive a PresentacionVS y Main la consume al iniciar la pelea.
+var replay_solicitado: bool = false
+var replay_ultimo_mensaje: String = ""
 
 # PantallaCarga.tscn lee esto para saber a qué escena pesada cargar
 # en segundo plano antes de mostrarla.
@@ -66,6 +95,7 @@ func iniciar_arcade(personaje: String) -> void:
 	arcade_victorias = 0
 	ultimo_rival = ""
 	ultimo_resultado = ""
+	ultimo_ganador = ""
 	_preparar_rival_arcade()
 
 func iniciar_batalla_rapida(personaje: String) -> void:
@@ -83,6 +113,7 @@ func iniciar_batalla_rapida(personaje: String) -> void:
 	arcade_victorias = 0
 	ultimo_rival = ""
 	ultimo_resultado = ""
+	ultimo_ganador = ""
 
 func iniciar_versus_local(jugador1: String, jugador2: String) -> void:
 	# 90.10.78 — J1 y J2 son dos humanos. Se permite mirror match: el sistema
@@ -99,9 +130,31 @@ func iniciar_versus_local(jugador1: String, jugador2: String) -> void:
 	arcade_victorias = 0
 	ultimo_rival = ""
 	ultimo_resultado = ""
+	ultimo_ganador = ""
 
 func es_versus_local() -> bool:
 	return modo == "versus_local"
+
+# 91.02.61 — PASS 14B / modo de transporte real.
+# La autoridad/peer viven en NetworkManager; GameState sólo expone el flujo.
+func es_online() -> bool:
+	return modo == "online"
+
+# J1 siempre es HOST; J2 siempre es CLIENTE. Ambos peers guardan la misma
+# orientación canónica para que PresentacionVS y el futuro rollback coincidan.
+func preparar_online_personajes(jugador_host: String, jugador_cliente: String) -> void:
+	modo = "online"
+	personaje_jugador = jugador_host
+	personaje_jugador2 = jugador_cliente
+	rival_actual = jugador_cliente
+	ultimo_rival = ""
+	ultimo_resultado = ""
+	ultimo_ganador = ""
+
+func iniciar_online_sincronizado(jugador_host: String, jugador_cliente: String, escenario: String, semilla: int) -> void:
+	preparar_online_personajes(jugador_host, jugador_cliente)
+	seleccionar_escenario(escenario)
+	online_seed = semilla if semilla != 0 else 9102062
 
 func seleccionar_escenario(escenario: String) -> void:
 	if escenario in ESCENARIOS_VERSUS:
@@ -118,6 +171,15 @@ func _preparar_rival_arcade() -> void:
 
 func registrar_resultado(jugador_gano: bool) -> String:
 	ultimo_rival = rival_actual
+
+	# 90.12.00 — Versus Local no tiene un "jugador principal" a efectos de
+	# resultado. Guardamos el ganador real y mostramos una pantalla neutral.
+	if modo == "versus_local":
+		ultimo_ganador = personaje_jugador if jugador_gano else personaje_jugador2
+		ultimo_resultado = "versus_local"
+		return ultimo_resultado
+
+	ultimo_ganador = personaje_jugador if jugador_gano else rival_actual
 	if modo == "arcade":
 		if not jugador_gano:
 			ultimo_resultado = "derrota"
@@ -147,6 +209,14 @@ func reiniciar_combate_actual() -> void:
 	if modo == "arcade":
 		escenario_actual = rival_actual
 	ultimo_resultado = ""
+	ultimo_ganador = ""
+
+func solicitar_replay_ultima_partida() -> void:
+	replay_solicitado = true
+	replay_ultimo_mensaje = ""
+
+func cancelar_replay() -> void:
+	replay_solicitado = false
 
 func reproducir_sfx_global(ruta: String, volumen_db: float = -3.0) -> void:
 	var player := AudioStreamPlayer.new()
@@ -157,7 +227,10 @@ func reproducir_sfx_global(ruta: String, volumen_db: float = -3.0) -> void:
 	player.play()
 
 func volver_al_menu() -> void:
+	replay_solicitado = false
 	modo = "rapida"
+	online_seed = 0
 	personaje_jugador2 = "Cibor-X"
 	ultimo_resultado = ""
 	ultimo_rival = ""
+	ultimo_ganador = ""

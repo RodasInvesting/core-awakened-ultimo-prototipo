@@ -1,0 +1,48 @@
+CORE AWAKENED 91.02.40 — PASS 11B / IA FINAL BACKEND
+=======================================================
+
+OBJETIVO
+- Eliminar la zona muerta donde la CPU se quedaba quieta a distancia.
+- Activar realmente los perfiles Fácil / Medio / Difícil ya existentes.
+- Hacer que Medio y Difícil sean más activos y agresivos.
+- Hacer que Difícil persiga, salte, use dash/backdash y presione más.
+- Robustecer COMBO x2/x3 contra CPU sin modificar timings, daño ni hitstun del Fighter.
+
+CAMBIOS
+1) game_state.gd
+   - dificultad_ia centralizada: 0 Fácil / 1 Medio / 2 Difícil.
+   - valor por defecto temporal: MEDIO.
+2) main.gd
+   - deja de forzar configurar_control_ia(0).
+   - ahora toma dificultad_ia desde GameState.
+3) fighter.gd
+   - persecución a distancia SIEMPRE; se elimina la zona muerta.
+   - perfiles Medio/Difícil con más frecuencia de decisión y movilidad.
+   - Difícil reduce casi por completo las pausas de 'mantener distancia'.
+   - usa las mismas velocidades/daños/alcances legales del Fighter.
+4) perfect_block_90_1.gd
+   - bloqueo/backdash/castigo/recovery táctico varían por dificultad.
+   - durante COMBO x2/x3 contra CPU se apaga el Tech/recovery táctico pendiente.
+   - el lock de recepción se extiende sólo 0.06 s respecto al anterior.
+   - NO se toca el sistema rollback/snapshot/reloj táctico.
+
+NO SE TOCA
+- CORE I / II / III
+- daño
+- knockback base
+- hitstun base
+- pushbox
+- timings de golpes
+- sprites
+- rollback / snapshots / RPC / serialización
+- Versus Local
+
+PRUEBA
+A) alejarse mucho de CPU: debe perseguir.
+B) dejarla acercarse: debe entrar sin quedarse parada.
+C) hacer COMBO x2 y x3: debe sentirse como Versus Local.
+D) observar salto/dash/backdash durante varias peleas.
+
+NOTA
+El selector visual Fácil/Medio/Difícil se integra después de certificar este comportamiento.
+Por ahora el backend queda en MEDIO por defecto.

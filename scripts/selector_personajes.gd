@@ -1,12 +1,12 @@
 extends Control
 
-# CORE AWAKENED 90.9.4 — selector temporal de prueba.
-# La ilustración ahora muestra 11 paneles visibles: 10 luchadores jugables
-# más Varkhos como jefe final. Dax ocupa la nueva tarjeta jugable y
-# Varkhos vuelve a quedar sólo como presencia visual/boss.
+# CORE AWAKENED 91.02.38 — PASS 10.3 QA / VARKHOS DESBLOQUEADO TEMPORALMENTE.
+# Basado en el selector definitivo de 13 personajes.
+# Único cambio funcional de este PASS: permitir seleccionar Varkhos para QA final.
+# No altera roster, zonas, VS local, Arcade, escenarios ni gameplay.
 const ROSTER: Array[String] = [
 	"Kai", "Cibor-X", "Fang", "Kali", "Aethel",
-	"Magnus", "Helena", "Jester", "Xenoid", "Dax", "Varkhos"
+	"Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar", "Varkhos"
 ]
 
 const COLORES := [
@@ -20,14 +20,15 @@ const COLORES := [
 	Color(0.85, 0.25, 0.85),
 	Color(0.42, 1.0, 0.08),
 	Color(0.96, 0.18, 0.08),
-	Color(0.95, 0.10, 0.16)
+	Color(1.0, 0.62, 0.12),
+	Color(1.0, 0.78, 0.15),
+	Color(0.95, 0.10, 0.16),
 ]
 
-# 90.11.27 — bordes recalibrados sobre el roster HD final (1280x720).
-# El marco ahora cubre la tarjeta completa, incluido el nombre inferior, y sigue
-# exactamente las divisiones metálicas de los 11 paneles. Varkhos queda bloqueado.
-const X_BORDES := [12.0, 131.0, 252.0, 361.0, 473.0, 584.0, 706.0, 818.0, 938.0, 1042.0, 1152.0, 1272.0]
-const TARJETA_Y := 65.0
+# Bordes medidos sobre el roster definitivo 1672x941 y convertidos a 1280x720.
+# 14 límites = 13 paneles: Kai ... Krovan, Nekhar, Varkhos.
+const X_BORDES := [9.95, 120.96, 229.67, 322.30, 410.34, 499.90, 589.47, 680.57, 769.38, 855.89, 946.22, 1037.32, 1154.45, 1268.52]
+const TARJETA_Y := 64.0
 const TARJETA_H := 574.0
 
 var indice := 0
@@ -36,8 +37,6 @@ var badge_j1: Label
 var badge_j2: Label
 var musica: AudioStreamPlayer
 var confirmando := false
-
-# 90.10.78 — el mismo selector sirve para J1 y J2.
 var fase_versus: int = 1
 var indice_j1: int = -1
 var estado_versus_label: Label
@@ -48,6 +47,10 @@ func _ready() -> void:
 	crear_interaccion()
 	crear_audio()
 	_crear_estado_versus()
+	if _es_online():
+		var red := _network()
+		if red != null and not red.selecciones_actualizadas.is_connected(_al_selecciones_online):
+			red.selecciones_actualizadas.connect(_al_selecciones_online)
 	actualizar_seleccion()
 
 func _rect_pantalla(idx: int) -> Rect2:
@@ -78,48 +81,43 @@ func crear_marco() -> void:
 	marco.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(marco)
 
-	badge_j1 = Label.new()
-	badge_j1.text = "J1"
-	badge_j1.size = Vector2(38, 28)
-	badge_j1.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge_j1.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	badge_j1.add_theme_font_size_override("font_size", 17)
-	badge_j1.add_theme_color_override("font_color", Color.WHITE)
-
-	var badge_style := StyleBoxFlat.new()
-	badge_style.bg_color = Color(0.48, 0.08, 0.92, 0.96)
-	badge_style.corner_radius_top_left = 5
-	badge_style.corner_radius_top_right = 5
-	badge_style.corner_radius_bottom_left = 5
-	badge_style.corner_radius_bottom_right = 5
-	badge_j1.add_theme_stylebox_override("normal", badge_style)
-	badge_j1.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge_j1 = _crear_badge("J1", Color(0.48, 0.08, 0.92, 0.96))
 	add_child(badge_j1)
-
-	badge_j2 = Label.new()
-	badge_j2.text = "J2"
-	badge_j2.size = Vector2(38, 28)
-	badge_j2.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge_j2.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	badge_j2.add_theme_font_size_override("font_size", 17)
-	badge_j2.add_theme_color_override("font_color", Color.WHITE)
-	var badge2_style := StyleBoxFlat.new()
-	badge2_style.bg_color = Color(0.10, 0.54, 1.0, 0.96)
-	badge2_style.corner_radius_top_left = 5
-	badge2_style.corner_radius_top_right = 5
-	badge2_style.corner_radius_bottom_left = 5
-	badge2_style.corner_radius_bottom_right = 5
-	badge_j2.add_theme_stylebox_override("normal", badge2_style)
-	badge_j2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge_j2 = _crear_badge("J2", Color(0.10, 0.54, 1.0, 0.96))
 	badge_j2.visible = false
 	add_child(badge_j2)
+
+func _crear_badge(texto: String, color: Color) -> Label:
+	var badge := Label.new()
+	badge.text = texto
+	badge.size = Vector2(38, 28)
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	badge.add_theme_font_size_override("font_size", 17)
+	badge.add_theme_color_override("font_color", Color.WHITE)
+	var st := StyleBoxFlat.new()
+	st.bg_color = color
+	st.corner_radius_top_left = 5
+	st.corner_radius_top_right = 5
+	st.corner_radius_bottom_left = 5
+	st.corner_radius_bottom_right = 5
+	badge.add_theme_stylebox_override("normal", st)
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return badge
 
 func _es_versus_local() -> bool:
 	var estado := get_node_or_null("/root/GameState")
 	return estado != null and str(estado.modo) == "versus_local"
 
+func _es_online() -> bool:
+	var estado := get_node_or_null("/root/GameState")
+	return estado != null and str(estado.modo) == "online"
+
+func _network() -> Node:
+	return get_node_or_null("/root/NetworkManager")
+
 func _crear_estado_versus() -> void:
-	if not _es_versus_local():
+	if not _es_versus_local() and not _es_online():
 		return
 	estado_versus_label = Label.new()
 	estado_versus_label.position = Vector2(330, 16)
@@ -136,11 +134,34 @@ func _crear_estado_versus() -> void:
 func _actualizar_estado_versus() -> void:
 	if estado_versus_label == null:
 		return
+	if _es_online():
+		var red := _network()
+		if red == null:
+			estado_versus_label.text = "ONLINE — RED NO DISPONIBLE"
+			return
+		var rol_txt := "HOST / JUGADOR 1" if red.es_host() else "CLIENTE / JUGADOR 2"
+		if confirmando:
+			# 91.02.63 — Godot 4.7.1 no puede inferir String desde propiedades
+			# dinámicas de un Node en una expresión ternaria.
+			var propio: String = str(red.personaje_host) if red.es_host() else str(red.personaje_cliente)
+			var otro: String = str(red.personaje_cliente) if red.es_host() else str(red.personaje_host)
+			if otro.is_empty():
+				estado_versus_label.text = "%s: %s  •  ESPERANDO AL RIVAL..." % [rol_txt, propio.to_upper()]
+			else:
+				estado_versus_label.text = "HOST: %s  •  CLIENTE: %s  •  SINCRONIZANDO..." % [red.personaje_host.to_upper(), red.personaje_cliente.to_upper()]
+		else:
+			estado_versus_label.text = "ONLINE  •  %s: ELIGE TU GUERRERO" % rol_txt
+		return
 	if fase_versus == 1:
 		estado_versus_label.text = "VERSUS LOCAL  •  JUGADOR 1: ELIGE TU GUERRERO"
 	else:
 		var nombre_j1 := ROSTER[indice_j1] if indice_j1 >= 0 else "J1"
 		estado_versus_label.text = "J1: %s  •  JUGADOR 2: ELIGE TU GUERRERO" % nombre_j1.to_upper()
+
+func _al_selecciones_online(host_nombre: String, cliente_nombre: String) -> void:
+	if not _es_online():
+		return
+	_actualizar_estado_versus()
 
 func _volver_a_j1_versus() -> void:
 	fase_versus = 1
@@ -212,35 +233,40 @@ func actualizar_seleccion() -> void:
 	estilo.shadow_size = 12
 	marco.add_theme_stylebox_override("panel", estilo)
 
-	if _es_versus_local() and fase_versus == 2:
+	if _es_online():
+		var red := _network()
+		badge_j1.text = "J1" if red != null and red.es_host() else "J2"
+		badge_j1.position = r.position + Vector2(6, 6)
+		_aplicar_color_badge(badge_j1, c)
+		if badge_j2:
+			badge_j2.visible = false
+	elif _es_versus_local() and fase_versus == 2:
 		var r_j1 := _rect_pantalla(indice_j1)
 		badge_j1.position = r_j1.position + Vector2(6, 6)
-		var c1: Color = COLORES[indice_j1]
-		var b1: StyleBoxFlat = badge_j1.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
-		b1.bg_color = Color(c1.r, c1.g, c1.b, 0.96)
-		badge_j1.add_theme_stylebox_override("normal", b1)
-
+		_aplicar_color_badge(badge_j1, COLORES[indice_j1])
 		badge_j2.visible = true
 		badge_j2.position = r.position + Vector2(6, 40)
-		var b2: StyleBoxFlat = badge_j2.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
-		b2.bg_color = Color(c.r, c.g, c.b, 0.96)
-		badge_j2.add_theme_stylebox_override("normal", b2)
+		_aplicar_color_badge(badge_j2, c)
 	else:
 		badge_j1.position = r.position + Vector2(6, 6)
-		var badge_style: StyleBoxFlat = badge_j1.get_theme_stylebox("normal").duplicate() as StyleBoxFlat
-		badge_style.bg_color = Color(c.r, c.g, c.b, 0.96)
-		badge_j1.add_theme_stylebox_override("normal", badge_style)
+		_aplicar_color_badge(badge_j1, c)
 		if badge_j2:
 			badge_j2.visible = false
 
 	_actualizar_estado_versus()
 
+func _aplicar_color_badge(badge: Label, c: Color) -> void:
+	var actual := badge.get_theme_stylebox("normal")
+	if actual == null:
+		return
+	var st: StyleBoxFlat = actual.duplicate() as StyleBoxFlat
+	st.bg_color = Color(c.r, c.g, c.b, 0.96)
+	badge.add_theme_stylebox_override("normal", st)
+
 func _unhandled_input(event: InputEvent) -> void:
 	if confirmando:
 		return
 
-	# En la segunda etapa, J2 puede seleccionar también con WASD + F cuando
-	# ambos jugadores comparten teclado. Mando/teclas UI siguen funcionando.
 	if _es_versus_local() and fase_versus == 2 and event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_A:
@@ -271,7 +297,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_accept"):
 		confirmar()
 	elif event.is_action_pressed("ui_cancel"):
-		if _es_versus_local() and fase_versus == 2:
+		if _es_online():
+			var red := _network()
+			if red != null:
+				red.cerrar_conexion()
+			get_node("/root/GameState").volver_al_menu()
+			get_tree().change_scene_to_file("res://scenes/MenuPrincipal.tscn")
+		elif _es_versus_local() and fase_versus == 2:
 			_volver_a_j1_versus()
 		else:
 			get_tree().change_scene_to_file("res://scenes/MenuPrincipal.tscn")
@@ -281,15 +313,23 @@ func confirmar() -> void:
 		return
 	var estado = get_node("/root/GameState")
 	var elegido: String = ROSTER[indice]
-	if elegido == "Varkhos":
+	# 91.02.38 — QA FINAL: Varkhos queda seleccionable temporalmente.
+	# En Arcade sigue entrando por la ruta segura de Batalla Rápida definida abajo.
+
+	if _es_online():
+		var red := _network()
+		if red == null or not red.hay_rival_conectado():
+			return
+		confirmando = true
+		estado.modo = "online"
+		red.confirmar_personaje_local(elegido)
+		_actualizar_estado_versus()
 		return
 
 	if _es_versus_local():
 		if fase_versus == 1:
 			indice_j1 = indice
 			fase_versus = 2
-			# J2 arranca visualmente en el siguiente casillero. Mirror match sigue
-			# permitido: basta con volver a la tarjeta de J1.
 			indice = wrapi(indice + 1, 0, ROSTER.size())
 			_actualizar_estado_versus()
 			actualizar_seleccion()
@@ -303,8 +343,6 @@ func confirmar() -> void:
 		return
 
 	confirmando = true
-	# Varkhos sigue siendo el jefe final oficial. Este desbloqueo es solo de prueba:
-	# si lo elegimos, lanzamos una Batalla Rápida para no alterar la progresión Arcade.
 	if estado.modo == "arcade" and elegido != "Varkhos":
 		estado.iniciar_arcade(elegido)
 		await get_tree().create_timer(0.18).timeout

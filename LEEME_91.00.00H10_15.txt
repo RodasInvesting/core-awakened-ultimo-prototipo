@@ -1,0 +1,50 @@
+CORE AWAKENED — 91.00.00-H10.15
+CORE III FIRST BEAT END — SECOND BEAT PHYSICS
+
+OBJETIVO
+- Revalidar la frontera CORE III FIRST BEAT END (stage 3 -> 4).
+- Eliminar las dos causas demostradas por H10.14 al entregar el segundo beat a await/Tween.
+
+PRUEBA H10.14
+- J1: primer causal DESYNC en subtick 7/8. El histórico ya arrancaba el segundo puñetazo
+  (fase=1, indice_punetazo=2, anticipación activa), pero la resim no recreaba la coroutine.
+- J2: primer causal DESYNC en subtick 1/8 por desplazamiento externo +0.2483 px;
+  un Tween futuro del segundo beat sobrevivía al restore.
+
+CAMBIO H10.15
+- CORE3 stage 4 pasa de CONTINUACION_ASYNC a SEGUNDO_BEAT_FSM.
+- El segundo beat reutiliza los mismos campos físicos/snapshotables ya existentes:
+  core3_primer_beat_subfase + origen/destino/duración/tiempo del acercamiento.
+- No se agregan campos al snapshot.
+- El segundo acercamiento usa QUAD/EASE_OUT determinista por physics ticks.
+- El segundo golpe usa la misma _ejecutar_paso_coreografia_combo_core(coreografia[1]).
+- Sólo al terminar el segundo beat se entra a stage 5 CONTINUACION_ASYNC y se retoma
+  la coreografía histórica desde el tercer beat (índice 2).
+
+CONGELADO / NO TOCADO
+- CORE I completo.
+- CORE II completo.
+- CORE III ENTRY (certificado H10.8).
+- CORE III RECARGA END (certificado H10.11).
+- CORE III APPROACH END (certificado H10.13).
+- rollback_snapshot.gd sin cambios frente a H10.14.
+- perfect_block_90_1.gd sin cambios frente a H10.14.
+
+PRUEBA
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Activar CORE III con J1 y dejar correr.
+5. Repetir con J2.
+6. Enviar el log completo.
+
+ESPERADO
+TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks
+TACTICAL ROLLBACK OK — CORE III RECARGA END — 8 ticks
+TACTICAL ROLLBACK OK — CORE III APPROACH END — 8 ticks
+CORE III FIRST BEAT END AUTO MARCADO
+CORE III FIRST BEAT END LOCALIZADO — stage 3->4
+TACTICAL ROLLBACK OK — CORE III FIRST BEAT END — 8 ticks
+
+Si J1 y J2 pasan, FIRST BEAT END queda certificado. La siguiente frontera será SECOND BEAT END
+(stage 4 -> 5), todavía sin convertir el tercer beat hasta tener evidencia runtime.

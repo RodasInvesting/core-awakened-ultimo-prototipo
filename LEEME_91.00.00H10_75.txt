@@ -1,0 +1,25 @@
+CORE AWAKENED 91.00.00-H10.75 — AIR x2 AUTO REVALIDATION
+
+BASELINE:
+- CORE I/II/III certificados y congelados.
+- COUNTER certificado H10.71.
+- PERFECT BLOCK certificado H10.72.
+- LAUNCHER certificado H10.73 J1/J2, 8 ticks idénticos.
+- AIR x1 certificado H10.74 J1/J2, 8 ticks idénticos.
+
+OBJETIVO H10.75:
+Revalidar AIR HIT x2 en ambos espejos con autocaptura exacta por el serial snapshotable ya existente y air_x=2.
+
+PRUEBA:
+1) Kai vs Dax — Kai/J1.
+2) Ejecutar ARRIBA+PUÑO y conectar LAUNCH!.
+3) Conectar AIR x1 y luego un segundo golpe aéreo hasta ver AIR x2.
+4) En AIR x2 dejar de golpear. No usar F11 y no continuar con AIR x3 hasta que termine la autocaptura.
+5) Repetir Dax vs Kai — Kai/J2.
+
+ESPERADO:
+TACTICAL ROLLBACK OK — AIR HIT — 8 ticks; estado presente idéntico
+con atacante J1 AIR x2 y J2 AIR x2 respectivamente.
+
+ALCANCE:
+Sólo scripts/main.gd cambia como arnés de diagnóstico. Fighter, PerfectBlock y rollback_snapshot permanecen byte-a-byte congelados.

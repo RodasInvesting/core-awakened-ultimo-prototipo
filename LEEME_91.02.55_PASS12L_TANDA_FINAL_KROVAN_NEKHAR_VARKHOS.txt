@@ -1,0 +1,96 @@
+CORE AWAKENED 91.02.55 — PASS 12L / PROYECTILES TANDA FINAL
+===============================================================
+
+BASE REQUERIDA
+Instalar sobre el proyecto actual después de:
+- 91.02.52 FIX Tanda 2 (Fighter con proyectil_spawn_altura_mult).
+- 91.02.54 FIX Dax / Tanda 3 cerrada.
+
+PERSONAJES
+- Krovan
+- Nekhar
+- Varkhos
+
+COMANDO
+ABAJO -> ADELANTE -> PUÑO
+
+MOTOR
+- sólo suelo;
+- un proyectil activo por personaje;
+- startup castigable;
+- sonido al salir;
+- velocidad 805 px/s;
+- evasión por salto/doble salto para luchadores que saltan;
+- orientación automática;
+- misma hitbox/balance común.
+
+IDENTIDAD VISUAL
+KROVAN
+- Cuervos + energía naranja/negra.
+- Pose scale inicial 1.18.
+
+NEKHAR
+- Vórtice funerario dorado/arena.
+- Pose scale inicial 1.20.
+
+VARKHOS
+- Núcleo demoníaco rojo/violeta.
+- Pose scale inicial 1.22.
+- Spawn altura 0.43 por su tamaño corporal superior.
+- Varkhos no salta, igual que antes.
+
+IMPORTANTE VARKHOS
+Varkhos tiene una función de input propia porque no puede saltar. Por ese motivo
+el comando de proyectil se integró dentro de _entrada_jugador_varkhos(),
+reutilizando _procesar_comando_proyectil() de Fighter.
+No se cambian carrera, bloqueo, puños, patadas ni CORE.
+
+SONIDO
+Los tres reutilizan:
+res://assets/helena/proyectil_impacto.wav
+El motor común lo reproduce al NACER/SALIR el proyectil.
+
+ARCHIVOS MODIFICADOS
+- scripts/krovan.gd
+- scripts/nekhar.gd
+- scripts/varkhos.gd
+
+ASSETS NUEVOS
+- assets/krovan/poder_proyectil.png
+- assets/krovan/proyectil_oficial.png
+- assets/nekhar/poder_proyectil.png
+- assets/nekhar/proyectil_oficial.png
+- assets/varkhos_final/poder_proyectil.png
+- assets/varkhos_final/proyectil_oficial.png
+
+NO SE TOCA
+- fighter.gd
+- proyectil_energia.gd
+- main.gd
+- game_state.gd
+- perfect_block_90_1.gd
+- project.godot
+- IA
+- CORE
+- rollback/netcode
+
+PRUEBA
+KROVAN:
+- tamaño reposo vs pose;
+- impacto/bloqueo;
+- doble salto del rival para evadir.
+
+NEKHAR:
+- tamaño reposo vs pose;
+- impacto/bloqueo;
+- doble salto del rival para evadir.
+
+VARKHOS:
+- confirmar que ↓ → + PUÑO dispara y no se convierte en puño normal;
+- confirmar impacto consistente;
+- revisar escala de la pose;
+- revisar altura de salida;
+- confirmar que sigue sin saltar;
+- confirmar carrera, bloqueo y CORE.
+
+Si pasan los tres: ROSTER COMPLETO DE PROYECTILES CERRADO.

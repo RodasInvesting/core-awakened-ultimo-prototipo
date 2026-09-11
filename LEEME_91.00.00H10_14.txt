@@ -1,0 +1,29 @@
+CORE AWAKENED 91.00.00-H10.14 — CORE III FIRST BEAT END DIAGNOSTIC
+
+BASE: H10.13.
+
+CERTIFICADO / CONGELADO:
+- CORE I completo.
+- CORE II completo.
+- CORE III ENTRY (H10.8).
+- CORE III RECARGA END (H10.11).
+- CORE III APPROACH END (H10.13).
+
+OBJETIVO H10.14:
+- Diagnóstico puro de CORE III FIRST BEAT END.
+- Detecta core3_secuencia_etapa 3 -> 4.
+- Cruza el fin del primer beat físico snapshotable y la entrega al segundo beat histórico.
+- No modifica fighter.gd ni rollback_snapshot.gd frente a H10.13.
+- No convierte todavía el resto de la ráfaga CORE III.
+
+PRUEBA:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Activar CORE III con J1 y dejar correr la secuencia.
+5. Repetir con J2.
+6. Enviar log completo.
+
+RESULTADO ÚTIL:
+- OK: certificamos FIRST BEAT END y avanzamos al siguiente borde.
+- DESYNC: el primer subtick causal identifica el await/Tween del segundo beat que debe pasar a FSM física.

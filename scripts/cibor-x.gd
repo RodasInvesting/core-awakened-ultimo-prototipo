@@ -93,6 +93,22 @@ func _init() -> void:
 	textura_carrera = load("res://assets/cibor-x/carrera.png")
 	textura_furia_carrera = load("res://assets/cibor-x/furia_carrera.png")
 
+	# 91.02.50 — PASS 12G / PROYECTIL TANDA 1 — CIBOR-X.
+	proyectil_especial_habilitado = true
+	textura_proyectil_pose = load("res://assets/cibor-x/poder_proyectil.png")
+	textura_proyectil_nucleo = load("res://assets/cibor-x/proyectil_oficial.png")
+	proyectil_pose_escala_mult = 1.05
+	color_proyectil_primario = Color(0.02, 0.56, 1.0, 1.0)
+	color_proyectil_secundario = Color(0.72, 0.96, 1.0, 1.0)
+	proyectil_velocidad = 805.0
+	proyectil_dano_mult = 0.86
+	proyectil_empuje = 148.0
+	proyectil_hitstun = 0.22
+	proyectil_startup = 0.16
+	proyectil_recovery = 0.30
+	proyectil_cooldown = 0.62
+	sonido_proyectil_impacto = load("res://assets/helena/proyectil_impacto.wav")
+
 func _procesar_entrada(_delta: float, vel_actual: float) -> void:
 	if controlado_por_jugador:
 		_entrada_jugador(vel_actual)

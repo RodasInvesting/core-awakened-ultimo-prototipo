@@ -1,0 +1,77 @@
+CORE AWAKENED 91.00.00-H9 — CORE II ENTRY ROLLBACK
+
+CORE I — CERTIFICADO EN ALCANCE ACTUAL
+--------------------------------------
+H8.3:
+- entrada + Target Lock physics: J1/J2 OK.
+
+H8.5:
+- Target Lock -> impacto -> daño/hitstop/hitstun/empuje -> póster: J1/J2 OK.
+
+H8.6:
+- fin de póster -> descongelar -> desbloquear -> devolver control: J1/J2 OK.
+
+CORE I queda cerrado de punta a punta para rollback local de 8 ticks
+en el alcance probado.
+
+OBJETIVO H9
+-----------
+Empezar CORE II SIN modificarlo todavía.
+
+CORE II actual:
+  activación
+    -> _secuencia_combo_normal()
+    -> _mostrar_recarga_energia(false)
+    -> await timer 1.05 s
+    -> acercamiento
+    -> combo automático
+    -> rematador
+
+H9 prueba únicamente:
+  CORE nivel 1 -> nivel 2
+  + comienzo de la recarga.
+
+No cruza todavía el final del timer de recarga.
+
+CAMBIOS
+-------
+- fighter.gd: lógica H8.6 intacta.
+- rollback_snapshot.gd: intacto.
+- sólo main.gd agrega marcador/localizador CORE II.
+- no cambia daño.
+- no cambia recarga.
+- no cambia duración.
+- no cambia combo.
+- no cambia rematador.
+- no cambia CORE III.
+
+PRUEBA
+------
+Hay que llegar al SEGUNDO CORE normalmente.
+
+J1:
+1. Usar CORE I.
+2. Volver a llenar la barra hasta CORE II.
+3. Activar CORE II.
+4. APENAS aparezca la pose de RECARGA de CORE II, presionar F11 UNA VEZ.
+5. Hacer 2 intentos J1.
+
+J2:
+Igual, 2 intentos.
+
+NO esperar a que termine todo CORE II para apretar F11: el evento de entrada
+debe seguir dentro del ring.
+
+Esperado:
+  CORE II EVENT MARCADO — ...
+  CORE II EVENT LOCALIZADO — ...
+  TACTICAL ROLLBACK — CORE II ENTRY — ...
+  CORE II ENTRY RESIM — ...
+y finalmente:
+  TACTICAL ROLLBACK OK — CORE II ENTRY — 8 ticks; estado presente idéntico
+
+Si H9 pasa:
+H9.1 probará exactamente el FINAL DE LA RECARGA. Ese es el primer lugar donde
+esperamos encontrar la continuación suspendida del await de 1.05 s.
+
+NO usar CORE III.

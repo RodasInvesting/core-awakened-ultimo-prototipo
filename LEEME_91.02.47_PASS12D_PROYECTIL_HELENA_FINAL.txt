@@ -1,0 +1,50 @@
+CORE AWAKENED 91.02.47 — PASS 12D / PROYECTIL HELENA FINAL
+=============================================================
+
+BASE APROBADA
+- Tamaño visual 42 px: APROBADO.
+- Evasión por salto/doble salto: APROBADA.
+- Pose de Helena: APROBADA.
+- Startup/recovery/cooldown: APROBADOS.
+- Hitbox vertical afinada: APROBADA.
+
+CAMBIOS FINALES
+1) Velocidad:
+   - 760 px/s -> 805 px/s.
+   - Incremento leve (+5.9 %), exactamente para que viaje un poco más rápido
+     sin convertirse en un proyectil imposible de reaccionar.
+
+2) PNG oficial:
+   - Se integra assets/helena/proyectil_oficial.png.
+   - El PNG pasa a ser el núcleo visual real del poder.
+   - El código conserva únicamente aura, brillo, anillos y estela alrededor.
+   - Al viajar hacia la izquierda se invierte automáticamente.
+
+BALANCE / COLISIÓN
+- Hitbox horizontal: sin cambios.
+- Hitbox vertical: sin cambios respecto de 91.02.46.
+- Daño: sin cambios.
+- Empuje: sin cambios.
+- Hitstun: sin cambios.
+- Startup/recovery/cooldown: sin cambios.
+
+NO TOCADO
+- IA
+- PerfectBlock / Combo Cancel
+- CORE I / II / III
+- pushbox
+- rollback/snapshots/RPC/serialización
+
+INSTALACIÓN
+Abrir ZIP -> arrastrar todo a la raíz -> aceptar reemplazar.
+
+PRUEBA FINAL HELENA
+1. Lanzar a derecha e izquierda.
+2. Confirmar PNG oficial visible y bien orientado.
+3. Confirmar que aura/anillos acompañen el PNG.
+4. Confirmar viaje apenas más rápido.
+5. Confirmar que salto/doble salto todavía lo evaden a distancia.
+6. Confirmar bloqueo e impacto normales.
+
+Si pasa, PROYECTIL HELENA queda CERRADO y usamos esta misma arquitectura
+para el resto del roster, cambiando PNG/color/configuración por personaje.

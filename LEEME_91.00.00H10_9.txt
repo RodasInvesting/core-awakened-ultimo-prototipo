@@ -1,0 +1,32 @@
+CORE AWAKENED 91.00.00-H10.9 — CORE III RECARGA END DIAGNOSTIC
+
+BASE: H10.8 CORE III SAFETY CLOCK DELTA.
+
+CERTIFICADO / CONGELADO:
+- CORE I: certificado.
+- CORE II: certificado end-to-end para rollback local de 8 ticks.
+- CORE III ENTRY: CERTIFICADO en J1 y J2 por H10.8.
+
+OBJETIVO H10.9:
+- Diagnóstico puro del borde CORE III RECARGA END (1.55 s).
+- Detecta en_pose_recarga true -> false con CORE >= 3 y secuencia activa.
+- Ejecuta rollback automático de 8 ticks terminando exactamente en el primer snapshot post-recarga.
+- NO reemplaza todavía SceneTreeTimer/await, Tween de brillo, Furia ni acercamiento.
+- Si falla, el primer desync demostrará qué estado asíncrono debe convertirse a FSM física.
+
+PRUEBA:
+1) Versus Local.
+2) No usar F11.
+3) Completar CORE I y CORE II.
+4) Activar CORE III una vez con J1 y una vez con J2.
+5) Esperar el mensaje CORE III RECARGA END AUTO / LOCALIZADO.
+6) Guardar el log completo.
+
+ESPERADO DIAGNÓSTICO:
+CORE III RECARGA END AUTO MARCADO
+CORE III RECARGA END LOCALIZADO
+TACTICAL ROLLBACK — CORE III RECARGA END
+...
+TACTICAL ROLLBACK OK o DESYNC — ambos resultados son útiles en H10.9.
+
+H10.9 no modifica gameplay.

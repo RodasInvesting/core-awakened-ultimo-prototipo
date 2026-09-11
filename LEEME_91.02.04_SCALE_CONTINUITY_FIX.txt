@@ -1,0 +1,27 @@
+CORE AWAKENED 91.02.04 — SCALE CONTINUITY FIX
+
+CAMBIOS VISUALES, SIN CAMBIOS DE GAMEPLAY:
+
+1) KROVAN — DERRIBADO
+- Escala de derribado: 0.2200 -> 0.2700.
+- Motivo: en prueba real seguía viéndose demasiado pequeño en el suelo.
+
+2) NEKHAR — RECARGA / FURIA IDLE
+- Escala específica: 0.2300.
+- Corrige el cuerpo pequeño causado por el halo de energía incluido en el PNG.
+
+3) NEKHAR — REMATE CORPORAL
+- Escala específica: 0.2350.
+- Corrige el salto de tamaño entre el último golpe CORE y el regreso a parado.
+
+FRONTERA CONGELADA:
+- scripts/fighter.gd: SIN CAMBIOS
+- scripts/perfect_block_90_1.gd: SIN CAMBIOS
+- scripts/rollback_snapshot.gd: SIN CAMBIOS
+
+NO se modifican hitboxes, daño, física, hitstun, empuje, movimiento ni rollback.
+
+PRUEBA RECOMENDADA:
+A) Krovan recibe CORE/KO y queda en el piso: verificar que no quede pequeño.
+B) Nekhar recarga: comparar directamente con su parado.
+C) Nekhar ejecuta CORE final: observar el remate corporal y su regreso a parado.

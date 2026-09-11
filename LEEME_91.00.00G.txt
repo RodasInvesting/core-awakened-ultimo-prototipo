@@ -1,0 +1,54 @@
+CORE AWAKENED 91.00.00-G — LOCAL ROLLBACK
+
+APROBADO ANTES DE G
+-------------------
+91.00.00-F:
+- Snapshot guardado/restaurado varias veces.
+- RESTORE OK exacto.
+- Sin modificar Fighter ni Combat Feel.
+
+OBJETIVO G
+----------
+Primer rollback local simulado:
+1. guardar snapshots al inicio de cada physics tick;
+2. conservar los inputs de J1/J2 asociados a ese tick;
+3. F11 restaura el estado de 8 ticks atrás (~133 ms a 60 Hz);
+4. durante 8 ticks ignora teclado/mando y reinyecta los inputs históricos;
+5. al alcanzar nuevamente el presente compara TODO el snapshot lógico.
+
+LÍMITE DELIBERADO DE ESTA PRIMERA PRUEBA
+----------------------------------------
+La ventana de 8 ticks debe estar libre de ataques, CORE, hitstun y KO.
+Sí puede probarse con:
+- caminar;
+- salto;
+- movimiento aéreo;
+- dash/backdash;
+- bloqueo sin impacto.
+
+La razón es arquitectónica: los poderes y algunas secuencias todavía usan
+coroutines/await. Primero certificamos rollback físico puro y luego migramos
+los estados de combate que lo necesiten a una máquina determinista.
+
+PRUEBA
+------
+1. Copiar encima de 91.00.00-F y reemplazar archivos.
+2. Entrar en Versus Local.
+3. Mover uno o ambos luchadores sin golpear. También podés saltar o hacer dash.
+4. Mientras siguen en una ventana sin golpes, presionar F11.
+5. Verás un micro-rebobinado de ~133 ms y catch-up automático.
+6. No tocar controles durante ese instante.
+
+OUTPUT BUSCADO:
+[91.00.00-G] ROLLBACK INICIADO ...
+[91.00.00-G] LOCAL ROLLBACK OK — 8 ticks rebobinados + re-simulados; estado presente idéntico
+
+Si los últimos 8 ticks contienen ataque/CORE:
+[91.00.00-G] ROLLBACK TEST — ... contienen combate activo
+Eso es protección, NO un error.
+
+SIGUIENTE
+---------
+Si G da OK:
+91.00.00-H — convertir la primera capa de ataque normal a estado rollback-safe
+y probar rollback cruzando un puñetazo/patada real.

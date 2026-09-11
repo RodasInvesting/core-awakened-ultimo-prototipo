@@ -1,0 +1,43 @@
+CORE AWAKENED 91.00.00-H10.48
+CORE III — SIXTEENTH BEAT END REVALIDATION
+
+Resultado H10.47:
+- SIXTEENTH BEAT END stage 18->19 localizó correctamente J1 y J2.
+- J1: DESYNC causal en subtick 1/8.
+- Única diferencia causal: desplazamiento externo no snapshotable del atacante al entrar al beat 17 histórico.
+- J2: PASS, 8 ticks, estado presente idéntico.
+- No hubo TEMPORAL DESYNC.
+- La frontera 18->19 NO se congela todavía.
+
+Cambio único H10.48:
+- Beat 17 CORE III convertido a FSM física/snapshotable.
+- stage 18 = beat 16 físico.
+- stage 19 = beat 17 físico.
+- stage 20 = continuación histórica desde beat 18.
+- La prueba sigue observando exactamente SIXTEENTH BEAT END stage 18->19 para revalidar la frontera que falló.
+
+Sin cambios en:
+- PerfectBlock.
+- Snapshot.
+- Historical delta.
+- GameState.
+- Input Recorder/Replay.
+- Ring Buffer.
+- Motion Guard.
+- Resultado.
+- Fronteras CORE I, CORE II y CORE III previamente certificadas.
+
+PRUEBA:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar naturalmente.
+5. Ejecutar CORE III completo con J2 y dejar terminar naturalmente.
+6. Enviar el runtime completo.
+
+OBJETIVO:
+TACTICAL ROLLBACK OK — CORE III SIXTEENTH BEAT END — 8 ticks; estado presente idéntico
+
+Si J1 y J2 pasan:
+- congelar SIXTEENTH BEAT END stage 18->19;
+- siguiente build: diagnóstico puro de SEVENTEENTH BEAT END stage 19->20.

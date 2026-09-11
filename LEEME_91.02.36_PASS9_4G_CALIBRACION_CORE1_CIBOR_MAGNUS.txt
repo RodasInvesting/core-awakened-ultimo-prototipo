@@ -1,0 +1,34 @@
+CORE AWAKENED 91.02.36 — PASS 9.4G CALIBRACION CORE I CIBOR/MAGNUS
+===============================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO a la raiz del proyecto CORE AWAKENED.
+3. Reemplazar archivos cuando Windows lo pida.
+4. Abrir Godot y esperar la importacion.
+
+OBJETIVO
+Ajustar la gigantografia exclusiva de CORE I para dos casos puntuales:
+- Cibor-X: mas grande y mas corrida hacia atras.
+- Magnus: mas grande y mas corrida hacia atras.
+
+QUE CAMBIA
+- Solo se recalibra la presentacion de CORE I con PNG exclusivo.
+- Cibor-X gana +escala y +retroceso.
+- Magnus gana +escala y +retroceso.
+- Se abre un poco el limite de ancho solo para estos dos, para que el arte
+  se pueda leer mejor en pantalla.
+
+QUE NO TOCA
+- logica de golpe
+- daño
+- hitstun
+- rollback
+- recarga de CORE II
+- gigantografia final de CORE II
+- CORE III
+
+PRUEBA SUGERIDA
+1. Probar CORE I de Cibor-X.
+2. Probar CORE I de Magnus.
+3. Verificar ambos desde centro y desde esquinas.

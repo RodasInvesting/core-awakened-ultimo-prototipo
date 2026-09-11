@@ -1,0 +1,22 @@
+CORE AWAKENED 91.00.00-H10.82 — NORMAL PUNCH BLOCK HARNESS FIX REVALIDATION
+
+Objetivo
+- Revalidar BLOQUEO NORMAL contra PUÑO, J1 y J2, 8 ticks.
+- NO modifica gameplay.
+
+Corrección causal del arnés H10.81
+- H10.81 localizó correctamente el bloqueo y los 8 PRETICK fueron idénticos.
+- Pero NORMAL BLOCK no estaba incluido en la ruta que toma el snapshot histórico inmediatamente posterior a la ventana.
+- El expected final se capturaba un physics tick LIVE más tarde: clock esperado quedaba +1 tick y los timers/posición aparecían desplazados en cascada.
+- H10.82 añade NORMAL BLOCK a la ruta de expected histórico post-ventana.
+- También desactiva Historical-X Guard para NORMAL BLOCK porque la guardia genera recoil/empuje físico causal y no debe ocultarse.
+
+Archivos funcionalmente congelados
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- scripts/rollback_snapshot.gd
+
+Prueba
+1) Kai vs Dax: Kai/J1 mantener bloqueo con anticipación y recibir un PUÑO normal. No F11.
+2) Dax vs Kai: Kai/J2 mantener bloqueo con anticipación y recibir un PUÑO normal. No F11.
+Esperado: TACTICAL ROLLBACK OK — NORMAL BLOCK — 8 ticks; estado presente idéntico

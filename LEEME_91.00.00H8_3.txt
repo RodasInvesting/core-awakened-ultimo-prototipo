@@ -1,0 +1,74 @@
+CORE AWAKENED 91.00.00-H8.3 — CORE I PHYSICS TARGET LOCK
+
+RESULTADO H8.2
+--------------
+J1 y J2 divergen en el mismo punto: primer tick posterior al input Especial.
+Todo el estado lógico coincide salvo X del atacante.
+
+J1:
+  desplazamiento externo esperado +30.0633 / actual 0.0000
+J2:
+  desplazamiento externo esperado -39.4261 / actual 0.0000
+
+CAUSA CONFIRMADA
+----------------
+_acercar_para_especial() usaba:
+  create_tween()
+  tween_property(global_position, destino, duracion)
+  await tween.finished
+
+El snapshot no puede restaurar el progreso interno del Tween.
+
+CAMBIO H8.3
+-----------
+Sólo el Target Lock de CORE I pasa a estado explícito por physics ticks.
+
+Se conserva:
+- destino: 150 px del rival;
+- duración: clamp(distancia/980, 0.08, 0.32);
+- curva: QUAD EASE OUT;
+- sprite de aceleración;
+- pose_timer;
+- daño;
+- gigantografía;
+- CORE II/III.
+
+Nuevas propiedades snapshotables:
+- core1_target_lock_activo
+- core1_target_lock_origen
+- core1_target_lock_destino
+- core1_target_lock_duracion
+- core1_target_lock_tiempo
+
+IMPORTANTE
+----------
+Esta vez fighter.gd SÍ está incluido porque es la primera corrección estructural
+necesaria para CORE rollback. La base usada es exactamente el fighter.gd actual
+subido por el usuario para H8.3.
+
+PRUEBA
+------
+1. Reemplazar H8.3 completa.
+2. Confirmar VS -> READY -> FIGHT normal.
+3. J1 llena su primer CORE y lo activa desde una distancia suficiente para que
+   se vea el acercamiento.
+4. DEJAR TERMINAR CORE I.
+5. Inmediatamente al recuperar control, presionar F11 UNA vez.
+6. Queremos CORE I EVENT LOCALIZADO y luego OK o DESYNC.
+7. Reiniciar pelea y repetir una vez con J2.
+
+No usar CORE II/III.
+
+POR QUÉ F11 DESPUÉS DEL CORE
+----------------------------
+El safety gate H6.1 permanece intacto. El ring conserva ~3 s de historia, por
+lo que puede volver al inicio de CORE I después de que la cinemática terminó.
+Así no hay que apretar F11 repetidamente durante el bloqueo cinematográfico.
+
+META H8.3
+---------
+1 J1 + 1 J2:
+  TACTICAL ROLLBACK OK — CORE I ENTRY — 8 ticks; estado presente idéntico
+
+Si ahora el primer DESYNC avanza a una etapa posterior, H8.3 habrá resuelto
+el Target Lock y H8.4 atacará exclusivamente el siguiente await/Tween.

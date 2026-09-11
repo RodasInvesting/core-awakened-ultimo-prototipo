@@ -1,0 +1,117 @@
+CORE AWAKENED 91.00.00-H5.1 — BACK DASH PHYSICS STEP
+
+RESULTADO H5
+------------
+J1:
+- 3 Back Dash hacia IZQUIERDA
+- 3/3 ROLLBACK OK
+
+J2:
+- serial 4: DESYNC final
+- serial 5: CAUSAL DESYNC
+- serial 6: OK
+- serial 7: OK
+
+El fallo NO depende realmente de J2/derecha.
+
+PRUEBA CAUSAL CLAVE
+-------------------
+En serial 5:
+- posición inicial J2 = 616.1741
+- esperada siguiente = 627.1852
+- actual siguiente = 617.1519
+- last_motion esperado = actual = 0.977778
+- velocidad esperada = actual = 58.66667
+- DESPLAZAMIENTO EXTERNO esperado = 10.0333
+- DESPLAZAMIENTO EXTERNO actual = 0.0000
+- backdash_timer esperado = 0.143333
+- backdash_timer actual = 0.160000
+
+Eso significa que Fighter sí ejecutó exactamente su physics,
+pero faltó UN paso de movimiento Back Dash.
+
+CAUSA EXACTA
+------------
+El inicio de Back Dash estaba en:
+    _physics_process()
+
+pero el desplazamiento/timer estaba en:
+    _process(delta)
+
+Por tanto:
+- input/táctica = physics
+- posición Back Dash = render
+- timer Back Dash = render
+
+El número y posición temporal de llamadas a _process() no forman parte de
+la simulación rollback y pueden variar entre LIVE y catch-up.
+
+Que algunos casos hayan dado OK fue coincidencia de scheduling/render.
+
+CAMBIO H5.1
+-----------
+_actualizar_backdash(delta) pasa completamente a _physics_process().
+
+Orden:
+1. Tactical Physics Clock
+2. IA
+3. input humano
+4. detección/inicio Back Dash
+5. expiración de ventanas
+6. actualización Back Dash con physics delta
+
+Si el segundo toque inicia Back Dash, su PRIMER PASO ocurre en ese mismo
+physics tick, tanto en LIVE como en rollback.
+
+_process() queda únicamente para correcciones VISUALES de Aethel.
+
+NO CAMBIA
+---------
+- velocidad Back Dash
+- duración nominal
+- cooldown
+- invulnerabilidad
+- dirección
+- sprite de evasión
+- controles
+- Fighter
+- daño / ataques / Counter / Perfect
+- Historical-X Guard sigue DESACTIVADO durante prueba Back Dash
+
+IMPACTO EN COMBAT FEEL
+----------------------
+El movimiento deja de depender del FPS y pasa a pasos fijos de física.
+La velocidad y duración nominal no cambian.
+
+PRUEBA
+------
+Primero jugar unos segundos SIN F11:
+- confirmar velocidad normal
+- confirmar que Back Dash se siente igual
+
+Luego:
+
+J1:
+- 3 Back Dash alejándose
+
+J2:
+- 4 Back Dash alejándose
+
+Presionar F11 inmediatamente durante/después de cada Back Dash.
+
+Meta:
+    TACTICAL ROLLBACK OK — BACK DASH — 8 ticks; estado presente idéntico
+
+Especialmente importante:
+- J2 hacia DERECHA, porque ahí H5 expuso el fallo.
+
+CERTIFICACIÓN H5.1
+------------------
+Queremos:
+- 7/7 OK
+- 0 ROLLBACK CAUSAL DESYNC
+- 0 TACTICAL TEMPORAL DESYNC
+- 0 TACTICAL ROLLBACK DESYNC
+
+Si pasa:
+H6 — Quick Recovery rollback.

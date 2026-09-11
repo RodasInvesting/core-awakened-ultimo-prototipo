@@ -1,0 +1,28 @@
+CORE AWAKENED 91.00.00-H10.64
+CORE III — ABSOLUTE VICTORY ENTRY REVALIDATION
+
+Objetivo único:
+- Revalidar ABSOLUTE VICTORY ENTRY en J1 y J2.
+- H10.63 alcanzó el target en ambos lados, pero el restore visual desplazó al ganador 5.381 px en subtick 0.
+
+Cambio funcional ÚNICO respecto de H10.63 FIXED3:
+- scripts/rollback_snapshot.gd: _restaurar_estado_visual_pushbox() preserva y repone position, velocity y mirando alrededor de Fighter._actualizar_textura().
+- Motivo: _actualizar_textura() puede ejecutar _separar_ganador_del_ko(); durante restore visual esa mutación física es inválida.
+
+Congelado / NO tocado:
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- lógica CORE I / CORE II / CORE III
+- timers y FSM de victoria
+- fórmula de delta histórico
+- xenoid FIXED3 conservado sin class_name duplicado
+
+Prueba:
+1) Kai vs Dax — Kai J1: CORE I -> CORE II -> CORE III completo.
+2) Dax vs Kai — Kai J2: CORE I -> CORE II -> CORE III completo.
+3) NO usar F11.
+4) Enviar runtime completo.
+
+Esperado inmediato:
+- Ya NO debe aparecer DESPLAZAMIENTO EXTERNO de 5.381 px en subtick 0.
+- Si aparece otro DESYNC, ese será el siguiente causal real de ABSOLUTE VICTORY ENTRY.

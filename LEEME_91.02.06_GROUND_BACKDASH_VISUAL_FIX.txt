@@ -1,0 +1,34 @@
+CORE AWAKENED 91.02.06 — GROUND BACK DASH VISUAL FIX
+
+OBJETIVO
+- Corregir únicamente la presentación del Back Dash ejecutado desde el suelo.
+- Mantener intacta la aceleración/dash hacia adelante y el acercamiento CORE II/III que ya quedaron correctos en 91.02.05.
+
+CAUSA AISLADA
+- El Back Dash táctico de suelo pertenece a PerfectBlock90_1.
+- Al aceptarlo, ese módulo llama _detener_carrera(), por lo que Fighter.carrera_activa queda false.
+- El guard visual 91.02.05 sólo mostraba overlay si carrera_activa == true.
+- Resultado: el desplazamiento físico hacia atrás funcionaba, pero Fighter volvía a seleccionar caminata por velocity.x y tapaba la pose de evasión.
+- El Back Dash aéreo sí podía verse porque usa el estado visual de dash aéreo de Fighter y no dependía de ese filtro.
+
+CAMBIO 91.02.06
+- main.gd lee de forma PASIVA _backdash_timer del módulo PerfectBlock90_1.
+- Mientras ese timer está activo, el Fighter está en suelo y no está atacando/bloqueando/hitstun/especial, se fuerza únicamente el overlay de textura_evasion.
+- No se modifica el timer, la posición, la velocidad, el input, la invulnerabilidad, la colisión, el alcance ni la física.
+- Si falta una textura de evasión dedicada, se conserva textura_carrera como fallback visual.
+
+FRONTERA CONGELADA
+- fighter.gd: sin cambios.
+- perfect_block_90_1.gd: sin cambios.
+- rollback_snapshot.gd: sin cambios.
+
+PRUEBA RECOMENDADA
+1) Kai en suelo mirando al rival: doble toque alejándose.
+2) Confirmar que durante TODO el desplazamiento aparece la pose de evasión/back dash y no caminata.
+3) Repetir cerca del centro y cerca del borde de arena.
+4) Verificar nuevamente dash hacia adelante.
+5) Verificar CORE II/III: acercamiento sigue mostrando dash hasta el primer golpe.
+6) Opcional: repetir con Dax y un personaje antiguo.
+
+NO TOCADO
+- Superposición de cuerpos/contact spacing. Se mantiene pendiente para el siguiente paquete una vez cerrado este punto visual.

@@ -1,0 +1,42 @@
+CORE AWAKENED 91.02.73 — PASS 14D3C / PAUSA ONLINE MÁXIMA 60 SEGUNDOS
+============================================================================
+
+POLÍTICA
+- Cada pausa ONLINE tiene un máximo de 60 segundos reales.
+- El menú muestra una cuenta regresiva visible 01:00 -> 00:00.
+- Si nadie pulsa CONTINUAR, al llegar a 00:00 el peer solicita reanudar y
+  NetworkManager 91.02.72 ejecuta la misma barrera fiable ya certificada.
+- CONTINUAR manual sigue funcionando antes del límite.
+- LOCAL/OFFLINE conserva el PauseManager original sin límite nuevo.
+
+IMPORTANTE SOBRE CANTIDAD DE PAUSAS
+Este PASS NO limita aún la cantidad por pelea. La recomendación para el futuro:
+- CASUAL: pausas repetidas, siempre con máximo 60 s.
+- RANKED: 1 pausa por jugador por pelea, máximo 60 s.
+La cuota se implementará cuando exista el modo Ranked para no mezclar reglas
+competitivas con el online casual actual.
+
+ARCHIVO ÚNICO
+- scripts/pause_manager_online.gd
+
+NO TOCADO
+- network_manager.gd 91.02.72
+- main.gd 91.02.70
+- rollback_snapshot.gd 91.02.60
+- Fighter / PerfectBlock / CORE / proyectiles / físicas
+
+PRUEBA
+1. Instalar ZIP ROOT sobre 91.02.72.
+2. Exportar 91.02.73 y usar la misma build en ambas PCs.
+3. Pausar desde PC1 o PC2.
+4. Confirmar contador visible.
+5. NO tocar CONTINUAR: esperar hasta 00:00.
+6. Ambas PCs deben reanudar automáticamente.
+7. Seguir jugando 20-30 segundos y comprobar sincronía.
+8. Pasar log HOST; CLIENT sólo si algo se ve distinto.
+
+LOGS ESPERADOS
+[91.02.73-P14D3C] PAUSA LIMITE — ... max=60s ...
+[91.02.73-P14D3C] PAUSA TIMEOUT 60S — ...
+seguido por los logs normales REANUDAR GO / REANUDADO /
+REANUDACION BARRERA OK / PAUSA CICLO CERRADO.

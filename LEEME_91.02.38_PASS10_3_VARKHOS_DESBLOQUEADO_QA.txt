@@ -1,0 +1,28 @@
+CORE AWAKENED 91.02.38 — PASS 10.3 QA / VARKHOS DESBLOQUEADO
+================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO a la carpeta raíz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/selector_personajes.gd.
+4. Abrir el juego y seleccionar Varkhos normalmente.
+
+CAMBIO ÚNICO
+- Se eliminó el bloqueo que impedía confirmar a Varkhos en el selector.
+
+SE CONSERVA
+- roster completo de 13 luchadores;
+- Krovan y Nekhar;
+- zonas y bordes del selector;
+- VS Local;
+- selector de escenarios;
+- flujo Arcade;
+- gameplay 91.02.37 congelado;
+- fighter.gd;
+- CORE I / II / III;
+- IA;
+- rollback / snapshots / netcode.
+
+NOTA
+Varkhos sigue pasando por la ruta de Batalla Rápida cuando corresponde,
+tal como ya estaba diseñado en este selector. El desbloqueo es para QA final.

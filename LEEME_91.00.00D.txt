@@ -1,0 +1,50 @@
+CORE AWAKENED 91.00.00-D — DETERMINISM TRACE
+
+OBJETIVO
+Aislar el primer frame REAL de desincronización detectado por 91.00.00-C.
+La prueba C encontró la primera divergencia visible dentro del bloque que termina
+en tick 240. D reduce la resolución del diagnóstico de 60 ticks a 1 tick.
+
+CAMBIOS
+- Mantiene el Input Recorder y Replay Local.
+- En Versus Local fija una semilla RNG al comenzar la grabación.
+- Guarda la semilla en metadata y la restaura ANTES de crear escenario/personajes
+  durante el replay.
+- Registra temporalmente una traza lógica por tick con movimiento, ataque,
+  hitstun/hitstop, dash, salto, bloqueo, CORE y timers relevantes.
+- Durante replay compara esa traza tick por tick.
+- Si diverge imprime: TRACE DESYNC — primer tick EXACTO: N y los primeros campos
+  distintos.
+- Conserva los checkpoints de 60 ticks de 91.00.00-C como segunda verificación.
+
+IMPORTANTE
+Hay que generar una pelea NUEVA con 91.00.00-D antes de pulsar VER REPLAY.
+Una grabación de C no contiene rng_seed ni trazas por tick y no sirve para esta prueba.
+
+NO MODIFICA
+- fighter.gd
+- daño
+- hitstun
+- knockback
+- CORE I/II/III
+- Combo Cancel
+- Perfect Block / Counter
+- Guardia de Escape
+- dash / air dash
+- reglas del combate
+
+PRUEBA
+1. Versus Local nuevo.
+2. Jugar normalmente hasta terminar la partida.
+3. VER REPLAY.
+4. No tocar controles.
+5. Enviar captura del Output.
+
+RESULTADO IDEAL
+[91.00.00-D] RNG sincronizado — seed XXXXX
+[91.00.00-D] REPLAY OK — N/N ticks — resultado idéntico
+
+SI SIGUE DIVERGIENDO
+[91.00.00-D] TRACE DESYNC — primer tick EXACTO: N
+  • J2.<campo> esperado=... actual=...
+Ese dato permitirá corregir la fuente específica sin tocar a ciegas el Combat Feel.

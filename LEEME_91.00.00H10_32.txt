@@ -1,0 +1,35 @@
+CORE AWAKENED 91.00.00-H10.32 — CORE III NINTH BEAT PHYSICS
+
+OBJETIVO
+- H10.31 diagnosticó EIGHTH BEAT END (stage 10->11).
+- J1 y J2 fallaron en subtick 1/8 al entregar al noveno beat histórico.
+- Ataques/inputs coincidieron; apareció desplazamiento externo del atacante.
+- H10.32 convierte SOLO el noveno beat a FSM física/snapshotable.
+- Se revalida exactamente la misma frontera EIGHTH BEAT END stage 10->11.
+
+ARQUITECTURA CORE III
+stage 1  = recarga
+stage 2  = approach
+stage 3  = beat 1 físico
+stage 4  = beat 2 físico
+stage 5  = beat 3 físico
+stage 6  = beat 4 físico
+stage 7  = beat 5 físico
+stage 8  = beat 6 físico
+stage 9  = beat 7 físico
+stage 10 = beat 8 físico
+stage 11 = beat 9 físico (NUEVO H10.32)
+stage 12 = continuación histórica desde beat 10
+
+CAMBIOS
+- fighter.gd: noveno beat físico; async desplazado a stage 12 y coreografia[9].
+- main.gd: misma prueba EIGHTH BEAT END 10->11, etiquetada H10.32.
+- No se modificaron rollback_snapshot.gd, PerfectBlock, game_state.gd ni otros sistemas.
+
+PRUEBA
+- NO presionar F11.
+- Completar CORE I y CORE II normalmente.
+- Ejecutar CORE III completo con J1 y luego J2.
+- Dejar terminar ambas secuencias naturalmente.
+- Resultado esperado en ambos lados:
+  TACTICAL ROLLBACK OK — CORE III EIGHTH BEAT END — 8 ticks; estado presente idéntico

@@ -142,6 +142,24 @@ func _init() -> void:
 	textura_furia_carrera = load(AETHEL_NEW + "aceleracion_combo.png")
 	textura_aceleracion_combo = load(AETHEL_NEW + "aceleracion_combo.png")
 
+	# 91.02.51 — PASS 12H / PROYECTIL TANDA 2 — AETHEL.
+	proyectil_especial_habilitado = true
+	textura_proyectil_pose = load(AETHEL_NEW + "poder_proyectil.png")
+	textura_proyectil_nucleo = load(AETHEL_NEW + "proyectil_oficial.png")
+	# 91.02.52 — su PNG de lanzamiento incluye alas + energía y la
+	# normalización geométrica achicaba demasiado el cuerpo en pantalla.
+	proyectil_pose_escala_mult = 1.34
+	color_proyectil_primario = Color(0.10, 0.58, 1.0, 1.0)
+	color_proyectil_secundario = Color(0.88, 0.97, 1.0, 1.0)
+	proyectil_velocidad = 805.0
+	proyectil_dano_mult = 0.86
+	proyectil_empuje = 148.0
+	proyectil_hitstun = 0.22
+	proyectil_startup = 0.16
+	proyectil_recovery = 0.30
+	proyectil_cooldown = 0.62
+	sonido_proyectil_impacto = load("res://assets/helena/proyectil_impacto.wav")
+
 
 func _procesar_entrada(_delta: float, vel_actual: float) -> void:
 	if controlado_por_jugador:

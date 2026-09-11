@@ -1,0 +1,28 @@
+CORE AWAKENED 91.00.00-H10.8 — CORE III SAFETY CLOCK DELTA
+
+OBJETIVO
+Cerrar la última diferencia de CORE III ENTRY observada en H10.7 sin tocar gameplay ni los sistemas ya certificados.
+
+QUÉ DEMOSTRÓ H10.7
+- CORE III ENTRY J2: TACTICAL ROLLBACK OK — 8 ticks.
+- CORE III ENTRY J1: una sola diferencia tras 8 ticks:
+  snapshot.j2.reloj_seguridad_secuencia esperado=0.054 actual=0.04266666666667
+- La diferencia es exactamente 0.01133333333333 s = (1.0 - 0.32) / 60.
+- Todos los demás campos de J1/J2/PB, posiciones, ataques y estado CORE coincidieron.
+
+CAMBIO H10.8
+- Se conserva íntegra la estrategia H10.7 de delta histórico explícito.
+- Fighter incorpora rollback_reloj_seguridad_delta_override, one-shot y desactivado (-1) en gameplay normal.
+- Sólo cuando J1 activa CORE III en el tick 1.0 -> 0.32, el rival J2 conserva para reloj_seguridad_secuencia el delta causal 1/60.
+- El resto del callback J2 mantiene el delta post-transición 0.32/60 que ya coincidió en H10.7.
+- J2 activador no recibe este override porque H10.7 ya pasó completo en ese caso.
+
+PRUEBA
+No usar F11. Ejecutar una tercera activación CORE III con J1 y otra con J2.
+
+RESULTADO ESPERADO
+CORE III HISTORICAL DELTA TRANSITION ... activador=J1 ... J2Safety=0.016667
+CORE III ENTRY RESIM ...
+TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks; estado presente idéntico
+
+Si J1 y J2 pasan, CORE III ENTRY queda certificado y el siguiente borde es FIN RECARGA CORE III 1.55 s.

@@ -1,0 +1,51 @@
+CORE AWAKENED 91.00.00-H10.20 — CORE III FOURTH BEAT PHYSICS
+
+ESTADO CERTIFICADO AL ENTRAR
+- CORE I: end-to-end certificado.
+- CORE II: end-to-end certificado para rollback local de 8 ticks.
+- CORE III ENTRY: J1/J2 certificado y reconfirmado en H10.18.
+- CORE III RECARGA END: J1/J2 certificado y reconfirmado en H10.18.
+- CORE III APPROACH END: J1/J2 certificado y reconfirmado en H10.18, incluido tick residual Fighter.
+- CORE III FIRST BEAT END: J1/J2 certificado.
+- CORE III SECOND BEAT END: J1/J2 certificado en H10.18.
+
+EVIDENCIA H10.19
+- THIRD BEAT END stage 5->6 falló simétricamente en J1 y J2.
+- Primer causal: subtick 1/8, inmediatamente después del restore.
+- J1: sólo posición del atacante diverge por desplazamiento externo +0.0847 px.
+- J2: sólo posición del atacante diverge por desplazamiento externo -0.1796 px.
+- Inputs, ataque, hitstop, hitstun y rival permanecen iguales.
+- Causa: al entrar al cuarto beat, la ruta histórica vuelve a crear acercamiento Tween/coroutine no regenerable por snapshot.
+
+CAMBIO H10.20
+- Stage 5 sigue siendo el tercer beat físico certificado por arquitectura.
+- Stage 6 pasa a ser CORE3_ETAPA_CUARTO_BEAT_FSM.
+- El cuarto beat usa los mismos campos de acercamiento/subfase snapshotables de los beats 1-3.
+- No usa Tween ni SceneTreeTimer/coroutine dentro del cuarto beat.
+- El cuarto beat ejecuta exactamente coreografia[3].
+- Al terminar el cuarto beat, stage 7 entrega a la ruta histórica desde coreografia[4] (quinto beat).
+- NO se convierte todavía el quinto beat.
+- rollback_snapshot.gd no cambia: los campos ya existentes son suficientes.
+- perfect_block_90_1.gd no cambia.
+- main.gd conserva el observador THIRD BEAT END stage 5->6 para revalidar la misma frontera.
+
+PRUEBA
+1. Reemplazar con este ZIP completo.
+2. Entrar a Versus Local.
+3. NO presionar F11.
+4. Completar CORE I y CORE II normalmente si hace falta cargar CORE III.
+5. Ejecutar CORE III completo con J1 y dejar continuar la secuencia.
+6. Repetir con J2.
+7. Enviar el log completo.
+
+RESULTADO OBLIGATORIO
+- TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III RECARGA END — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III APPROACH END — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III FIRST BEAT END — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III SECOND BEAT END — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III THIRD BEAT END — 8 ticks
+
+SI THIRD BEAT END PASA J1/J2
+- Certificar y congelar THIRD BEAT END.
+- Siguiente objetivo: FOURTH BEAT END stage 6->7, frontera de entrega al quinto beat histórico.

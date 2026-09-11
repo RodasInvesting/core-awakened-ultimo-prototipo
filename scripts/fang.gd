@@ -73,6 +73,22 @@ func _init() -> void:
 		load("res://assets/fang/caminata_2.png"),
 	]
 
+	# 91.02.50 — PASS 12G / PROYECTIL TANDA 1 — FANG.
+	proyectil_especial_habilitado = true
+	textura_proyectil_pose = load("res://assets/fang/poder_proyectil.png")
+	textura_proyectil_nucleo = load("res://assets/fang/proyectil_oficial.png")
+	proyectil_pose_escala_mult = 1.03
+	color_proyectil_primario = Color(1.0, 0.30, 0.02, 1.0)
+	color_proyectil_secundario = Color(1.0, 0.88, 0.30, 1.0)
+	proyectil_velocidad = 805.0
+	proyectil_dano_mult = 0.86
+	proyectil_empuje = 148.0
+	proyectil_hitstun = 0.22
+	proyectil_startup = 0.16
+	proyectil_recovery = 0.30
+	proyectil_cooldown = 0.62
+	sonido_proyectil_impacto = load("res://assets/helena/proyectil_impacto.wav")
+
 func _procesar_entrada(_delta: float, vel_actual: float) -> void:
 	if controlado_por_jugador:
 		_entrada_jugador(vel_actual)

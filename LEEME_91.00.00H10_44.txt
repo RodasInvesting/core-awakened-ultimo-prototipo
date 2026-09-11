@@ -1,0 +1,25 @@
+CORE AWAKENED 91.00.00-H10.44
+CORE III — FIFTEENTH BEAT PHYSICS / FOURTEENTH BEAT END REVALIDATION
+
+Objetivo único:
+- Revalidar rollback de 8 ticks en CORE III FOURTEENTH BEAT END.
+- Frontera exacta: stage 16 -> stage 17.
+- stage 16 = decimocuarto beat físico snapshotable.
+- stage 17 = decimoquinto beat físico snapshotable (nuevo H10.44).
+- stage 18 = continuación histórica desde el decimosexto beat.
+
+Cambio determinista único:
+- El beat 15 deja de usar la ruta async/Tween/coroutine histórica.
+- Reutiliza la misma FSM física snapshotable de los beats 1-14.
+- Snapshot, PerfectBlock, GameState, Input Recorder/Replay, Ring Buffer, Motion Guard y Resultado sin cambios.
+
+Prueba:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar la pelea.
+5. Repetir CORE III completo con J2 y dejar terminar la pelea.
+6. Enviar el runtime completo.
+
+Resultado objetivo en ambos lados:
+TACTICAL ROLLBACK OK — CORE III FOURTEENTH BEAT END — 8 ticks; estado presente idéntico

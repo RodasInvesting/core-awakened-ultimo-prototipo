@@ -1,0 +1,85 @@
+CORE AWAKENED 91.00.00-H3.3 — COUNTER CAPTURE BOUNDARY
+
+RESULTADO H3.2
+--------------
+El Counter REAL quedó confirmado:
+- serial 1, 2, 3 = puño
+- serial 4, 5, 6 = patada
+- luego serial 7, 8 y 9 también fueron marcados.
+
+Pero F11 seguía diciendo:
+  TACTICAL TEST — no hay ataque normal dentro de los últimos 8 ticks
+
+CAUSA EXACTA
+------------
+PerfectBlock90_1 y Main no capturan en la misma frontera.
+
+El sello:
+  COUNTER EVENT MARCADO
+puede ocurrir DESPUÉS de que Main ya guardó el snapshot más reciente.
+
+Al physics tick siguiente, Main hacía:
+1. detectar solicitud F11
+2. buscar Counter en ring
+3. recién DESPUÉS registrar el snapshot nuevo
+
+Por eso el sello existía en PerfectBlock90_1 pero todavía no en el ring.
+
+PRUEBA DEL LOG
+--------------
+Más tarde, cuando el ring sí tenía serial=7:
+  COUNTER MARK esperado serial=7
+  COUNTER MARK actual serial=7
+
+Es decir: captura/restauración del marcador funcionan.
+Fallaba sólo la frontera de búsqueda.
+
+CAMBIO H3.3
+-----------
+Si F11 detecta:
+  serial LIVE > serial del último snapshot del ring
+
+NO hace rollback todavía.
+
+Hace:
+1. imprime:
+   COUNTER RECIÉN MARCADO — ... capturando 1 physics tick
+2. deja continuar exactamente un physics tick normal
+3. ese tick Main guarda el sello dentro del ring
+4. F11 se rearma automáticamente
+5. al siguiente physics tick localiza el evento y hace rollback
+
+También:
+- lookback ampliado a 180 ticks (~3 s)
+- un serial ya probado no se reutiliza
+- gameplay y timings permanecen intactos
+
+NO cambia:
+- Fighter
+- Perfect/Counter timings
+- daño
+- startup
+- empuje
+- hitstun
+- recovery
+- controles
+- Combat Feel
+
+PRUEBA
+------
+1. J1 ataca.
+2. J2 consigue PERFECT!
+3. soltar bloqueo
+4. J2 X o C
+5. confirmar COUNTER!
+6. F11
+
+Secuencia esperada:
+  COUNTER EVENT MARCADO — serial=N ...
+  ROLLBACK SOLICITADO
+  COUNTER RECIÉN MARCADO — serial=N ... capturando 1 physics tick
+  COUNTER EVENT LOCALIZADO — serial=N ...
+  TACTICAL ROLLBACK — COUNTER ...
+  TACTICAL ROLLBACK OK — COUNTER — 8 ticks; estado presente idéntico
+
+Hacer 4-6 Counters alternando puño/patada.

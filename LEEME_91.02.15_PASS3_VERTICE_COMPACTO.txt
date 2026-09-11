@@ -1,0 +1,42 @@
+CORE AWAKENED 91.02.15 — PASS 3: VÉRTICE MÁS COMPACTO
+
+BASE
+- Parte exactamente de 91.02.14 PASS 2.
+- Conserva PASS 1: gravedad x1.35 sólo durante descenso libre normal.
+- Conserva PASS 2: MULT_DOBLE_SALTO_ALTURA = 1.25.
+
+CAMBIO ÚNICO DE GAMEPLAY
+- Se agrega una banda pequeña alrededor del vértice del salto:
+  UMBRAL_VELOCIDAD_VERTICE = 120.0
+  MULT_GRAVEDAD_VERTICE = 1.50
+- Sólo actúa cuando saltos_usados > 0, sin hitstun y sin derribo especial.
+- La rama del vértice NO se acumula con la gravedad de caída x1.35.
+
+OBJETIVO
+- Reducir varios frames de sensación de suspensión cuando velocity.y cruza por 0.
+- Mantener prácticamente la misma altura de salto.
+- Mantener el peso de caída aprobado en PASS 1.
+- Mantener la utilidad del doble salto aprobado en PASS 2.
+
+AISLAMIENTO
+- No cambia fuerza_salto base (-420.0).
+- No cambia gravedad base (1200.0).
+- No cambia MULT_DOBLE_SALTO_ALTURA (1.25).
+- No cambia MULT_GRAVEDAD_CAIDA_LIBRE (1.35).
+- No cambia Dash / Backdash / Air Dash.
+- No cambia ataques, daño, hitstop, hitstun ni knockback.
+- No cambia launcher ni derribos especiales.
+- No cambia CORE I / II / III.
+- No cambia sprites, escalas, recargas, sonidos, VS ni main.gd.
+
+PRUEBA RECOMENDADA
+1) Kai: salto normal limpio; observar subida → vértice → caída.
+2) Kai: doble salto; confirmar que sigue siendo útil y más compacto.
+3) Aethel: salto normal y doble salto avanzando sobre el rival.
+4) Nekhar/Dax: comprobar que el aterrizaje conserva peso.
+5) Ataque aéreo normal: confirmar que no cambió timing de golpe de forma perceptible.
+
+CRITERIO
+- Debe desaparecer parte de la pausa visual en la cima.
+- No debe sentirse como una caída brusca ni como si el personaje fuese atraído al suelo.
+- Si PASS 3 queda bien, el siguiente ajuste debe ser VISUAL (lectura de pose ascenso/descenso), no otra subida grande de gravedad.

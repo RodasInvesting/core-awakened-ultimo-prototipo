@@ -1,0 +1,47 @@
+CORE AWAKENED 91.02.49 — PASS 12F / HELENA AJUSTE FINAL
+=========================================================
+
+VIDEO 91.02.48
+- Lanzamiento: APROBADO.
+- Velocidad 805 px/s: APROBADA.
+- Evasión salto/doble salto: APROBADA.
+- PNG oficial: APROBADO.
+- Pendientes:
+  1) sonido al SALIR, no al impactar;
+  2) dragón un poco más visible.
+
+CAMBIOS
+1. SONIDO
+   - Ya NO se reproduce al impactar.
+   - Se reproduce exactamente cuando el proyectil aparece/sale de las manos.
+   - Se conserva el audio procesado de 91.02.48 y su volumen.
+
+2. TAMAÑO VISUAL
+   - Núcleo PNG oficial: objetivo de 104 px -> 124 px de alto (~19 %).
+   - Aura/anillos crecen levemente para acompañar el PNG.
+   - El objetivo es que el dragón se reconozca mejor durante el vuelo.
+
+COLISIÓN / BALANCE
+- Hitbox horizontal: SIN CAMBIOS.
+- Hitbox vertical 15 px: SIN CAMBIOS.
+- La evasión con salto/doble salto queda intacta.
+- Velocidad 805 px/s: SIN CAMBIOS.
+- Daño, empuje, hitstun, startup, recovery y cooldown: SIN CAMBIOS.
+
+ARCHIVO MODIFICADO
+- scripts/proyectil_energia.gd
+
+REQUISITO
+Instalar sobre 91.02.48, que ya contiene fighter.gd, helena.gd, PNG y WAV.
+
+INSTALACIÓN
+Abrir ZIP -> arrastrar todo a la raíz -> aceptar reemplazar.
+
+PRUEBA FINAL
+- ↓ → + PUÑO.
+- El sonido debe escucharse al NACER el proyectil.
+- Al impactar NO debe volver a sonar.
+- El dragón debe verse un poco más grande.
+- El doble salto debe seguir pasando por encima a distancia.
+
+Si pasa: PROYECTIL HELENA CERRADO.

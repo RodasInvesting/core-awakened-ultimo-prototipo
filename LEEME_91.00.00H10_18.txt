@@ -1,0 +1,37 @@
+CORE AWAKENED 91.00.00-H10.18 — CORE III PB DELTA REGRESSION FIX
+
+OBJETIVO
+- Revalidar las fronteras ya certificadas de CORE III después de la regresión del harness H10.17.
+- Mantener intacto el tercer beat físico agregado en H10.17.
+- NO avanzar todavía a THIRD BEAT END stage 5->6.
+
+CAUSA CONFIRMADA EN H10.17
+- Fighters: reloj_seguridad_secuencia avanza directamente con delta; su diferencia snapshot puede recuperar el tick residual 0.005333 observado cerca de RECARGA END.
+- PerfectBlock: _rollback_tactical_clock_seconds avanza con paso = delta / Engine.time_scale.
+- H10.17 realimentaba esa diferencia no escalada como delta de PerfectBlock, provocando doble división por time_scale y DESYNC sólo del reloj táctico en CORE III ENTRY y RECARGA END.
+
+CAMBIO H10.18
+- Se conserva el clock-delta override únicamente para J1/J2 Fighters en subticks sin transición de time_scale.
+- PerfectBlock vuelve SIEMPRE a la fórmula certificada H10.11: base_delta * escala_post.
+- La semántica especial J2Safety de H10.11 permanece intacta.
+- fighter.gd permanece byte por byte igual a H10.17: tercer beat físico stage 5 preservado.
+- rollback_snapshot.gd y perfect_block_90_1.gd no cambian.
+
+PRUEBA
+1. Reemplazar scripts con este ZIP completo.
+2. Versus Local. NO presionar F11.
+3. Ejecutar CORE III con J1 y luego con J2.
+4. Enviar el log completo.
+
+DEBEN PASAR EN AMBOS LADOS
+- TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III RECARGA END — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III APPROACH END — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III FIRST BEAT END — 8 ticks
+- TACTICAL ROLLBACK OK — CORE III SECOND BEAT END — 8 ticks
+
+SI TODO PASA
+- ENTRY/RECARGA quedan reconfirmados bajo el nuevo regression guard.
+- APPROACH END queda reconfirmado incluyendo el tick residual post-recarga.
+- SECOND BEAT END queda certificado y congelado.
+- Próximo build: diagnóstico THIRD BEAT END stage 5->6.

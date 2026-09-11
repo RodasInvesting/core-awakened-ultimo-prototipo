@@ -1,0 +1,95 @@
+CORE AWAKENED 91.00.00-H10.2 — CORE III TIMESCALE BOUNDARY
+
+DIAGNÓSTICO H10.1
+-----------------
+La ventana ya fue exacta:
+  [evento-1 .. evento+6]
+
+J1 y J2 fallaron en el primer subtick del borde CORE III.
+
+Patrón clave:
+  reloj_seguridad esperado = 0.0166667
+  reloj_seguridad actual   = 0.0053333
+
+0.0053333 = (1/60) * 0.32
+
+También:
+  pose_timer esperado 1.6133333
+  pose_timer actual   1.6246667
+  diferencia          0.0113334
+
+En J1:
+  combo_count esperado 0 / actual 54
+  combo_timer esperado 0 / actual 0.0113333
+
+Es la misma causa: con delta 16.67 ms el combo_timer expira y resetea el
+combo; con 5.33 ms todavía queda tiempo.
+
+CAUSA
+-----
+LIVE:
+- el frame de activación CORE III nace con Engine.time_scale=1.0;
+- su delta ya es 1/60;
+- dentro de ese mismo tick recarga_iniciada(true) pone time_scale=0.32;
+- ese cambio afecta RECIÉN el siguiente frame.
+
+ROLLBACK anterior:
+- el test se pide cuando LIVE ya está en time_scale=0.32;
+- Godot crea el frame actual con delta=0.0053333;
+- Main restaura time_scale=1.0 dentro de ese frame;
+- pero ese _delta ya quedó calculado;
+- el primer tick histórico usa el delta equivocado.
+
+H10.2
+-----
+NO toca Fighter.
+NO toca rollback_snapshot.
+NO toca CORE III.
+
+Sólo Main aplica una frontera temporal a CORE III ENTRY.
+
+FRAME A — ARMADO:
+- restore del snapshot histórico;
+- time_scale queda en su valor histórico;
+- J1/J2 y PerfectBlock se pausan;
+- no se consume input histórico.
+
+FRAME B — CATCH-UP:
+- Godot ya creó el nuevo frame usando el time_scale histórico;
+- Main hace un segundo restore del mismo snapshot;
+- reactiva Fighter y PerfectBlock;
+- empieza la ventana histórica.
+
+Cuando el especial se re-simula:
+- recarga_iniciada(true) vuelve a poner 0.32;
+- los frames siguientes nacen lentos igual que en LIVE.
+
+PRUEBA
+------
+NO usar F11.
+
+Una vez J1 y una vez J2:
+CORE I -> CORE II completo -> cargar tercera vez -> CORE III.
+
+Esperar:
+  CORE III EXACT ENTRY LOCALIZADO
+  CORE III TIMESCALE BOUNDARY ARMADO
+  TACTICAL ROLLBACK — CORE III ENTRY
+  CORE III TIMESCALE BOUNDARY READY
+  CORE III ENTRY RESIM
+
+Buscamos:
+  TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks
+
+Ya no deben aparecer:
+- 0.016667 vs 0.005333
+- pose_timer con diferencia 0.011333
+- combo_timer 0 vs 0.011333
+- combo_count viejo sobreviviendo
+
+Si pasa J1+J2:
+CORE III ENTRY queda certificado.
+El siguiente borde será FIN RECARGA 1.55 s, donde sí esperamos atacar
+SceneTreeTimer/await y la transición a Furia/acercamiento.
+
+CORE I y CORE II siguen intactos/certificados.

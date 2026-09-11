@@ -1,0 +1,90 @@
+CORE AWAKENED 91.00.00-H8.5 — CORE I EXPLICIT SEQUENCE
+
+RESULTADO H8.4
+--------------
+La posición del Target Lock ya quedó exacta:
+  esperado 0.0987 / actual 0.0987
+
+Primer DESYNC:
+  inmediatamente al terminar el Target Lock.
+
+LIVE sí ejecutó:
+- pose especial
+- combo_count/combo_timer
+- daño
+- hitstop/hitstun
+- empuje
+- reacción de impacto
+
+ROLLBACK no ejecutó nada de eso.
+
+CAUSA
+-----
+La lógica seguía suspendida en:
+
+  await core1_target_lock_finalizado
+
+Al restaurar un snapshot, Godot restaura variables del Fighter pero NO puede
+restaurar la continuación interna de esa coroutine suspendida.
+
+H8.5
+----
+CORE I ahora tiene máquina de estados explícita:
+
+  INACTIVO
+    -> TARGET_LOCK
+    -> POSTER
+
+Al finalizar Target Lock, en el MISMO physics tick:
+- emite la señal diagnóstica;
+- ejecuta pose;
+- ejecuta especial;
+- prepara reacción del rival;
+- aplica impacto/daño;
+- inicia la espera lógica del poster.
+
+La espera lógica del poster también vive en physics ticks.
+
+La rutina visual del poster sigue usando Tween/await, pero para CORE I pasa a
+ser PRESENTACIÓN PURA:
+- no gobierna daño;
+- no gobierna desbloqueo;
+- no gobierna fin de secuencia;
+- durante rollback catch-up ni siquiera se duplica.
+
+CORE II/III conservan el comportamiento anterior.
+
+PRUEBA H8.5
+-----------
+Igual que H8.4.
+
+J1:
+1. Llenar primer CORE.
+2. Alejarse > ~210 px.
+3. Activar CORE I.
+4. Dejar terminar CORE I.
+5. Cuando vuelva el control, F11 UNA VEZ.
+6. Repetir 2 veces.
+
+J2:
+Igual, 2 veces.
+
+Queremos:
+  CORE I TARGET END LOCALIZADO
+  TACTICAL ROLLBACK — CORE I TARGET END
+  CORE I TARGET END RESIM
+  TACTICAL ROLLBACK OK — CORE I TARGET END — 8 ticks
+
+Lo crítico:
+ya NO deben aparecer diferencias inmediatas en:
+- combo_count
+- vida rival
+- hitstun
+- hitstop
+- empuje
+- pose_timer
+
+Si H8.5 pasa:
+el próximo paso será probar el FINAL del poster y la devolución de control.
+
+NO USAR CORE II/III todavía.

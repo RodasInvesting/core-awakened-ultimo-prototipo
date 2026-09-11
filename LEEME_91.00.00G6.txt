@@ -1,0 +1,34 @@
+CORE AWAKENED 91.00.00-G6 — CAUSAL PUSHBOX TRACE + VISUAL RESTORE
+
+Hallazgo de G5
+--------------
+Los desync reales aparecen en el estado del subtick 1. J1 llega con la misma
+velocity y el mismo last_motion que la grabación, pero su posición mundial es
+distinta. Eso demuestra desplazamiento externo a su propio move_and_slide().
+
+Además G5 imprimía el input del subtick donde SE DETECTABA la diferencia, no el
+input del subtick ANTERIOR que la causó.
+
+Cambio G6
+---------
+- El log ahora imprime INPUT CAUSAL del tick anterior.
+- Calcula desplazamiento externo:
+  delta mundial - get_last_motion().
+- Imprime distancia entre luchadores antes/después.
+- Imprime contacto_post_golpe_timer/distancia, bloqueo, hitstun, fase, dash y
+  timers de AMBOS Fighter.
+- Imprime textura/escala histórica usada por el pushbox contextual.
+- El snapshot restaura sprite.texture/scale/position/rotation/flip/modulate y
+  ciclos de caminata relevantes, porque el pushbox contextual puede consultar
+  el radio visual de la pose.
+- NO modifica fighter.gd ni Combat Feel.
+
+PRUEBA
+------
+Repetir F11 varias veces con movimiento/dash/salto sin golpes.
+Si aparece:
+[91.00.00-G6] ROLLBACK CAUSAL DESYNC
+copiar ese bloque completo hasta LOCAL ROLLBACK DESYNC.
+
+La línea DESPLAZAMIENTO EXTERNO nos dirá directamente qué Fighter fue movido
+por pushbox/anchor/contacto fuera de su move_and_slide().

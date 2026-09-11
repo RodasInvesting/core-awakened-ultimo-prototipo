@@ -1,0 +1,46 @@
+CORE AWAKENED 91.02.32 — PASS 9.4C ENCUADRE ABIERTO CORE II
+=============================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Probar CORE II desde suelo y desde aire.
+
+PROBLEMA CORREGIDO
+Con PASS 9.4B la gigantografia exclusiva ya tiene el tamaño correcto, pero el
+zoom historico 1.18 de la recarga podia cortar la mitad superior cuando CORE II
+se activaba desde salto/doble salto.
+
+SOLUCION
+- CORE II cancela UNICAMENTE el tween de zoom de recarga.
+- Conserva sonido, oscurecimiento de escenario, aura y recarga.
+- Durante los 1.05 s usa un encuadre abierto adaptativo.
+- En suelo normalmente queda cerca de 0.96-1.00.
+- Desde aire puede abrir hasta 0.88 para incluir gigantografia + luchadores.
+- Al terminar la recarga devuelve inmediatamente el control a la camara
+  dinamica normal antes del acercamiento/combo.
+
+CORE III
+SIN CAMBIOS.
+Mantiene el zoom epico historico 1.24, camara lenta, Furia y Absoluto.
+
+NO TOCA
+- duracion CORE II: 1.05 s
+- flash 9.4B: 0.50 / 0.08 / 0.24 / 0.10
+- cadencia combo: 0.012 / 0.065 / 0.010 / 0.004
+- gigantografias exclusivas ni gigantografia final
+- daño / hitstun / hit-stop / knockback
+- pushbox 78 / 80 / 84
+- salto / doble salto / gravedad / air dash
+- receiver lock
+- KO
+- rollback / netcode / snapshots / RPC / serializacion
+
+PRUEBA CLAVE
+A) CORE II desde suelo.
+B) CORE II en la subida del salto.
+C) CORE II cerca del apice.
+D) CORE II durante doble salto.
+E) CORE II cerca de un borde.
+F) CORE III para confirmar que conserva su zoom epico.

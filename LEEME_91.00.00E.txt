@@ -1,0 +1,42 @@
+CORE AWAKENED 91.00.00-E — PHYSICS CLOCK
+
+Objetivo
+--------
+Eliminar el desync detectado exactamente en tick 219 durante READY/FIGHT.
+
+Hallazgo de 91.00.00-D
+----------------------
+La seed RNG coincidió, pero en tick 219:
+- grabación: ronda_activa=true
+- replay: ronda_activa=false
+- ambos Fighters seguían congelado_por_rival=true en replay
+
+Causa
+-----
+READY/FIGHT y el cambio de ronda usaban SceneTreeTimer de reloj idle/tiempo real.
+Ese callback puede cruzar un physics tick distinto entre dos ejecuciones.
+
+Cambio E
+--------
+- READY (1.65 s) -> cantidad exacta de physics ticks.
+- FIGHT (1.98 s) -> cantidad exacta de physics ticks.
+- transición tras K.O. (2.2 s) -> physics ticks.
+- limpieza visual de texto de ronda (0.9 s) -> physics ticks.
+- NO se modifica fighter.gd.
+- NO se cambia daño, hitstun, CORE, dash, bloqueo, Combo Cancel ni física del Fighter.
+- Se conserva seed RNG y traza por tick de 91.00.00-D.
+
+Prueba
+------
+1. Copiar este paquete encima de 91.00.00-D y reemplazar archivos.
+2. Jugar una pelea NUEVA en Versus Local.
+3. Terminar la pelea.
+4. Pulsar VER REPLAY.
+5. No tocar controles.
+6. Revisar Output.
+
+Resultado buscado:
+[91.00.00-E] REPLAY OK ...
+
+Si aparece TRACE DESYNC, enviar captura. El nuevo tick exacto será la siguiente
+fuente no determinista a aislar.

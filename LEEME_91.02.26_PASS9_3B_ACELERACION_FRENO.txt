@@ -1,0 +1,48 @@
+CORE AWAKENED 91.02.26 — PASS 9.3B ACELERACION / FRENO TERRESTRE
+================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar.
+
+OBJETIVO
+Aumentar dinamica entre acciones sin subir la velocidad maxima del luchador.
+
+CAMBIO UNICO
+- Aceleracion terrestre normal: +15 %.
+  Base efectiva por defecto: 2400 -> 2760.
+- Frenado terrestre al soltar direccion: +18 %.
+  Base efectiva por defecto: 2800 -> 3304.
+- Velocidad maxima: SIN CAMBIOS.
+- Aire: SIN CAMBIOS.
+- Dash/backdash: SIN CAMBIOS.
+- Footwork durante ataques: SIN CAMBIOS.
+
+SE PRESERVA
+- PASS 9.3A recovery: puño 0.64 / patada 0.60.
+- PASS 9.2C pushbox: neutral 78 / precontacto 80 / torso 84.
+- Startup, ventana activa, pose, alcance e hitboxes.
+- Daño, hitstun, hitstop y knockback.
+- Gravedad, salto y doble salto.
+- CORE I / II / III, posters, rematador y Absoluto.
+- KO final.
+- Rollback / netcode / snapshots / RPC / serializacion.
+
+PRUEBA PRINCIPAL
+A) Quieto -> caminar hacia rival: debe responder mas rapido.
+B) Caminar -> soltar: debe frenar antes, sin deslizarse.
+C) Izquierda -> derecha repetidamente: cambio de direccion mas firme.
+D) Golpe -> caminar: comprobar la mejora combinada con PASS 9.3A.
+E) Golpe -> retroceder.
+F) Bloqueo -> avance / retroceso.
+G) Pelea libre 45-60 s contra IA o VS Local.
+H) Probar contacto cerrado para revalidar 78/80/84.
+I) CORE II rapido al final para revalidar PASS 9.1.
+
+QUE BUSCAMOS
+- Mayor respuesta y energia arcade.
+- Menos sensacion de arrastre entre acciones.
+- NO aumentar desplazamiento maximo por segundo.
+- NO perder peso ni control fino.

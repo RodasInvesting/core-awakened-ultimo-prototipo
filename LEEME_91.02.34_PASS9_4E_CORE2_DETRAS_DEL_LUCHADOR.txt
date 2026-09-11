@@ -1,0 +1,48 @@
+CORE AWAKENED 91.02.34 — PASS 9.4E CORE II SCREEN-SAFE DETRAS DEL LUCHADOR
+================================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd y assets/core2_entrada_flash/.
+4. Abrir Godot y esperar importacion si corresponde.
+
+OBJETIVO
+Mantener la gigantografia exclusiva de CORE II completa dentro de pantalla,
+pero devolviendola DETRAS del personaje para que no tape la recarga ni se vea
+adelante en activaciones de esquina.
+
+QUE CAMBIA
+- Se conserva el calculo screen-safe de 91.02.33.
+- La gigantografia deja de vivir en CanvasLayer frontal.
+- Ahora se crea como Sprite2D top_level en el mundo 2D.
+- Su posicion y escala se calculan a partir de la camara activa.
+- Se fija z_index = -1 para quedar detras de los luchadores.
+- Durante toda la recarga se recompone por si la camara hace microajustes.
+
+RESULTADO BUSCADO
+- Desde suelo: misma lectura clara.
+- Desde doble salto: ya no tapa al personaje.
+- Desde esquina: ya no parece delante del luchador.
+- El PNG sigue completo y con buen tamaño.
+
+SE CONSERVA
+- PASS 9.4C camara abierta CORE II (0.88–1.00).
+- PASS 9.4D safe-area y clamp del PNG visible.
+- recarga CORE II: 1.05 s.
+- flash: 0.50 / 0.08 / 0.24 / 0.10.
+- combo: 0.012 / 0.065 / 0.010 / 0.004.
+- CORE III y su zoom epico.
+- daño / hitstun / hit-stop / knockback.
+- pushbox 78 / 80 / 84.
+- salto / doble salto / gravedad / air dash.
+- receiver lock / KO.
+- rollback / netcode / snapshots / RPC / serializacion.
+
+PRUEBA CLAVE
+A) suelo.
+B) esquina izquierda.
+C) esquina derecha.
+D) doble salto.
+E) lado invertido.
+F) CORE III de control.

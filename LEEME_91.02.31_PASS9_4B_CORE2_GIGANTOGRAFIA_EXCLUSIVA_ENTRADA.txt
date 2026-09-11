@@ -1,0 +1,47 @@
+CORE AWAKENED 91.02.31 — PASS 9.4B CORE II / GIGANTOGRAFIA EXCLUSIVA DE ENTRADA
+=================================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO su contenido a la carpeta RAIZ de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Copiar también assets/core2_entrada_flash/ completa.
+5. Abrir Godot y esperar la importación de los PNG.
+
+NUEVO FLUJO CORE II
+recarga
+ -> gigantografía EXCLUSIVA grande arriba/detrás del Fighter
+ -> desaparece
+ -> combo certificado
+ -> remate/gigantografía FINAL existente
+
+ARTES INCLUIDOS
+Aethel, Cibor-X, Dax, Fang, Helena, Jester, Kai, Kali, Krovan,
+Magnus, Nekhar/Momia, Varkhos y Xenoid.
+
+PRESENTACION
+- Empieza dentro de los últimos 0.50 s de la recarga existente.
+- Fade-in: 0.08 s.
+- Presencia: 0.24 s.
+- Fade-out: 0.10 s.
+- Altura base: 430 px.
+- Opacidad objetivo: ~90 %, máximo 92 %.
+- Capa z_index -1: el Fighter real queda delante.
+- Mucho más elevada y visible que PASS 9.4A.
+
+IMPORTANTE
+NO agrega tiempo a CORE II.
+NO cambia recarga lógica: 1.05 s.
+NO cambia la ráfaga: 0.012 / 0.065 / 0.010 / 0.004.
+NO toca CORE III.
+NO toca remate final.
+NO toca daño, hitstun, knockback, pushbox, receiver lock ni KO.
+NO toca rollback, netcode, snapshots, RPC ni serialización.
+
+PRUEBA
+- Probar Helena, Fang, Dax y Varkhos.
+- Probar Magnus y Kali para confirmar su arte dedicado.
+- Probar Krovan y Nekhar si ya están activos en el roster.
+- Verificar que la gigantografía se vea claramente DURANTE la recarga.
+- Verificar que desaparezca antes del combo.
+- Verificar que el remate final siga siendo el cierre dominante.

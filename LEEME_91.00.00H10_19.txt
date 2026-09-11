@@ -1,0 +1,45 @@
+CORE AWAKENED 91.00.00-H10.19 — CORE III THIRD BEAT END DIAGNOSTIC
+
+ESTADO CERTIFICADO AL ENTRAR
+- CORE I: end-to-end certificado.
+- CORE II: end-to-end certificado para rollback local de 8 ticks.
+- CORE III ENTRY: J1/J2 certificado y reconfirmado en H10.18.
+- CORE III RECARGA END: J1/J2 certificado y reconfirmado en H10.18.
+- CORE III APPROACH END: J1/J2 certificado y reconfirmado en H10.18, incluido tick residual Fighter.
+- CORE III FIRST BEAT END: J1/J2 certificado.
+- CORE III SECOND BEAT END: J1/J2 certificado en H10.18.
+
+OBJETIVO H10.19
+- Diagnosticar únicamente CORE III THIRD BEAT END.
+- Frontera exacta: core3_secuencia_etapa 5 -> 6.
+- Stage 5 = tercer beat FSM físico snapshotable.
+- Stage 6 = continuación histórica/async desde el cuarto beat.
+- Ventana: 8 ticks, comenzando un tick antes del cruce.
+
+CAMBIO H10.19
+- main.gd agrega observador automático stage 5->6 para J1/J2.
+- main.gd agrega localizador histórico de la frontera dentro del rollback ring.
+- La nueva clasificación "CORE III THIRD BEAT END" usa el mismo restore exacto y delta histórico CORE III ya certificado.
+- THIRD BEAT END tiene prioridad sobre SECOND/FIRST/APPROACH/RECARGA/ENTRY cuando se dispara su auto-test.
+- NO se convierte todavía el cuarto beat.
+- fighter.gd permanece byte por byte igual a H10.18.
+- rollback_snapshot.gd permanece byte por byte igual a H10.18.
+- perfect_block_90_1.gd permanece byte por byte igual a H10.18.
+
+PRUEBA
+1. Reemplazar con este ZIP completo.
+2. Entrar a Versus Local.
+3. NO presionar F11.
+4. Completar CORE I y CORE II normalmente si hace falta cargar CORE III.
+5. Ejecutar CORE III completo con J1 y dejar continuar la secuencia.
+6. Repetir con J2.
+7. Enviar el log completo.
+
+DEBE APARECER LA NUEVA FRONTERA
+- CORE III THIRD BEAT END AUTO MARCADO
+- CORE III THIRD BEAT END LOCALIZADO — stage 5->6
+- TACTICAL ROLLBACK — CORE III THIRD BEAT END
+
+RESULTADO POSIBLE
+- OK: stage 5->6 queda certificado; siguiente objetivo será instrumentar el interior del cuarto beat histórico.
+- DESYNC: el log debe revelar el primer tick/subtick causal. Si reproduce el patrón Tween/coroutine del cuarto beat, la siguiente build convertirá únicamente ese cuarto beat a FSM física.

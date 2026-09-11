@@ -1,0 +1,31 @@
+CORE AWAKENED 91.02.37 — PASS 9.4H RETROCESO GLOBAL CORE I EXCLUSIVAS
+================================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO a la raiz del proyecto CORE AWAKENED.
+3. Reemplazar archivos cuando Windows lo pida.
+4. Abrir Godot y esperar la importacion si corresponde.
+
+OBJETIVO
+Ajustar TODAS las gigantografias exclusivas de CORE I para que queden un poco
+mas atras del luchador y se lean mejor visualmente.
+
+QUE CAMBIA
+- Se agrega un retroceso global adicional a TODAS las gigantografias exclusivas
+  de CORE I.
+- Cibor-X y Magnus mantienen ademas su calibracion extra previa.
+- No se modifican tamaños generales, daño ni logica del golpe.
+
+QUE NO TOCA
+- CORE II y su recarga limpia
+- gigantografia final de CORE II
+- CORE III
+- daño / hitstun / hit-stop
+- rollback / snapshots
+- pushbox
+
+PRUEBA SUGERIDA
+1. Probar CORE I con varios luchadores.
+2. Confirmar que la gigantografia queda un poco mas atras del cuerpo.
+3. Revisar especialmente Helena, Fang, Kai, Aethel, Cibor-X, Magnus y Varkhos.

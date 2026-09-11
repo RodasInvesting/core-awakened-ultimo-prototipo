@@ -1,0 +1,37 @@
+CORE AWAKENED 91.02.63 — PASS 14C HOTFIX / SELECTOR PERSONAJES
+================================================================
+
+ERROR CORREGIDO
+Godot 4.7.1:
+- línea 144: Cannot infer the type of "propio"
+- línea 145: Cannot infer the type of "otro"
+
+CAUSA
+NetworkManager se obtiene como Node y sus propiedades dinámicas llegan como
+Variant. Godot no puede inferir automáticamente el tipo resultante de la
+expresión ternaria.
+
+CORRECCIÓN
+Se tipan explícitamente ambas variables como String y se convierten con str().
+
+ARCHIVO MODIFICADO
+- scripts/selector_personajes.gd
+
+NO SE TOCA
+- network_manager.gd
+- game_state.gd
+- selector_escenarios.gd
+- presentacion_vs.gd
+- main.gd
+- fighter.gd
+- rollback 91.02.60
+- gameplay / CORE / IA / proyectiles
+
+INSTALACIÓN
+Abrir ZIP -> arrastrar todo a la raíz -> aceptar reemplazar.
+
+PRUEBA
+1. Abrir el proyecto en Godot.
+2. Confirmar que desaparecen los Parse Error de selector_personajes.gd.
+3. Ejecutar dos instancias y repetir ONLINE -> HOST / CONECTAR.
+4. Continuar con PASS 14C: selección de personajes y escenario sincronizados.

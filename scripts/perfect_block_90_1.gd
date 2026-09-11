@@ -194,6 +194,41 @@ var _aethel_patada_escala: Dictionary = {}
 
 var _scan_timer := 0.0
 
+# 91.00.00-H10.2 — MARCADOR EXPLÍCITO DE COUNTER PARA ROLLBACK.
+# Diagnóstico únicamente: NO gobierna gameplay, daño, timing ni input.
+# Se incrementa sólo cuando _intentar_counter() realmente consume la ventana
+# y lanza el contraataque.
+var _rollback_counter_event_serial: int = 0
+var _rollback_counter_event_fighter_id: int = -1
+var _rollback_counter_event_tipo: String = ""
+
+# 91.00.00-H10.2 — marcador explícito Back Dash para diagnóstico rollback.
+# No participa de gameplay: sólo identifica una ejecución REAL aceptada.
+var _rollback_backdash_event_serial: int = 0
+var _rollback_backdash_event_fighter_id: int = -1
+var _rollback_backdash_event_direccion: float = 0.0
+
+# 91.00.00-H10.2 — marcadores explícitos Launcher/Air Combo para diagnóstico.
+# Son observadores inertes: NO gobiernan gameplay, timings, daño ni movimiento.
+var _rollback_launcher_event_serial: int = 0
+var _rollback_launcher_event_attacker_id: int = -1
+var _rollback_launcher_event_defender_id: int = -1
+
+var _rollback_airhit_event_serial: int = 0
+var _rollback_airhit_event_attacker_id: int = -1
+var _rollback_airhit_event_defender_id: int = -1
+var _rollback_airhit_event_count: int = 0
+
+# 91.00.00-H10.2 — RELOJ TÁCTICO DETERMINISTA.
+# Todas las ventanas de Perfect/Counter/Combo Cancel/Back Dash/Launcher/
+# Quick Recovery/IA dejan de depender del reloj real del SO.
+# Este reloj avanza una vez por physics tick y forma parte del snapshot.
+var _rollback_tactical_clock_ticks: int = 0
+var _rollback_tactical_clock_seconds: float = 0.0
+# H10.7 — delta efímero para resimulación CORE III. No participa del gameplay
+# normal; Main lo fija sólo durante catch-up y se consume en un callback.
+var rollback_delta_override: float = -1.0
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -203,6 +238,12 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if rollback_delta_override >= 0.0:
+		delta = rollback_delta_override
+		rollback_delta_override = -1.0
+	# 91.00.00-H10.2 — avanzar ANTES de evaluar cualquier deadline táctico.
+	_avanzar_reloj_tactico(delta)
+
 	_scan_timer -= delta
 	if _scan_timer <= 0.0:
 		_scan_timer = INTERVALO_BUSQUEDA
@@ -240,11 +281,19 @@ func _physics_process(delta: float) -> void:
 			_air_combo_activo[id] = false
 			_air_combo_golpes[id] = 0
 
-
-func _process(delta: float) -> void:
-	# El inicio del Back Dash se detecta en _physics_process por Fighter/input-frame.
-	# Aquí sólo mantenemos el desplazamiento ya iniciado y la corrección visual.
+	# 91.00.00-H10.2 — BACK DASH 100% PHYSICS.
+	# Antes se actualizaba en _process(delta), por lo que posición y timer
+	# dependían del framerate/render y no podían reproducirse de forma exacta.
+	#
+	# Se ejecuta DESPUÉS de _procesar_input_jugadores(): si el segundo toque
+	# inicia un Back Dash en este physics tick, su primer paso ocurre en este
+	# mismo tick tanto en LIVE como durante rollback.
 	_actualizar_backdash(delta)
+
+
+func _process(_delta: float) -> void:
+	# 91.00.00-H10.2 — _process queda exclusivamente para correcciones visuales.
+	# Ningún estado lógico ni movimiento de Back Dash puede depender del render.
 
 	# 90.6.3 — única excepción visual: las patadas de Aethel tienen entradas
 	# precalculadas viejas. Se recalculan contra el PNG real en tiempo de juego.
@@ -534,6 +583,16 @@ func _iniciar_backdash(luchador: Node, direccion: float) -> void:
 	_backdash_invuln_hasta[id] = ahora + VENTANA_INVULNERABLE_BACKDASH
 	_backdash_cooldown_hasta[id] = ahora + COOLDOWN_BACKDASH
 
+	# 91.00.00-H10.2 — sello sólo después de que el Back Dash fue aceptado.
+	_rollback_backdash_event_serial += 1
+	_rollback_backdash_event_fighter_id = int(id)
+	_rollback_backdash_event_direccion = direccion
+	print("[91.00.00-H10.2] BACKDASH EVENT MARCADO — serial=%d fighter_id=%d dir=%.1f" % [
+		_rollback_backdash_event_serial,
+		_rollback_backdash_event_fighter_id,
+		_rollback_backdash_event_direccion
+	])
+
 	# Mantiene la mirada hacia el rival mientras retrocede.
 	var rival = luchador.get("objetivo")
 	if is_instance_valid(rival):
@@ -551,6 +610,8 @@ func _iniciar_backdash(luchador: Node, direccion: float) -> void:
 
 
 func _actualizar_backdash(delta: float) -> void:
+	# H5.1: esta función SOLO se invoca desde _physics_process.
+	# `delta` es por tanto el paso de simulación, no el delta de render.
 	for id in _backdash_timer.keys():
 		var restante: float = float(_backdash_timer.get(id, 0.0))
 		if restante <= 0.0:
@@ -876,6 +937,17 @@ func _intentar_counter(tipo: String, objetivo_input: Node = null) -> bool:
 			defensor.set("_atk_dur_recovery",
 				_get_float(defensor, "_atk_dur_recovery") * MULT_RECOVERY_COUNTER)
 
+		# 91.00.00-H10.2 — sello de evento. Si esta línea se ejecuta, el Counter
+		# fue REALMENTE aceptado por la lógica de producción.
+		_rollback_counter_event_serial += 1
+		_rollback_counter_event_fighter_id = int(id)
+		_rollback_counter_event_tipo = tipo
+		print("[91.00.00-H10.2] COUNTER EVENT MARCADO — serial=%d fighter_id=%d tipo=%s" % [
+			_rollback_counter_event_serial,
+			_rollback_counter_event_fighter_id,
+			_rollback_counter_event_tipo
+		])
+
 		_mostrar_texto(defensor, "COUNTER!", Color(0.35, 0.95, 1.0, 1.0))
 		return true
 
@@ -930,6 +1002,50 @@ func _cancelar_estado_tactico(cpu: Node, id, motivo: String) -> void:
 	if is_instance_valid(cpu) and bool(cpu.get("bloqueando")):
 		_set_si_existe(cpu, "bloqueando", false)
 		_set_si_existe(cpu, "bloqueo_timer", 0.0)
+
+func _ia_nivel(cpu: Node) -> int:
+	if not is_instance_valid(cpu):
+		return 0
+	if _tiene_propiedad(cpu, "dificultad_ia"):
+		return clampi(int(cpu.get("dificultad_ia")), 0, 2)
+	return 0
+
+func _ia_prob_bloqueo_por_nivel(cpu: Node) -> float:
+	match _ia_nivel(cpu):
+		2: return 0.24
+		1: return 0.44
+		_: return 0.30
+
+func _ia_prob_backdash_por_nivel(cpu: Node) -> float:
+	match _ia_nivel(cpu):
+		2: return 0.12
+		1: return 0.22
+		_: return 0.12
+
+func _ia_prob_castigo_por_nivel(cpu: Node) -> float:
+	match _ia_nivel(cpu):
+		2: return 0.96
+		1: return 0.70
+		_: return 0.48
+
+func _ia_tiempo_reaccion_cpu(cpu: Node) -> float:
+	match _ia_nivel(cpu):
+		2: return randf_range(0.025, 0.055)
+		1: return randf_range(0.095, 0.165)
+		_: return randf_range(0.16, 0.25)
+
+func _ia_prob_recovery_por_nivel(cpu: Node) -> float:
+	match _ia_nivel(cpu):
+		2: return 0.36
+		1: return 0.46
+		_: return 0.25
+
+func _ia_duracion_bloqueo_por_nivel(cpu: Node) -> float:
+	match _ia_nivel(cpu):
+		2: return 0.12
+		1: return IA_DURACION_BLOQUEO
+		_: return 0.30
+
 
 func _procesar_ia_tactica(delta: float) -> void:
 	var ahora := _ahora()
@@ -991,14 +1107,15 @@ func _procesar_ia_tactica(delta: float) -> void:
 		# REACCIÓN DEFENSIVA:
 		# cuanto más presiona el jugador, más probable que la CPU se defienda.
 		if cpu_neutral and rival_atacando and distancia <= IA_DISTANCIA_DEFENSA:
+			var bloqueo_base_nivel: float = _ia_prob_bloqueo_por_nivel(cpu)
 			var prob_bloqueo: float = clampf(
-				IA_PROB_BLOQUEO_BASE + presion * 0.09,
-				IA_PROB_BLOQUEO_BASE,
+				bloqueo_base_nivel + presion * 0.075,
+				bloqueo_base_nivel,
 				0.82
 			)
 
 			# Bajo mucha presión puede crear espacio con Back Dash.
-			if presion >= 2.0 and randf() < IA_PROB_BACKDASH_PRESION and _puede_backdash(cpu):
+			if presion >= 2.0 and randf() < _ia_prob_backdash_por_nivel(cpu) and _puede_backdash(cpu):
 				var dir_escape: float = _direccion_alejamiento(cpu)
 				if dir_escape != 0.0:
 					_iniciar_backdash(cpu, dir_escape)
@@ -1007,11 +1124,13 @@ func _procesar_ia_tactica(delta: float) -> void:
 					continue
 
 			if randf() < prob_bloqueo and cpu.has_method("_iniciar_bloqueo"):
-				cpu.call("_iniciar_bloqueo", IA_DURACION_BLOQUEO)
+				var dur_bloqueo_cpu: float = _ia_duracion_bloqueo_por_nivel(cpu)
+				cpu.call("_iniciar_bloqueo", dur_bloqueo_cpu)
 				_ia_estado[id] = "DEFENSA"
-				# Tras defenderse, prepara una oportunidad de castigo.
-				_ia_castigo_hasta[id] = ahora + IA_DURACION_BLOQUEO + 0.22
-				_ia_siguiente_decision[id] = ahora + IA_DURACION_BLOQUEO
+				# Difícil bloquea menos tiempo y transforma la defensa en castigo rápido.
+				var espera_castigo: float = 0.025 if _ia_nivel(cpu) == 2 else 0.22
+				_ia_castigo_hasta[id] = ahora + dur_bloqueo_cpu + espera_castigo
+				_ia_siguiente_decision[id] = ahora + dur_bloqueo_cpu
 				continue
 
 		# CASTIGO:
@@ -1023,7 +1142,7 @@ func _procesar_ia_tactica(delta: float) -> void:
 					_set_si_existe(cpu, "bloqueando", false)
 					_set_si_existe(cpu, "bloqueo_timer", 0.0)
 
-					if randf() < IA_PROB_CASTIGO:
+					if randf() < _ia_prob_castigo_por_nivel(cpu):
 						if randf() < 0.55:
 							if cpu.has_method("intentar_punetazo"):
 								cpu.call("intentar_punetazo")
@@ -1038,7 +1157,7 @@ func _procesar_ia_tactica(delta: float) -> void:
 
 		# Esta capa no fuerza aproximación ni recarga: eso sigue siendo trabajo
 		# de la IA original del Fighter, evitando conflictos entre sistemas.
-		_ia_siguiente_decision[id] = ahora + _ia_tiempo_reaccion()
+		_ia_siguiente_decision[id] = ahora + _ia_tiempo_reaccion_cpu(cpu)
 
 
 func _registrar_impacto_ia(defensor: Node, tipo: String, bloqueado: bool) -> void:
@@ -1120,7 +1239,7 @@ func _intentar_recovery_ia(cpu: Node, ahora: float) -> void:
 	_ia_recovery_hasta[id] = 0.0
 	_ia_recovery_cooldown_hasta[id] = ahora + IA_RECOVERY_COOLDOWN
 
-	if randf() > IA_RECOVERY_PROB:
+	if randf() > _ia_prob_recovery_por_nivel(cpu):
 		return
 
 	_set_si_existe(cpu, "hitstun_timer", 0.0)
@@ -1308,6 +1427,16 @@ func _consumir_launcher_si_corresponde(atacante: Node, defensor: Node, tipo: Str
 	_air_combo_golpes[aid] = 0
 	_combo_proteccion_hasta[aid] = _ahora() + 0.72
 
+	# H6 — sello sólo cuando el golpe ARMADO realmente conectó y lanzó.
+	_rollback_launcher_event_serial += 1
+	_rollback_launcher_event_attacker_id = int(aid)
+	_rollback_launcher_event_defender_id = int(defensor.get_instance_id())
+	print("[91.00.00-H10.2] LAUNCHER EVENT MARCADO — serial=%d atacante=%d defensor=%d" % [
+		_rollback_launcher_event_serial,
+		_rollback_launcher_event_attacker_id,
+		_rollback_launcher_event_defender_id
+	])
+
 	_mostrar_texto(atacante, "LAUNCH!", Color(1.0, 0.45, 0.16, 1.0))
 	return true
 
@@ -1343,6 +1472,18 @@ func _registrar_air_hit_si_corresponde(atacante: Node, defensor: Node) -> void:
 		vel_atk.x = signf(dx) * 105.0
 		atacante.set("mirando", signf(dx))
 	atacante.set("velocity", vel_atk)
+
+	# H6 — sello de impacto aéreo REAL, después de aplicar su estado lógico.
+	_rollback_airhit_event_serial += 1
+	_rollback_airhit_event_attacker_id = int(aid)
+	_rollback_airhit_event_defender_id = int(defensor.get_instance_id())
+	_rollback_airhit_event_count = golpes
+	print("[91.00.00-H10.2] AIR HIT EVENT MARCADO — serial=%d atacante=%d defensor=%d air_x=%d" % [
+		_rollback_airhit_event_serial,
+		_rollback_airhit_event_attacker_id,
+		_rollback_airhit_event_defender_id,
+		_rollback_airhit_event_count
+	])
 
 	_mostrar_texto(atacante, "AIR x%d" % golpes, Color(0.58, 0.90, 1.0, 1.0))
 
@@ -1527,8 +1668,18 @@ func _abrir_combo_cancel(atacante: Node) -> void:
 	# Si no llega un segundo input, el lock vence enseguida y la CPU vuelve normal.
 	var defensor_cpu = atacante.get("objetivo")
 	if is_instance_valid(defensor_cpu) and not bool(defensor_cpu.get("controlado_por_jugador")):
+		var did_cpu: int = int(defensor_cpu.get_instance_id())
+		# 91.02.40 — cualquier Tech/recovery táctico armado por el primer impacto
+		# se cancela mientras el jugador conserva la ventana x2/x3. No se modifica
+		# el hitstun del Fighter ni la física común.
+		_ia_recovery_desde[did_cpu] = 0.0
+		_ia_recovery_hasta[did_cpu] = 0.0
+		_ia_estado[did_cpu] = "COMBO_LOCK"
+		_ia_siguiente_decision[did_cpu] = _ahora() + VENTANA_COMBO_CANCEL + 0.10
 		if defensor_cpu.has_method("activar_lock_recepcion_combo_cancel_cpu"):
-			defensor_cpu.call("activar_lock_recepcion_combo_cancel_cpu", VENTANA_COMBO_CANCEL + 0.04)
+			# +0.10 cubre también el startup del siguiente golpe; 90.11.07 usaba
+			# +0.04 y todavía podía liberar la IA unas centésimas antes del impacto.
+			defensor_cpu.call("activar_lock_recepcion_combo_cancel_cpu", VENTANA_COMBO_CANCEL + 0.10)
 
 
 func _intentar_combo_cancel(tipo: String, objetivo_input: Node = null) -> bool:
@@ -1694,5 +1845,20 @@ func _limpiar_referencias_invalidas() -> void:
 			_vida_antes.erase(id)
 
 
+func _avanzar_reloj_tactico(delta: float) -> void:
+	# Godot escala delta con Engine.time_scale. Dividir por la escala conserva
+	# aproximadamente la duración real que tenía el sistema anterior, pero ahora
+	# el resultado depende exclusivamente de pasos de simulación reproducibles.
+	var escala := absf(float(Engine.time_scale))
+	var paso := delta
+	if escala > 0.000001:
+		paso = delta / escala
+	elif Engine.physics_ticks_per_second > 0:
+		paso = 1.0 / float(Engine.physics_ticks_per_second)
+
+	_rollback_tactical_clock_ticks += 1
+	_rollback_tactical_clock_seconds += paso
+
+
 func _ahora() -> float:
-	return Time.get_ticks_msec() / 1000.0
+	return _rollback_tactical_clock_seconds

@@ -1,0 +1,101 @@
+CORE AWAKENED 91.00.00-H9.3 — CORE II PHYSICS RECARGA + APPROACH
+
+RESULTADO H9.2
+--------------
+H9.2 capturó correctamente el fin de recarga y encontró DESYNC simétrico.
+
+J1:
+- en_pose_recarga esperado=false / actual=true
+- desplazamiento externo inesperado hasta +105 px
+
+J2:
+- en_pose_recarga esperado=false / actual=true
+- desplazamiento externo inesperado hasta +151 px
+
+Segunda pelea repitió lo mismo en ambos lados.
+
+CAUSA
+-----
+Son DOS estados nativos que el snapshot no puede reconstruir:
+
+1) _mostrar_recarga_energia(false)
+   usa SceneTreeTimer + await.
+   Al volver atrás, en_pose_recarga se restaura a true, pero el await LIVE
+   ya terminó y no existe una continuación nueva que vuelva a ponerlo false.
+
+2) inmediatamente después:
+   _acercar_para_combo_auto()
+   crea un Tween de global_position.
+   Ese Tween LIVE sigue existiendo cuando restauramos un snapshot anterior,
+   así que mueve al Fighter durante el catch-up aunque históricamente todavía
+   estaba recargando.
+
+H9.3
+----
+CORE II ahora tiene estados explícitos sólo para:
+
+  RECARGA
+    ->
+  PRIMER ACERCAMIENTO
+    ->
+  COMBO ASYNC (todavía original)
+
+RECARGA:
+- duración lógica 1.05 s por physics ticks;
+- en_pose_recarga se apaga por la FSM;
+- brillo sigue siendo presentación visual.
+
+PRIMER ACERCAMIENTO:
+- mismo target adaptativo;
+- misma velocidad base /900;
+- mismo clamp 0.08..0.30;
+- misma curva QUAD EASE OUT;
+- posición calculada por physics ticks;
+- origen/destino/duración/progreso entran en snapshot.
+
+NO SE CONVIERTE TODAVÍA
+-----------------------
+- _racha_combo_auto()
+- los awaits internos de cada golpe
+- acercamientos ENTRE golpes
+- rematador
+- poster CORE II
+
+Esos serán los siguientes pasos.
+
+PRUEBA H9.3
+-----------
+IMPORTANTE: para aislar recarga + primer acercamiento, activar CORE II
+desde LEJOS, idealmente más de 350 px del rival.
+
+NO usar F11. La auto-captura sigue activa.
+
+J1:
+1. Usar CORE I.
+2. Llenar CORE II.
+3. Separarse >350 px.
+4. Activar CORE II.
+5. No tocar nada.
+6. Al terminar recarga el rollback se dispara solo.
+7. Repetir 2 veces.
+
+J2:
+Igual, 2 veces.
+
+BUSCAMOS
+--------
+  CORE II RECARGA END AUTO MARCADO
+  CORE II RECARGA END LOCALIZADO
+  TACTICAL ROLLBACK — CORE II RECARGA END
+
+y finalmente:
+  TACTICAL ROLLBACK OK — CORE II RECARGA END — 8 ticks
+
+Ya NO deben aparecer:
+- en_pose_recarga esperado=false actual=true
+- desplazamiento externo inesperado del Tween viejo.
+
+Si H9.3 pasa:
+H9.4 probará el FIN DEL PRIMER ACERCAMIENTO -> inicio de _racha_combo_auto().
+
+NO usar CORE III.

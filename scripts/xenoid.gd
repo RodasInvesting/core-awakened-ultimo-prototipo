@@ -105,6 +105,22 @@ func _init() -> void:
 	textura_furia_parado = load("res://assets/xenoid/furia_parado.png")
 	textura_furia_carrera = load("res://assets/xenoid/aceleracion_combo.png")
 
+	# 91.02.53 — PASS 12J / PROYECTIL TANDA 3 — XENOID.
+	proyectil_especial_habilitado = true
+	textura_proyectil_pose = load("res://assets/xenoid/poder_proyectil.png")
+	textura_proyectil_nucleo = load("res://assets/xenoid/proyectil_oficial.png")
+	proyectil_pose_escala_mult = 1.08
+	color_proyectil_primario = Color(0.18, 0.88, 0.48, 1.0)
+	color_proyectil_secundario = Color(0.28, 0.82, 1.0, 1.0)
+	proyectil_velocidad = 805.0
+	proyectil_dano_mult = 0.86
+	proyectil_empuje = 148.0
+	proyectil_hitstun = 0.22
+	proyectil_startup = 0.16
+	proyectil_recovery = 0.30
+	proyectil_cooldown = 0.62
+	sonido_proyectil_impacto = load("res://assets/helena/proyectil_impacto.wav")
+
 func _procesar_entrada(_delta: float, vel_actual: float) -> void:
 	if controlado_por_jugador:
 		_entrada_jugador(vel_actual)

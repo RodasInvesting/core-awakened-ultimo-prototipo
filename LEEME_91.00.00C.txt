@@ -1,0 +1,36 @@
+CORE AWAKENED 91.00.00-C — CHECKSUM SYNC / CORE III TERMINAL FIX
+
+OBJETIVO
+- Corregir el falso DESYNC observado en 91.00.00-B al finalizar por CORE III.
+- No tocar Fighter ni Combat Feel.
+- Añadir checkpoints lógicos cada 60 physics ticks para localizar el primer desync real.
+
+QUÉ CORRIGE
+1. CORE III ahora evalúa el replay por su propia ruta terminal. En B esa ruta cerraba la
+   grabación original pero nunca llamaba al evaluador durante el replay.
+2. Al terminar el buffer, el replay deja inputs neutros durante 30 ticks de gracia en vez
+   de declarar DESYNC inmediatamente. Esto cubre eventos/await que resuelven justo después
+   del último Input Frame.
+3. Grabaciones nuevas guardan checkpoints cada 60 ticks: posición, velocidad, vida, CORE,
+   cargas, bloqueo, Furia, rondas y estado de ronda.
+4. Durante replay se comparan los checkpoints y Output informa el PRIMER tick detectado
+   si aparece una divergencia real.
+
+PRUEBA RECOMENDADA
+A) Copiar scripts/ sobre el proyecto actual y Reemplazar.
+B) Jugar Versus Local hasta terminar una partida, idealmente usando CORE III.
+C) En Resultado pulsar VER REPLAY. No tocar controles.
+D) Revisar Output.
+
+RESULTADO ESPERADO
+[91.00.00-C] Input Recorder ACTIVO ...
+[91.00.00-C] Input Recorder GUARDADO ...
+[91.00.00-C] RONDA 1 sincronizada — tick 0
+[91.00.00-C] REPLAY ACTIVO ...
+[91.00.00-C] Buffer de inputs completo ... (puede aparecer y NO es error)
+[91.00.00-C] REPLAY OK — N/N ticks — resultado idéntico
+
+SI HAY DESYNC REAL
+Aparecerá:
+[91.00.00-C] CHECKSUM DESYNC — primer tick detectado: N
+y debajo las variables que divergen.

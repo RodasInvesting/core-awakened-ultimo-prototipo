@@ -1,0 +1,20 @@
+CORE AWAKENED 91.00.00-H10.53 — CORE III NINETEENTH BEAT ATTACK START DIAGNOSTIC
+
+OBJETIVO
+- H10.52 certificó EIGHTEENTH BEAT END stage 20->21 en J1 y J2.
+- Fighter no cambia. Stage 21 sigue siendo la continuación histórica desde beat 19.
+- Esta build localiza el PRIMER ataque histórico dentro de stage 21 (fase_ataque 0 -> activa), inmediatamente después del acercamiento async del beat 19.
+- No se inventa stage 22.
+
+PRUEBA
+1. Versus Local.
+2. NO usar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con un luchador que exponga los beats largos (Kai recomendado) como J1.
+5. Repetir con Kai como J2.
+6. Enviar runtime completo.
+
+ÉXITO ESPERADO
+TACTICAL ROLLBACK OK — CORE III NINETEENTH BEAT ATTACK START — 8 ticks; estado presente idéntico
+
+Si falla, se diagnostica el primer subtick causal y sólo entonces se decide si beat 19 debe pasar a FSM física.

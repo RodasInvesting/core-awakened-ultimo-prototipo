@@ -1,8 +1,7 @@
 extends Control
 
-# 90.10.53 — VS CLASH SCREEN
-# Las gigantografias oficiales apuntan hacia el centro: jugador normal a la
-# izquierda, rival reflejado horizontalmente a la derecha.
+# CORE AWAKENED 91.02.07 — VS CLASH SCREEN + CORE POSTERS KROVAN/NEKHAR.
+# Las gigantografías oficiales apuntan hacia el centro.
 const POSTERS := {
 	"Kai": "gigantografias/kai.png",
 	"Cibor-X": "gigantografias/cibor-x.png",
@@ -14,7 +13,8 @@ const POSTERS := {
 	"Jester": "gigantografias/jester.png",
 	"Xenoid": "gigantografias/xenoid.png",
 	"Dax": "gigantografias/dax.png",
-	# Varkhos queda con su VS anterior hasta completar su arte final.
+	"Krovan": "gigantografias/krovan_core_vs_910207.png",
+	"Nekhar": "gigantografias/nekhar_core_vs_910207.png",
 	"Varkhos": "varkhos_vs.png"
 }
 
@@ -28,11 +28,11 @@ const POSTER_FIT_SCALE := {
 	"Helena": 1.13,
 	"Jester": 1.12,
 	"Xenoid": 1.12,
+	"Krovan": 1.24,
+	"Nekhar": 1.24,
 	"Varkhos": 0.78
 }
 
-# X positivo significa acercar el foco/poder al centro. Para el rival se
-# invierte automaticamente luego del flip horizontal.
 const POSTER_OFFSET := {
 	"Kai": Vector2(34.0, 0.0),
 	"Cibor-X": Vector2(30.0, 0.0),
@@ -43,12 +43,29 @@ const POSTER_OFFSET := {
 	"Helena": Vector2(36.0, 0.0),
 	"Jester": Vector2(34.0, 0.0),
 	"Xenoid": Vector2(32.0, 0.0),
+	"Krovan": Vector2(22.0, 12.0),
+	"Nekhar": Vector2(22.0, 12.0),
 	"Varkhos": Vector2.ZERO
 }
+
+var estado_sync_online: Label
+var online_transicion_iniciada: bool = false
+
+func _es_online() -> bool:
+	var estado := get_node_or_null("/root/GameState")
+	return estado != null and str(estado.modo) == "online"
+
+func _network() -> Node:
+	return get_node_or_null("/root/NetworkManager")
 
 func _ready() -> void:
 	var estado = get_node("/root/GameState")
 	crear_pantalla_vs(estado)
+	if _es_online():
+		_crear_estado_sync_online(estado)
+		var red := _network()
+		if red != null and not red.presentacion_sincronizada.is_connected(_al_presentacion_sincronizada):
+			red.presentacion_sincronizada.connect(_al_presentacion_sincronizada)
 	crear_audio_y_transicion()
 
 func crear_pantalla_vs(estado) -> void:
@@ -61,8 +78,6 @@ func crear_pantalla_vs(estado) -> void:
 	crear_panel_poster(estado.personaje_jugador, Rect2(0, 0, 640, 720), true)
 	crear_panel_poster(estado.rival_actual, Rect2(640, 0, 640, 720), false)
 
-	# Centro oscuro fino: deja que las dos energias lleguen visualmente hasta
-	# el VS, pero mantiene legible el logo.
 	var velo_centro := ColorRect.new()
 	velo_centro.position = Vector2(566, 0)
 	velo_centro.size = Vector2(148, 720)
@@ -91,8 +106,6 @@ func crear_panel_poster(nombre: String, area: Rect2, es_jugador: bool) -> void:
 	if tex == null:
 		return
 
-	# Fondo lleno, oscuro y ligeramente ampliado. Da continuidad visual a la
-	# mitad de pantalla sin quitar protagonismo a la gigantografia frontal.
 	var fondo_poster := TextureRect.new()
 	fondo_poster.texture = tex
 	fondo_poster.position = Vector2.ZERO
@@ -104,8 +117,6 @@ func crear_panel_poster(nombre: String, area: Rect2, es_jugador: bool) -> void:
 	fondo_poster.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cont.add_child(fondo_poster)
 
-	# Gigantografia principal completa. La derecha se refleja para que el poder
-	# apunte hacia el centro; la izquierda conserva la orientacion original.
 	var poster := TextureRect.new()
 	poster.texture = tex
 	poster.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -121,8 +132,6 @@ func crear_panel_poster(nombre: String, area: Rect2, es_jugador: bool) -> void:
 	poster.position = Vector2((area.size.x - poster.size.x) * 0.5, (area.size.y - poster.size.y) * 0.5) + offset
 	cont.add_child(poster)
 
-	# Viñeta sutil para que el centro y los nombres sigan leyendo sobre artes
-	# extremadamente luminosas.
 	var velo := ColorRect.new()
 	velo.position = Vector2.ZERO
 	velo.size = area.size
@@ -130,13 +139,11 @@ func crear_panel_poster(nombre: String, area: Rect2, es_jugador: bool) -> void:
 	velo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cont.add_child(velo)
 
-	# Entrada simultanea desde los extremos hasta el choque central.
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tween.tween_property(cont, "position", area.position, 0.42)
 
 func crear_choque_centro() -> void:
-	# Núcleo luminoso que representa el choque de las dos gigantografias.
 	var impacto := Panel.new()
 	impacto.position = Vector2(588, 292)
 	impacto.size = Vector2(104, 104)
@@ -179,6 +186,8 @@ func crear_info_superior(estado) -> void:
 	var info := Label.new()
 	if estado.modo == "arcade":
 		info.text = "NEXT LEVEL  •  TORNEO %d DE %d" % [estado.arcade_indice + 1, estado.arcade_oponentes.size()]
+	elif estado.modo == "online":
+		info.text = "ONLINE  •  HOST VS CLIENTE"
 	else:
 		info.text = "NEXT LEVEL  •  BATALLA RÁPIDA"
 	info.position = Vector2(405, 32)
@@ -242,12 +251,55 @@ func crear_nombre_panel(texto: String, area: Rect2, color_borde: Color, izquierd
 	add_child(label)
 
 	var tag := Label.new()
-	tag.text = "JUGADOR 1" if izquierda else "RIVAL"
+	var gs := get_node_or_null("/root/GameState")
+	if gs != null and str(gs.modo) == "online":
+		tag.text = "HOST / JUGADOR 1" if izquierda else "CLIENTE / JUGADOR 2"
+	else:
+		tag.text = "JUGADOR 1" if izquierda else "RIVAL"
 	tag.position = area.position + Vector2(20, -24)
 	tag.size = Vector2(120, 20)
 	tag.add_theme_font_size_override("font_size", 16)
 	tag.add_theme_color_override("font_color", color_borde)
 	add_child(tag)
+
+func _crear_estado_sync_online(estado) -> void:
+	estado_sync_online = Label.new()
+	estado_sync_online.position = Vector2(290, 82)
+	estado_sync_online.size = Vector2(700, 52)
+	estado_sync_online.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	estado_sync_online.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	estado_sync_online.add_theme_font_size_override("font_size", 16)
+	estado_sync_online.add_theme_color_override("font_color", Color(0.80, 0.92, 1.0))
+	estado_sync_online.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.96))
+	estado_sync_online.add_theme_constant_override("outline_size", 5)
+	estado_sync_online.text = "PASS 14C • ESPERANDO BARRERA ONLINE • SEED %d" % int(estado.online_seed)
+	add_child(estado_sync_online)
+
+func _al_presentacion_sincronizada(seed_recibida: int, firma: String) -> void:
+	if estado_sync_online != null:
+		estado_sync_online.text = "SINCRONIZACIÓN OK • SEED %d • ENTRANDO A COMBATE ONLINE" % seed_recibida
+		estado_sync_online.add_theme_color_override("font_color", Color(0.52, 1.0, 0.68))
+	if not online_transicion_iniciada:
+		online_transicion_iniciada = true
+		call_deferred("_online_ir_a_combate", seed_recibida)
+
+
+func _online_ir_a_combate(seed_recibida: int) -> void:
+	# Ambos peers recibieron la misma barrera VS. Dejamos un breve hold visual y
+	# luego cargamos Main; NetworkManager sobrevivirá por ser Autoload.
+	await get_tree().create_timer(1.15).timeout
+	var red := _network()
+	if red == null or not red.hay_rival_conectado():
+		online_transicion_iniciada = false
+		if estado_sync_online != null:
+			estado_sync_online.text = "RIVAL DESCONECTADO"
+			estado_sync_online.add_theme_color_override("font_color", Color(1.0, 0.40, 0.40))
+		return
+	var estado := get_node_or_null("/root/GameState")
+	if estado != null:
+		estado.online_seed = seed_recibida
+		estado.escena_destino_carga = "res://scenes/Main.tscn"
+	get_tree().change_scene_to_file("res://scenes/PantallaCarga.tscn")
 
 func crear_audio_y_transicion() -> void:
 	var sfx := AudioStreamPlayer.new()
@@ -255,6 +307,16 @@ func crear_audio_y_transicion() -> void:
 	sfx.volume_db = -3.0
 	add_child(sfx)
 	sfx.play()
+
+	if _es_online():
+		# PASS 14C se detiene deliberadamente en VS. Todavía NO entra a Main:
+		# Main recibirá Input Frames remotos recién en PASS 14D.
+		await get_tree().process_frame
+		var red := _network()
+		if red != null:
+			red.marcar_presentacion_lista()
+		return
+
 	await get_tree().create_timer(3.2).timeout
 	var estado := get_node("/root/GameState")
 	estado.escena_destino_carga = "res://scenes/Main.tscn"

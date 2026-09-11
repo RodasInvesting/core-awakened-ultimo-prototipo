@@ -1,0 +1,32 @@
+CORE AWAKENED 91.02.14 — PASS 2: DOBLE SALTO MÁS COMPACTO
+
+BASE
+- Conserva íntegramente el PASS 1: gravedad x1.35 sólo durante descenso libre normal.
+
+CAMBIO ÚNICO DE GAMEPLAY
+- MULT_DOBLE_SALTO_ALTURA baja de 1.40 a 1.25.
+- Primer salto: sin cambios.
+- Gravedad: sin cambios respecto a 91.02.13.
+- El segundo salto sigue siendo más alto que el primero y mantiene el cruce aéreo,
+  pero reduce la sensación de quedar suspendido demasiado tiempo.
+
+NO TOCADO
+- fuerza_salto base = -420.0.
+- gravedad base = 1200.0.
+- multiplicador de caída libre = x1.35.
+- Dash / Backdash / Air Dash.
+- Ataques, daño, hitstop, hitstun, knockback.
+- CORE I / II / III.
+- Sprites, escalas, recargas, sonidos, VS.
+- main.gd y módulos rollback/tácticos.
+
+PRUEBA RECOMENDADA
+1) Kai: salto normal y doble salto.
+2) Dax: comparar primer salto vs segundo.
+3) Aethel: doble salto avanzando y cruce sobre el rival.
+4) Nekhar: comprobar lectura de peso.
+5) Ataque aéreo después del segundo salto y aterrizaje.
+
+OBJETIVO VISUAL
+El segundo salto debe seguir siendo útil, pero sentirse más corto y comprometido.
+No buscamos todavía tocar el vértice del primer salto ni acelerar golpes/combos.

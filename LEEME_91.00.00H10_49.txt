@@ -1,0 +1,33 @@
+CORE AWAKENED 91.00.00-H10.49 — CORE III SEVENTEENTH BEAT END DIAGNOSTIC
+
+OBJETIVO ÚNICO
+- H10.48 certificó CORE III SIXTEENTH BEAT END stage 18->19 en J1 y J2: 8 ticks idénticos.
+- Esa frontera queda congelada.
+- H10.49 NO modifica Fighter ni gameplay.
+- Diagnóstico puro de CORE III SEVENTEENTH BEAT END stage 19->20.
+- stage 19 = beat 17 físico/snapshotable ya certificado en su entrada.
+- stage 20 = continuación histórica desde beat 18.
+
+QUÉ CAMBIA
+- scripts/main.gd: sólo observador/localizador/clasificación diagnóstica del nuevo límite stage 19->20 y labels H10.49.
+- LEEME de esta versión.
+
+QUÉ NO CAMBIA
+- scripts/fighter.gd: byte por byte idéntico a H10.48.
+- PerfectBlock, snapshot, historical delta funcional, GameState, Input Recorder/Replay, Ring Buffer, Motion Guard y Resultado: sin cambios de lógica.
+- CORE I, CORE II y todas las fronteras CORE III ya certificadas permanecen congeladas.
+
+PRUEBA
+1. Reemplazar la carpeta scripts con la de este ZIP según el flujo habitual del proyecto.
+2. NO usar F11 manualmente.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1.
+5. Ejecutar CORE III completo con J2.
+6. Enviar el runtime completo.
+
+MARCADOR OBJETIVO
+[91.00.00-H10.49] CORE III SEVENTEENTH BEAT END LOCALIZADO — stage 19->20
+
+RESULTADO POSIBLE
+- Si J1 y J2 dan TACTICAL ROLLBACK OK — CORE III SEVENTEENTH BEAT END — 8 ticks; estado presente idéntico, se certifica y congela esta frontera.
+- Si aparece DESYNC, el runtime decidirá el siguiente cambio. No se tocará ninguna frontera posterior antes de aislar el primer subtick causal.

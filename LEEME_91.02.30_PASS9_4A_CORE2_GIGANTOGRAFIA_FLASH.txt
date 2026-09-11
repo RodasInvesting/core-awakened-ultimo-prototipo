@@ -1,0 +1,64 @@
+CORE AWAKENED 91.02.30 — PASS 9.4A CORE II / GIGANTOGRAFIA FLASH
+================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar CORE II.
+
+OBJETIVO
+Agregar la presentación rápida que vimos en los juegos de referencia SIN
+alargar ni reescribir la lógica certificada de CORE II.
+
+FLUJO NUEVO
+recarga CORE II
+  -> durante los últimos ~0.42 s aparece una gigantografía rápida
+  -> desaparece
+  -> acercamiento / combo normal actual
+  -> remate + gigantografía final actual
+
+TRATAMIENTO DEL FLASH
+- Usa textura_rematador (gigantografía CORE II); si no existe, fallback a especial.
+- Altura base aproximada: 310 px, adaptada por personaje.
+- Menor que el póster final.
+- Semitransparente (~68 %).
+- Detrás del cuerpo real.
+- Hacia la espalda del atacante para no tapar al rival.
+- Fade-in 0.07 s + presencia 0.22 s + fade-out 0.09 s = ~0.38 s.
+
+MUY IMPORTANTE
+El flash ocupa tiempo YA existente dentro de la recarga.
+NO agrega 0.38/0.40 s al CORE.
+NO retrasa el primer golpe.
+NO cambia ningún estado lógico de combate.
+NO toca snapshots/rollback.
+
+SE PRESERVA
+- CORE II recarga lógica: 1.05 s exactos.
+- Acercamiento CORE II actual.
+- Cadencia CORE II/III: 0.012 / 0.065 / 0.010 / 0.004.
+- PASS 9.3C continuidad visual del combo.
+- Póster/remate final CORE II completo y grande.
+- PASS 9.3A/9.3B/9.3D/9.3E.
+- Pushbox 78/80/84.
+- Receiver lock PASS 9.1.
+- Daño, hitstun, hit-stop, knockback y KO.
+- CORE I y CORE III.
+- Rollback / netcode / snapshots / RPC / serialización.
+
+PRUEBA PRINCIPAL
+A) Activar CORE II desde distancia media.
+B) Activar CORE II estando ya muy cerca del rival.
+C) Verificar que el flash aparezca una sola vez antes de la ráfaga.
+D) Confirmar que el flash NO tape al rival.
+E) Confirmar que el primer golpe entra con la misma velocidad de 91.02.29.
+F) Verificar continuidad completa del combo.
+G) Confirmar que el póster/remate FINAL sigue siendo el grande y dominante.
+H) Hacer CORE III después para verificar que no recibió el flash de CORE II.
+
+CRITERIO DE APROBACION
+- Se siente como una firma cinematográfica rápida.
+- No parece una segunda pausa.
+- No roba protagonismo al remate final.
+- La ráfaga mantiene exactamente su ritmo.

@@ -1,0 +1,31 @@
+CORE AWAKENED 91.00.00-H10.87 — NORMAL COMBAT INTEGRAL REGRESSION
+
+OBJETIVO
+Revalidación integral final del combate normal usando seis fronteras ya certificadas de forma aislada.
+No modifica gameplay. Sólo main.gd añade un arnés secuencial target-only.
+
+CHECKPOINTS POR ESPEJO
+1. Forward Dash hacia el rival.
+2. Una PATADA normal limpia.
+3. Recovery ofensivo 3->0 (automático, no tocar nada).
+4. Backdash alejándose del rival.
+5. Mantener bloqueo y recibir una PATADA normal.
+6. Soltar bloqueo y volver a neutral.
+
+EJECUCIÓN
+- Primero Kai vs Dax con Kai/J1.
+- Repetir Dax vs Kai con Kai/J2.
+- NO usar F11.
+- El arnés fija automáticamente J1/J2 en el primer Forward Dash.
+- Cada checkpoint sólo avanza si el rollback previo termina OK.
+
+RESULTADO FINAL ESPERADO
+NORMAL COMBAT INTEGRAL REGRESSION OK — 6/6 checkpoints; movimiento + impacto + recovery + backdash + guardia + retorno neutral idénticos
+
+FRONTERAS CONGELADAS
+CORE I/II/III, Perfect Block, Counter, Launcher, AIR x1/x2/x3, Backdash, Forward Dash, Normal Punch Impact, Normal Kick Impact, Normal Punch Block, Normal Kick Block, Normal Block Recovery, Normal Attack Recovery.
+
+ARCHIVOS DE PRODUCCIÓN CONGELADOS
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- scripts/rollback_snapshot.gd

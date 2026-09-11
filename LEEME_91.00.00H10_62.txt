@@ -1,0 +1,44 @@
+CORE AWAKENED 91.00.00-H10.62 — CORE III ABSOLUTE KO ENTRY DIAGNOSTIC
+
+BASE CERTIFICADA:
+- H10.58: CORE III ABSOLUTE FINISHER ENTRY J1/J2 — PASS 8 ticks.
+- H10.60: CORE III ABSOLUTE REVEAL END 0.18->0.42 J1/J2 — PASS 8 ticks.
+- El reveal de 3.15 s permanece como FSM física/snapshotable de H10.60.
+- Fighter y PerfectBlock permanecen congelados.
+
+OBJETIVO ÚNICO H10.62:
+- Diagnosticar la siguiente frontera real después del reveal.
+- Main espera 0.70 s con SceneTreeTimer histórico y luego ejecuta perdedor._derrotado().
+- Target exacto: ronda_activa=false, time_scale=0.42 y el perdedor cruza
+  esta_derrotado false -> true.
+- H10.62 NO convierte todavía el timer de 0.70 s; sólo prueba si se reconstruye.
+
+PRUEBA:
+1) Kai vs Dax: completar CORE I, CORE II y CORE III con Kai/J1.
+2) Dax vs Kai: completar CORE I, CORE II y CORE III con Kai/J2.
+3) NO usar F11.
+
+RESULTADO ESPERADO:
+- CORE III ABSOLUTE KO ENTRY AUTO MARCADO
+- CORE III ABSOLUTE KO ENTRY LOCALIZADO
+- Luego TACTICAL ROLLBACK OK o DESYNC con primer subtick causal.
+
+NO MODIFICADO:
+- fighter.gd
+- perfect_block_90_1.gd
+- rollback_snapshot.gd
+- rollback_ring_buffer.gd
+- gameplay/arte/audio
+
+NOTA:
+- La espera posterior de 0.65 s hasta victoria también permanece histórica y fuera
+  del alcance de esta build.
+
+
+H10.62 — CORE III ABSOLUTE KO ENTRY PHYSICS REVALIDATION
+- H10.61 probó J1/J2 DESYNC causal en el tick del K.O.: el SceneTreeTimer(0.70) no se rebobinaba.
+- Sólo esa espera 0.70 s pasa a FSM physics/snapshotable en Main.
+- rollback_snapshot.gd captura/restaura activo/timer/lado del K.O. absoluto.
+- Fighter y PerfectBlock permanecen byte-identical.
+- La espera posterior 0.65 s sigue histórica y NO se toca en esta build.
+- Objetivo: misma frontera esta_derrotado false->true, J1 y J2, 8 ticks.

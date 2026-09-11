@@ -1,5 +1,14 @@
 extends Node2D
 
+# 91.00.00-A — grabador compacto de Input Frames para la futura capa online.
+const InputRecorderScript := preload("res://scripts/input_recorder.gd")
+# 91.00.00-H10.13 — replay determinista + seed compartida + traza por tick. El replay alimenta
+# la misma entrada EXTERNA del Fighter; nunca escribe posición/vida/CORE directamente.
+const InputReplayScript := preload("res://scripts/input_replay.gd")
+const RollbackSnapshotScript := preload("res://scripts/rollback_snapshot.gd")
+const RollbackRingBufferScript := preload("res://scripts/rollback_ring_buffer.gd")
+const RollbackNeutralMotionGuardScript := preload("res://scripts/rollback_neutral_motion_guard.gd")
+
 # CORE AWAKENED 90.10.96 — CÁMARA DINÁMICA RESTAURADA + INPUT ROUTER CONSERVADO.
 # El dash espejo quedó resuelto en perfect_block_90_1.gd (90.10.95), por lo que
 # ya no necesitamos restricciones artificiales de cámara en Versus Local.
@@ -38,6 +47,482 @@ var rival: Fighter
 # 90.10.77 — estado local de control. No cambia las reglas del combate; sólo
 # decide si el lado derecho recibe IA o input humano J2.
 var versus_local_activo := false
+# 91.02.64 — PASS 14D1. Online reutiliza la entrada EXTERNA certificada de
+# Versus Local, pero cada peer sólo lee SU dispositivo local.
+var online_activo: bool = false
+var online_combate_habilitado: bool = false
+var online_tick_simulacion: int = 0
+const ONLINE_INPUT_DELAY_TICKS := 4
+var online_inputs_locales: Dictionary = {}
+var online_ultimo_frame_remoto: Dictionary = {}
+var online_remote_misses: int = 0
+var online_remote_hits: int = 0
+
+# 91.02.68 — PASS 14D2A / DETECTOR DE ROLLBACK REMOTO.
+# Antes de rebobinar gameplay, medimos qué paquetes tardíos CAMBIAN realmente
+# la predicción aplicada. Un paquete tardío idéntico a la predicción no requiere
+# rollback. Esta capa es sólo telemetría: no restaura snapshots ni toca Fighter.
+const ONLINE_ROLLBACK_DIAG_HISTORY_TICKS := 180
+var online_prediccion_remota_por_tick: Dictionary = {}
+var online_late_evaluados: int = 0
+var online_late_iguales: int = 0
+var online_rollback_necesarios: int = 0
+var online_rollback_max_edad: int = 0
+var online_rollback_tick_mas_antiguo: int = -1
+
+# 91.02.70 — PASS 14D2C / ROLLBACK REMOTO REAL.
+# 14D2A midió 1–4 ticks durante combate normal; usamos techo 8 para margen.
+# La re-simulación usa el scheduler real de Godot, un subtick histórico por
+# physics frame, preservando Fighter/PB/proyectiles sin reescribir esos sistemas.
+const ONLINE_ROLLBACK_MAX_TICKS := 8
+var online_rollback_tick_pendiente: int = -1
+var online_rollback_catchup_modo: bool = false
+var online_rollback_finalizar_pendiente: bool = false
+var online_rollbacks_ejecutados: int = 0
+var online_rollback_ticks_reprocesados: int = 0
+var online_rollback_fuera_ventana: int = 0
+var online_rollback_ultimo_inicio: int = -1
+var online_rollback_ultima_cantidad: int = 0
+
+# 91.02.67 — PERF-1 / COMPATIBILIDAD VISUAL.
+# No altera physics, Fighter, hitboxes, velocidades, daño, CORE ni rollback.
+# Se activa automáticamente en gl_compatibility (PCs antiguas) y también en
+# ONLINE para que ambos peers usen el mismo perfil visual durante estas pruebas.
+var modo_bajo_visual: bool = false
+var perf_diag_acumulado: float = 0.0
+var perf_renderer_actual: String = ""
+# 91.02.66 — buffers exclusivos del harness localhost. No se usan entre 2 PCs.
+var online_inputs_loopback_j2: Dictionary = {}
+var online_loopback_ultimo_j1: Dictionary = {}
+var online_loopback_ultimo_j2: Dictionary = {}
+var online_loopback_hits: int = 0
+var online_loopback_misses: int = 0
+# 91.00.00-A — SOLO observación: no modifica el frame que recibe Fighter.
+var input_recorder = null
+var input_recorder_ronda_actual: int = 1
+# 91.00.00-H10.13 — estado local de reproducción determinista.
+var input_replay = null
+var replay_modo_activo: bool = false
+var replay_ronda_actual: int = 1
+var replay_agotado_reportado: bool = false
+var replay_final_evaluado: bool = false
+var replay_marcadores_ok: bool = true
+var replay_tick_primer_desync: int = -1
+var replay_checkpoints_ok: bool = true
+var replay_trace_ok: bool = true
+var replay_rng_seed_actual: int = 0
+var replay_ticks_neutros_post_buffer: int = 0
+const REPLAY_GRACIA_POST_BUFFER_TICKS := 30
+const REPLAY_CHECKPOINT_INTERVALO := 60
+
+# 91.00.00-H10.13 — snapshot manual de diagnóstico. Se mantiene completamente
+# fuera del flujo competitivo normal: F9 guarda / F10 restaura sólo en Versus Local.
+var rollback_snapshot_manual: Dictionary = {}
+var rollback_snapshot_disponible: bool = false
+
+# 91.00.00-H10.13 — rollback local simulado.
+# El historial conserva ~3 s a 60 Hz, pero F11 rebobina sólo 8 ticks (~133 ms),
+# una ventana típica de rollback competitivo.
+const ROLLBACK_BUFFER_TICKS := 180
+const ROLLBACK_TEST_TICKS := 8
+const ROLLBACK_COUNTER_LOOKBACK_TICKS := 180
+var rollback_ring = null
+var rollback_tick_logico: int = 0
+var rollback_catchup_activo: bool = false
+var rollback_catchup_ventana: Array[Dictionary] = []
+var rollback_catchup_indice: int = 0
+# H10.2 — frontera de time_scale para catch-up CORE III.
+# El frame donde se pide rollback puede haber nacido ya con delta escalado
+# por la cámara lenta LIVE. Preparar un frame permite que el siguiente delta
+# sea calculado con el time_scale histórico restaurado.
+var rollback_catchup_preparando_timescale: bool = false
+var rollback_catchup_inicio_timescale: Dictionary = {}
+# H10.6 — barrera CORE III de dos frames + commit restore.
+# Frame A restaura time_scale histórico y apaga simuladores; Frame B deja un tick
+# completo de estabilización a 1.0. Al final de B se reactivan sólo los Fighters.
+# En el siguiente Main (antes de Fighter/PB) hacemos un tercer restore y recién
+# entonces reactivamos PerfectBlock + catch-up. Así el delta del primer subtick ya
+# nació a 1/60 y ningún callback administrativo puede contaminar el snapshot 0.
+var rollback_catchup_reactivar_tactico_next_tick: bool = false
+var rollback_catchup_reactivacion_deferred_pendiente: bool = false
+var rollback_catchup_barrier_frames_restantes: int = 0
+var rollback_catchup_commit_restore_pendiente: bool = false
+var rollback_comparacion_pendiente: bool = false
+var rollback_estado_presente_esperado: Dictionary = {}
+var rollback_tick_origen: int = -1
+var rollback_motion_guard = null
+var rollback_test_solicitado: bool = false
+var rollback_subtrace_primer_error: int = -1
+var rollback_subtrace_diferencias: Array[String] = []
+var rollback_h_clasificacion: String = ""
+var rollback_h_atacante: String = ""
+var rollback_counter_serial_ya_probado: int = 0
+var rollback_counter_defer_activo: bool = false
+var rollback_counter_serial_defer: int = -1
+# H10.72 — Perfect Block se localiza por la transición snapshotable
+# _counter_disponible false->true. No toca PerfectBlock/Fighter.
+var rollback_perfect_tick_ya_probado: int = -1
+var h1072_perfect_auto_armado: bool = false
+var h1072_perfect_tick_evento: int = -1
+var h1072_perfect_lado: String = ""
+# H10.73 — Launcher certificado. Sus variables se conservan por compatibilidad
+# del localizador histórico, pero H10.76 ya no arma autocaptura de Launcher.
+var h1073_launcher_auto_armado: bool = false
+var h1073_launcher_tick_evento: int = -1
+var h1073_launcher_lado: String = ""
+# H10.76 — AIR x3 certificado. Variables conservadas por compatibilidad
+# del localizador histórico; H10.78 ya no arma autocaptura AIR.
+var h1076_airx3_auto_armado: bool = false
+var h1076_airx3_tick_evento: int = -1
+var h1076_airx3_lado: String = ""
+# H10.78 — BACK DASH target-only automático. Observa el serial snapshotable
+# ya existente de PerfectBlock y no modifica la mecánica de movimiento.
+var h1077_backdash_auto_armado: bool = false
+var h1077_backdash_tick_evento: int = -1
+var h1077_backdash_lado: String = ""
+var h1077_backdash_serial_evento: int = -1
+var h1077_backdash_direccion: float = 0.0
+var rollback_backdash_serial_ya_probado: int = 0
+var rollback_backdash_serial_defer: int = -1
+# H10.78 — FORWARD DASH/CARRERA target-only automático. Se detecta sólo por
+# estado Fighter snapshotable: carrera_activa false->true y dirección hacia rival.
+# Fighter permanece congelado; no se agrega serial nuevo a gameplay.
+var h1078_forward_dash_auto_armado: bool = false
+var h1078_forward_dash_tick_evento: int = -1
+var h1078_forward_dash_lado: String = ""
+var h1078_forward_dash_direccion: float = 0.0
+var rollback_forward_dash_tick_ya_probado: int = -1
+# H10.80 — impacto normal limpio de PATADA target-only automático. Se detecta
+# exclusivamente por la transición snapshotable _atk_ya_conecto false->true
+# con ambos luchadores en suelo, sin guardia, sin dash y sin Launcher/AIR.
+# Fighter permanece congelado.
+var h1080_kick_impact_auto_armado: bool = false
+var h1080_kick_impact_tick_evento: int = -1
+var h1080_kick_impact_lado: String = ""
+var rollback_kick_impact_tick_ya_probado: int = -1
+# H10.81 — BLOQUEO NORMAL contra PUÑO target-only automático. El evento se
+# identifica por impacto de punetazo en suelo con defensor ya bloqueando,
+# hitstun de guardia > 0 y SIN apertura de Counter (excluye Perfect Block).
+# Fighter / PerfectBlock / RollbackSnapshot permanecen congelados.
+var h1081_punch_block_auto_armado: bool = false
+var h1081_punch_block_tick_evento: int = -1
+var h1081_punch_block_atacante: String = ""
+var h1081_punch_block_defensor: String = ""
+var rollback_punch_block_tick_ya_probado: int = -1
+# H10.85 — RECUPERACIÓN POST-BLOQUEO. H10.83 ya certificó el impacto de
+# patada bloqueada; ahora observamos el cruce hitstun > 0 -> <= 0 con el
+# botón de bloqueo ya soltado. La ventana incluye la liberación lógica de
+# bloqueando y el retorno a neutral. Sólo diagnóstico en Main.
+var h1084_block_watch_activo: bool = false
+var h1084_block_atacante: String = ""
+var h1084_block_defensor: String = ""
+var h1084_block_tick_impacto: int = -1
+var h1084_block_recovery_auto_armado: bool = false
+var h1084_block_recovery_tick_evento: int = -1
+var rollback_block_recovery_tick_ya_probado: int = -1
+# H10.87 — RECUPERACIÓN OFENSIVA POST-IMPACTO NORMAL. H10.80 certificó
+# el contacto de patada; ahora seguimos al atacante hasta RECOVERY->NINGUNA.
+# Sólo diagnóstico en Main; Fighter permanece congelado.
+var h1086_attack_watch_activo: bool = false
+var h1086_attack_lado: String = ""
+var h1086_attack_tick_impacto: int = -1
+var h1086_attack_recovery_auto_armado: bool = false
+var h1086_attack_recovery_tick_evento: int = -1
+var rollback_attack_recovery_tick_ya_probado: int = -1
+# H10.87 — REGRESIÓN INTEGRAL FINAL DEL COMBATE NORMAL. No crea gameplay:
+# encadena seis checkpoints ya certificados de forma aislada y sólo avanza
+# al siguiente cuando el rollback anterior devuelve presente idéntico.
+# 0 Forward Dash -> 1 Kick Impact -> 2 Attack Recovery -> 3 Backdash
+# -> 4 Kick Block -> 5 Block Recovery.
+var h1087_integral_fase: int = 0
+var h1087_integral_lado_usuario: String = ""
+var h1087_integral_fallo: bool = false
+var h1087_integral_completo: bool = false
+var rollback_launcher_serial_ya_probado: int = 0
+var rollback_launcher_serial_defer: int = -1
+var rollback_airhit_serial_ya_probado: int = 0
+var rollback_airhit_serial_defer: int = -1
+# H6.1 — los seriales diagnósticos forman parte del snapshot y por tanto
+# pueden retroceder tras F11. El tick del ring NO retrocede: es la identidad
+# correcta para saber si un evento ya fue probado.
+var rollback_launcher_tick_ya_probado: int = -1
+var rollback_airhit_tick_ya_probado: int = -1
+# H8.1 — marcador de diagnóstico CORE I en Main.
+# NO forma parte del snapshot: su identidad no retrocede durante F11.
+var rollback_core1_event_serial: int = 0
+var rollback_core1_event_serial_ya_probado: int = 0
+var rollback_core1_event_tick_hint: int = -1
+var rollback_core1_event_lado: String = ""
+# H8.4 — marcador monotónico de finalización del Target Lock CORE I.
+# Vive en Main y NO se restaura con snapshots.
+var rollback_core1_target_end_serial: int = 0
+var rollback_core1_target_end_serial_ya_probado: int = 0
+var rollback_core1_target_end_tick_hint: int = -1
+var rollback_core1_target_end_lado: String = ""
+# H8.6 — último tick histórico de fin de póster CORE I ya probado.
+# El tick del ring es monotónico dentro de la pelea y no forma parte del snapshot.
+var rollback_core1_poster_end_tick_ya_probado: int = -1
+# H9 — activación CORE II. Main-only marker: no forma parte del snapshot.
+var rollback_core2_event_serial: int = 0
+var rollback_core2_event_serial_ya_probado: int = 0
+var rollback_core2_event_tick_hint: int = -1
+var rollback_core2_event_lado: String = ""
+# H10 — activación CORE III. Main-only; no entra al snapshot.
+var rollback_core3_event_serial: int = 0
+var rollback_core3_event_serial_ya_probado: int = 0
+var rollback_core3_event_tick_hint: int = -1
+var rollback_core3_event_lado: String = ""
+var h10_core3_auto_armado: bool = false
+const H101_CORE3_POST_TICKS_REQUERIDOS := ROLLBACK_TEST_TICKS - 2
+# H10.9 — siguiente frontera certificable de CORE III: fin de la recarga lenta
+# 1.55 s (en_pose_recarga true -> false) antes de Furia/acercamiento.
+# Diagnóstico puro: todavía NO reemplaza SceneTreeTimer/await.
+var rollback_core3_recarga_end_tick_ya_probado: int = -1
+var h109_recarga_prev_j1: bool = false
+var h109_recarga_prev_j2: bool = false
+var h109_recarga_observador_inicializado: bool = false
+var h109_auto_test_armado: bool = false
+var h109_auto_test_tick_evento: int = -1
+var h109_auto_test_lado: String = ""
+# H10.13 — frontera siguiente: fin del primer Target Lock CORE III.
+# Detecta core3_secuencia_etapa 2 -> 3, ahora entrando al primer beat FSM snapshotable.
+var rollback_core3_approach_end_tick_ya_probado: int = -1
+var h1012_core3_etapa_prev_j1: int = 0
+var h1012_core3_etapa_prev_j2: int = 0
+var h1012_approach_observador_inicializado: bool = false
+var h1012_auto_test_armado: bool = false
+var h1012_auto_test_tick_evento: int = -1
+var h1012_auto_test_lado: String = ""
+# H10.15 — revalidación de la misma frontera stage 3 -> 4, ahora con el
+# segundo beat gobernado por FSM física snapshotable en vez de coroutine/Tween.
+var rollback_core3_first_beat_end_tick_ya_probado: int = -1
+var h1014_core3_etapa_prev_j1: int = 0
+var h1014_core3_etapa_prev_j2: int = 0
+var h1014_first_beat_observador_inicializado: bool = false
+var h1014_auto_test_armado: bool = false
+var h1014_auto_test_tick_evento: int = -1
+var h1014_auto_test_lado: String = ""
+# H10.20 — SECOND BEAT END certificado en H10.18; frontera congelada.
+# Detecta stage 4 -> 5, entrada al tercer beat FSM físico snapshotable.
+var rollback_core3_second_beat_end_tick_ya_probado: int = -1
+var h1016_core3_etapa_prev_j1: int = 0
+var h1016_core3_etapa_prev_j2: int = 0
+var h1016_second_beat_observador_inicializado: bool = false
+var h1016_auto_test_armado: bool = false
+var h1016_auto_test_tick_evento: int = -1
+var h1016_auto_test_lado: String = ""
+# H10.20 — revalidación del fin del TERCER beat físico CORE III.
+# Detecta stage 5 -> 6, ahora entrando al cuarto beat físico snapshotable.
+var rollback_core3_third_beat_end_tick_ya_probado: int = -1
+var h1019_core3_etapa_prev_j1: int = 0
+var h1019_core3_etapa_prev_j2: int = 0
+var h1019_third_beat_observador_inicializado: bool = false
+var h1019_auto_test_armado: bool = false
+var h1019_auto_test_tick_evento: int = -1
+var h1019_auto_test_lado: String = ""
+# H10.24 — FOURTH BEAT END certificado en H10.22; frontera congelada.
+# Detecta stage 6 -> 7, entrada al quinto beat FSM físico snapshotable.
+var rollback_core3_fourth_beat_end_tick_ya_probado: int = -1
+var h1021_core3_etapa_prev_j1: int = 0
+var h1021_core3_etapa_prev_j2: int = 0
+var h1021_fourth_beat_observador_inicializado: bool = false
+var h1021_auto_test_armado: bool = false
+var h1021_auto_test_tick_evento: int = -1
+var h1021_auto_test_lado: String = ""
+# H10.26 — FIFTH BEAT END certificado en H10.24; frontera congelada.
+# Detecta stage 7 -> 8, entrada al sexto beat FSM físico snapshotable.
+var rollback_core3_fifth_beat_end_tick_ya_probado: int = -1
+var h1023_core3_etapa_prev_j1: int = 0
+var h1023_core3_etapa_prev_j2: int = 0
+var h1023_fifth_beat_observador_inicializado: bool = false
+var h1023_auto_test_armado: bool = false
+var h1023_auto_test_tick_evento: int = -1
+var h1023_auto_test_lado: String = ""
+# H10.26 — revalidación del fin del SEXTO beat físico CORE III.
+# Detecta stage 8 -> 9, ahora entrando al séptimo beat físico snapshotable.
+var rollback_core3_sixth_beat_end_tick_ya_probado: int = -1
+var h1025_core3_etapa_prev_j1: int = 0
+var h1025_core3_etapa_prev_j2: int = 0
+var h1025_sixth_beat_observador_inicializado: bool = false
+var h1025_auto_test_armado: bool = false
+var h1025_auto_test_tick_evento: int = -1
+var h1025_auto_test_lado: String = ""
+# H10.32 — revalidación del fin del SÉPTIMO beat CORE III.
+# H10.29 mostró regresión al entregar a beat 8 histórico; stage 9 -> 10 ahora entra al octavo beat físico.
+var rollback_core3_seventh_beat_end_tick_ya_probado: int = -1
+var h1027_core3_etapa_prev_j1: int = 0
+var h1027_core3_etapa_prev_j2: int = 0
+var h1027_seventh_beat_observador_inicializado: bool = false
+var h1027_auto_test_armado: bool = false
+var h1027_auto_test_tick_evento: int = -1
+var h1027_auto_test_lado: String = ""
+# H10.32 — revalidación del fin del OCTAVO beat CORE III: stage 10->11 entra al noveno beat físico.
+# Detecta stage 10 -> 11: entrega al noveno beat histórico.
+# No observa fases internas ni imprime por tick; una sola frontera snapshotable.
+var rollback_core3_eighth_beat_end_tick_ya_probado: int = -1
+var h1028_core3_etapa_prev_j1: int = 0
+var h1028_core3_etapa_prev_j2: int = 0
+var h1028_fase_prev_j1: int = 0
+var h1028_fase_prev_j2: int = 0
+var h1028_esperando_octavo_j1: bool = false
+var h1028_esperando_octavo_j2: bool = false
+# H10.29: un 9->10 también termina con fase_ataque -> 0, pero ese cierre
+# pertenece al SÉPTIMO beat. Exigimos ver un ataque NUEVO ya dentro de stage 10
+# antes de aceptar cualquier fase !=0 -> 0 como fin del octavo beat.
+var h1029_octavo_ataque_visto_j1: bool = false
+var h1029_octavo_ataque_visto_j2: bool = false
+var h1028_eighth_beat_observador_inicializado: bool = false
+var h1028_auto_test_armado: bool = false
+var h1028_auto_test_tick_evento: int = -1
+var h1028_auto_test_lado: String = ""
+var h1029_localizacion_espera_ticks: int = 0
+const H1029_LOCALIZACION_MAX_TICKS := 4
+# H10.51 — diagnóstico del fin del DECIMOCTAVO beat CORE III.
+# Detecta stage 20 -> 21: fin del decimoctavo beat físico y entrega al beat 19 histórico.
+var rollback_core3_eighteenth_beat_end_tick_ya_probado: int = -1
+var h1051_core3_etapa_prev_j1: int = 0
+var h1051_core3_etapa_prev_j2: int = 0
+var h1051_eighteenth_beat_observador_inicializado: bool = false
+var h1051_auto_test_armado: bool = false
+var h1051_auto_test_tick_evento: int = -1
+var h1051_auto_test_lado: String = ""
+var h1051_localizacion_espera_ticks: int = 0
+const H1051_LOCALIZACION_MAX_TICKS := 4
+# H10.53 — stage 21 contiene toda la continuación histórica desde beat 19.
+# Diagnosticamos el PRIMER ataque histórico: fase_ataque 0 -> activa dentro de stage 21.
+var rollback_core3_nineteenth_beat_attack_start_tick_ya_probado: int = -1
+var h1053_core3_etapa_prev_j1: int = 0
+var h1053_core3_etapa_prev_j2: int = 0
+var h1053_fase_prev_j1: int = 0
+var h1053_fase_prev_j2: int = 0
+var h1053_esperando_primer_ataque_j1: bool = false
+var h1053_esperando_primer_ataque_j2: bool = false
+var h1053_nineteenth_attack_observador_inicializado: bool = false
+var h1053_auto_test_armado: bool = false
+var h1053_auto_test_tick_evento: int = -1
+var h1053_auto_test_lado: String = ""
+var h1053_localizacion_espera_ticks: int = 0
+# H10.60 — siguiente frontera real tras la entrada ABSOLUTA certificada en H10.58.
+# Diagnostica el fin del reveal/slow-motion de gigantografia en Main:
+# time_scale 0.18 -> 0.42 mientras ronda_activa=false y CORE III permanece en stage 21.
+var rollback_core3_absolute_reveal_end_tick_ya_probado: int = -1
+var h1057_auto_test_armado: bool = false
+var h1057_event_tick_hint: int = -1
+var h1057_event_lado: String = ""
+var h1057_localizacion_espera_ticks: int = 0
+var h1057_scale_prev: float = 1.0
+var h1057_scale_observador_inicializado: bool = false
+const H1057_LOCALIZACION_MAX_TICKS := 4
+# H10.60 — el SceneTreeTimer de 3.15 s del reveal ABSOLUTO no se rebobina.
+# Lo reemplazamos SOLO en esta fase por un contador de physics ticks, capturable
+# y restaurable. La continuación posterior (0.70 / 0.65) permanece histórica.
+var core3_absolute_reveal_fsm_activo: bool = false
+var core3_absolute_reveal_timer: float = 0.0
+var core3_absolute_reveal_lado: int = 0 # 1=J1 / 2=J2
+const CORE3_ABSOLUTE_REVEAL_DURACION := 3.15
+# H10.62 — el runtime H10.61 probó que el SceneTreeTimer(0.70) del K.O.
+# absoluto no se rebobina. Convertimos SOLO esa espera a contador physics
+# snapshotable. La espera posterior de 0.65 s permanece histórica.
+var core3_absolute_ko_fsm_activo: bool = false
+var core3_absolute_ko_timer: float = 0.0
+var core3_absolute_ko_lado: int = 0 # 1=J1 / 2=J2
+const CORE3_ABSOLUTE_KO_DURACION := 0.70
+var rollback_core3_absolute_ko_entry_tick_ya_probado: int = -1
+var h1061_derrotado_prev_j1: bool = false
+var h1061_derrotado_prev_j2: bool = false
+var h1061_derrotado_observador_inicializado: bool = false
+# H10.65 — el runtime H10.64 probó que el SceneTreeTimer(0.65) post-K.O.
+# no se reproduce durante catch-up. Convertimos SOLO esa espera a contador
+# physics snapshotable y revalidamos ABSOLUTE VICTORY ENTRY.
+var core3_absolute_victory_fsm_activo: bool = false
+var core3_absolute_victory_timer: float = 0.0
+var core3_absolute_victory_lado: int = 0 # 1=J1 / 2=J2
+const CORE3_ABSOLUTE_VICTORY_DURACION := 0.65
+var rollback_core3_absolute_victory_entry_tick_ya_probado: int = -1
+var h1063_victoria_prev_j1: bool = false
+var h1063_victoria_prev_j2: bool = false
+var h1063_victoria_observador_inicializado: bool = false
+# H10.68 — target-only posterior a la entrada certificada H10.66. Esperamos
+# nueve snapshots estables de victoria: ocho ticks a re-simular + el snapshot
+# presente histórico inmediatamente posterior para comparar el HOLD completo.
+var h1067_victory_hold_auto_test_armado: bool = false
+var h1067_victory_hold_lado: String = ""
+var h1067_victory_hold_snapshots_estables: int = 0
+var h1067_victory_hold_localizacion_espera_ticks: int = 0
+var rollback_core3_absolute_victory_hold_tick_ya_probado: int = -1
+const H1067_VICTORY_HOLD_SNAPSHOTS_NECESARIOS := ROLLBACK_TEST_TICKS + 1
+
+# H10.69 — target-only del borde posterior al HOLD: el SceneTreeTimer LIVE de
+# 9.20 s llama _finalizar_partida_flujo() y en Versus local resetea la partida.
+# No modifica gameplay: sólo espera suficientes snapshots post-reset para cruzar
+# históricamente ese callback y exponer el primer causal si no es rebobinable.
+var h1069_match_reset_auto_test_armado: bool = false
+var h1069_match_reset_lado: String = ""
+var h1069_match_reset_post_snapshots: int = 0
+var h1069_match_reset_localizacion_espera_ticks: int = 0
+var rollback_core3_absolute_match_reset_tick_ya_probado: int = -1
+const H1069_MATCH_RESET_POST_SNAPSHOTS_NECESARIOS := 7
+const H1069_LOCALIZACION_MAX_TICKS := 4
+const H1067_LOCALIZACION_MAX_TICKS := 4
+const H1053_LOCALIZACION_MAX_TICKS := 4
+# H9.1 — último tick histórico de fin de recarga CORE II probado.
+var rollback_core2_recarga_end_tick_ya_probado: int = -1
+# H9.2 — observador automático del borde de fin de recarga CORE II.
+# Main corre antes que Fighter: al inicio del tick ve el estado final del tick anterior.
+var h92_recarga_prev_j1: bool = false
+var h92_recarga_prev_j2: bool = false
+var h92_recarga_observador_inicializado: bool = false
+var h92_auto_test_armado: bool = false
+var h92_auto_test_tick_evento: int = -1
+var h92_auto_test_lado: String = ""
+# H9.4 — observador automático del fin del PRIMER acercamiento CORE II.
+# Detecta snapshotable stage 2 -> 3 (ACERCAMIENTO -> COMBO_ASYNC).
+var h94_core2_etapa_prev_j1: int = 0
+var h94_core2_etapa_prev_j2: int = 0
+var h94_observador_inicializado: bool = false
+var h94_auto_test_armado: bool = false
+var h94_auto_test_tick_evento: int = -1
+var h94_auto_test_lado: String = ""
+var rollback_core2_combo_entry_tick_ya_probado: int = -1
+# H9.6 — primer beat DENTRO de la ráfaga CORE II.
+var h96_fase_prev_j1: int = 0
+var h96_fase_prev_j2: int = 0
+var h96_etapa_prev_j1: int = 0
+var h96_etapa_prev_j2: int = 0
+var h96_observador_inicializado: bool = false
+var h96_esperando_first_beat_j1: bool = false
+var h96_esperando_first_beat_j2: bool = false
+var h96_auto_test_armado: bool = false
+var h96_auto_test_tick_evento: int = -1
+var h96_auto_test_lado: String = ""
+var rollback_core2_first_beat_end_tick_ya_probado: int = -1
+# H9.8 — borde ráfaga completa -> rematador CORE II.
+var h98_etapa_prev_j1: int = 0
+var h98_etapa_prev_j2: int = 0
+var h98_observador_inicializado: bool = false
+var h98_auto_test_armado: bool = false
+var h98_auto_test_tick_evento: int = -1
+var h98_auto_test_lado: String = ""
+var rollback_core2_rematador_entry_tick_ya_probado: int = -1
+# H9.9 — fin exacto del póster del rematador CORE II.
+var rollback_core2_rematador_poster_serial: int = 0
+var rollback_core2_rematador_poster_serial_ya_probado: int = 0
+var rollback_core2_rematador_poster_tick_hint: int = -1
+var rollback_core2_rematador_poster_lado: String = ""
+var h99_auto_test_armado: bool = false
+# H9.11 — cierre definitivo CORE II: espera final -> stage 0/control.
+var h911_etapa_prev_j1: int = 0
+var h911_etapa_prev_j2: int = 0
+var h911_sub_prev_j1: int = 0
+var h911_sub_prev_j2: int = 0
+var h911_sec_prev_j1: bool = false
+var h911_sec_prev_j2: bool = false
+var h911_observador_inicializado: bool = false
+var h911_auto_test_armado: bool = false
+var h911_auto_test_tick_evento: int = -1
+var h911_auto_test_lado: String = ""
+var rollback_core2_sequence_end_tick_ya_probado: int = -1
+
 var barra_poder_kai: ColorRect
 var barra_poder_rival: ColorRect
 var etiqueta_combo: Label
@@ -127,6 +612,8 @@ const AMBIENTE_COLORES := {
 	"Jester": Color(0.85, 0.25, 0.85),
 	"Xenoid": Color(0.42, 1.0, 0.08),
 	"Dax": Color(0.96, 0.18, 0.08),
+	"Krovan": Color(1.0, 0.62, 0.12),
+	"Nekhar": Color(1.0, 0.38, 0.08),
 	# 90.11.15 — arena final violeta de Varkhos / El Ojo del Núcleo.
 	"Varkhos": Color(0.62, 0.18, 1.0),
 }
@@ -142,6 +629,8 @@ const FONDOS := {
 	"Jester": "res://assets/fondos/jester.png",
 	"Xenoid": "res://assets/fondos/xenoid.png",
 	"Dax": "res://assets/fondos/dax.png",
+	"Krovan": "res://assets/fondos/krovan.png",
+	"Nekhar": "res://assets/fondos/nekhar.png",
 	"Varkhos": "res://assets/fondos/varkhos.png",
 }
 
@@ -198,7 +687,12 @@ const SND_VOZ_DOLOR_1 := preload("res://assets/sonidos/voces_reales/dolor_respir
 const SND_VOZ_DOLOR_2 := preload("res://assets/sonidos/voces_reales/dolor_respiro_2.wav")
 const SND_VOZ_DOLOR_3 := preload("res://assets/sonidos/voces_reales/dolor_respiro_3.wav")
 const SND_VOZ_GRITO_PELEA_FUERTE := preload("res://assets/sonidos/voces_reales/grito_pelea_fuerte.wav")
-const PERSONAJES_VOZ_MASCULINA := ["Kai", "Fang", "Aethel", "Magnus", "Dax"]
+# 91.02.10 — pool masculino compartido basado en las voces ya usadas por Kai.
+# Cibor-X conserva voz robótica; Helena conserva voz femenina propia.
+const PERSONAJES_VOZ_MASCULINA := [
+	"Kai", "Fang", "Aethel", "Magnus", "Dax",
+	"Jester", "Xenoid", "Krovan", "Nekhar", "Varkhos"
+]
 
 # --- FASE 86.3: pegadas pesadas + ambiente Kai + identidad robótica Cibor-X ---
 # Se retiraron por completo del selector los sonidos derivados de Slap/Hard Slap.
@@ -218,6 +712,9 @@ const SND_JESTER_AMBIENTE := preload("res://assets/sonidos/escenarios/jester.wav
 const SND_XENOID_AMBIENTE := preload("res://assets/sonidos/escenarios/xenoid.mp3")
 const SND_DAX_AMBIENTE := preload("res://assets/sonidos/escenarios/dax.mp3")
 const SND_VARKHOS_AMBIENTE := preload("res://assets/sonidos/escenarios/varkhos.mp3")
+# 91.02.10 — música oficial de las dos arenas nuevas.
+const SND_KROVAN_AMBIENTE := preload("res://assets/sonidos/escenarios/krovan.mp3")
+const SND_NEKHAR_AMBIENTE := preload("res://assets/sonidos/escenarios/nekhar.mp3")
 const SND_CIBOR_STUN := preload("res://assets/sonidos/cibor_real/stun_intermitente.wav")
 const SND_CIBOR_STUN_BURST := preload("res://assets/sonidos/cibor_real/stun_burst.wav")
 const SND_CIBOR_BLASTER := preload("res://assets/sonidos/cibor_real/space_blaster.wav")
@@ -228,6 +725,8 @@ const SND_GRITO_HOMBRE_NUEVO_2 := preload("res://assets/sonidos/voces_reales_nue
 const SND_GRITO_HOMBRE_NUEVO_3 := preload("res://assets/sonidos/voces_reales_nuevas/grito_hombre_nuevo_3.wav")
 const SND_GRITO_HOMBRE_NUEVO_4 := preload("res://assets/sonidos/voces_reales_nuevas/grito_hombre_nuevo_4.wav")
 const SND_HELENA_GRITO_ATAQUE_1 := preload("res://assets/sonidos/helena_real/helena_grito_ataque_1.wav")
+const SND_HELENA_RECARGA_CORE2 := preload("res://assets/sonidos/helena_real/helena_recarga_core2.wav")
+const SND_HELENA_RECARGA_CORE3 := preload("res://assets/sonidos/helena_real/helena_recarga_core3.wav")
 const SND_CIBOR_GOLPE_METAL_REAL := preload("res://assets/sonidos/cibor_real/golpe_metal_real.wav")
 const SND_AETHEL_PODER_FINAL := preload("res://assets/sonidos/voces_aethel/aethel_poder_final_candidata.wav")
 const SND_CIBOR_DOLOR_1 := preload("res://assets/sonidos/voces_cibor/cibor_dolor_1_candidata.wav")
@@ -246,7 +745,10 @@ const SND_PATADA_USUARIO_SUAVE := preload("res://assets/sonidos/aporte_90_10_48/
 const SND_VOZ_RECARGA_GENERICA := preload("res://assets/sonidos/aporte_90_10_48/grito_recarga_hombre.wav")
 # 90.10.49 — sting cinematográfico dedicado al instante en que aparece la gigantografía CORE III.
 const SND_GIGANTOGRAFIA_FINAL_USUARIO := preload("res://assets/sonidos/aporte_90_10_49/gigantografia_final_usuario.wav")
-const PERSONAJES_VOZ_RECARGA_MASC := ["Kai", "Fang", "Aethel", "Magnus", "Jester", "Xenoid", "Kali", "Dax"]
+const PERSONAJES_VOZ_RECARGA_MASC := [
+	"Kai", "Fang", "Aethel", "Magnus", "Jester", "Xenoid", "Kali", "Dax",
+	"Krovan", "Nekhar", "Varkhos"
+]
 
 var audio_golpe: AudioStreamPlayer
 var audio_especial: AudioStreamPlayer
@@ -254,6 +756,9 @@ var audio_ko: AudioStreamPlayer
 var audio_victoria: AudioStreamPlayer
 var audio_poder_final: AudioStreamPlayer
 var audio_salto: AudioStreamPlayer
+# 91.02.12 — player dedicado para recortar el grito de Helena exactamente al tiempo de recarga.
+var audio_helena_recarga: AudioStreamPlayer
+var helena_recarga_serial: int = 0
 var audio_musica_batalla: AudioStreamPlayer
 var audio_ambiente_escenario: AudioStreamPlayer
 var ambiente_escenario_actual := ""
@@ -271,7 +776,35 @@ var ronda_activa := true
 var etiqueta_resultado: Label
 var etiqueta_marcador: Label
 
+func _configurar_modo_bajo_visual_perf1() -> void:
+	perf_renderer_actual = str(RenderingServer.get_current_rendering_method())
+	modo_bajo_visual = online_activo or perf_renderer_actual == "gl_compatibility"
+	print("[91.02.67-PERF1] PERFIL VISUAL=%s renderer=%s online=%s" % [
+		"BAJO" if modo_bajo_visual else "NORMAL",
+		perf_renderer_actual,
+		str(online_activo)
+	])
+
+
+func _perf1_log_fps(delta: float) -> void:
+	perf_diag_acumulado += delta
+	if perf_diag_acumulado < 2.0:
+		return
+	perf_diag_acumulado = 0.0
+	print("[91.02.67-PERF1] FPS=%d perfil=%s renderer=%s" % [
+		Engine.get_frames_per_second(),
+		"BAJO" if modo_bajo_visual else "NORMAL",
+		perf_renderer_actual
+	])
+
+
 func _ready() -> void:
+	# Debe ocurrir antes de crear escenario/personajes para que la metadata del
+	# replay pueda restaurar J1, J2 y arena sin tocar el estado del Fighter.
+	online_activo = _detectar_modo_online()
+	_configurar_modo_bajo_visual_perf1()
+	_preparar_solicitud_replay()
+	_preparar_rng_determinista_versus()
 	_crear_escenario()
 	_crear_ambiente()
 	_crear_escenario_vivo()
@@ -279,20 +812,262 @@ func _ready() -> void:
 	_crear_ambiente_glow()
 	_crear_audio()
 	_crear_personajes()
+	if replay_modo_activo:
+		_iniciar_replay_inputs()
+	else:
+		_iniciar_grabacion_inputs()
 	_crear_iluminacion_luchadores()
 	_crear_ui()
 	_crear_capa_destello()
-	call_deferred("_presentar_ready_fight")
+	if (versus_local_activo or online_activo) and not replay_modo_activo:
+		rollback_ring = RollbackRingBufferScript.new(ROLLBACK_BUFFER_TICKS)
+		if online_activo:
+			print("[91.02.69-P14D2B] ONLINE RING ARMADO — capacidad=%d ticks; captura aún diagnóstica" % ROLLBACK_BUFFER_TICKS)
+	if versus_local_activo and not online_activo and not replay_modo_activo:
+		print("[91.00.00-H10.88] ROLLBACK BUFFER ACTIVO — F11 rebobina %d ticks" % ROLLBACK_TEST_TICKS)
+		rollback_motion_guard = RollbackNeutralMotionGuardScript.new()
+		rollback_motion_guard.name = "RollbackNeutralMotionGuard"
+		add_child(rollback_motion_guard)
+		rollback_motion_guard.configurar(self, kai, rival)
+		print("[91.00.00-H10.88] HISTORICAL X GUARD — LIVE pasivo / rollback usa X absoluta del snapshot siguiente")
+		print("[91.00.00-H10.88] TACTICAL PHYSICS CLOCK — PerfectBlock sin Time.get_ticks_msec(); reloj+deadlines en snapshot")
+		print("[91.00.00-H10.88] BACKDASH PHYSICS STEP — movimiento/timer fuera de _process(); simulación fija")
+		print("[91.00.00-H10.88] LAUNCHER/AIR COMBO TEST — F11 localiza LAUNCH! o AIR xN dentro del ring")
+		print("[91.00.00-H10.88] EVENT TICK LOCATOR — eventos identificados por tick monotónico; PRETICK compacto")
+		print("[91.00.00-H10.88] CORE I SAFE ENTRY — safety gate H6.1 intacto; evento por señal fase_activada")
+		print("[91.00.00-H10.88] CORE I PHYSICS TARGET LOCK — Tween eliminado sólo del acercamiento CORE I")
+		print("[91.00.00-H10.88] CORE I TARGET END TEST — cruza final del lock -> continuación async/impacto")
+		print("[91.00.00-H10.88] CORE I EXPLICIT FSM — continuación post-lock + espera lógica del poster por physics ticks")
+		print("[91.00.00-H10.88] CORE I POSTER END TEST — transición snapshot POSTER->INACTIVO y devolución de control")
+		print("[91.00.00-H10.88] CORE II ENTRY TEST — activación 1->2 + arranque de recarga; sin cambios de gameplay")
+		print("[91.00.00-H10.88] CORE II RECARGA END TEST — cruza timer 1.05 s -> continuación await / acercamiento combo")
+		print("[91.00.00-H10.88] AUTO CAPTURE — fin de recarga CORE II dispara rollback automáticamente; no usar F11")
+		print("[91.00.00-H10.88] CORE II PHYSICS RECARGA+APPROACH — SceneTreeTimer y primer Tween eliminados de lógica CORE II")
+		print("[91.00.00-H10.88] CORE II COMBO ENTRY AUTO — cruza stage 2->3 e inicio de _racha_combo_auto(); no usar F11")
+		print("[91.00.00-H10.88] CORE II COMBO APPROACH PHYSICS — sin Tween por beat; stage 3 gobernado por FSM")
+		print("[91.00.00-H10.88] CORE II FIRST BEAT END AUTO — prueba restore dentro de stage 3; no usar F11")
+		print("[91.00.00-H10.88] CORE II COMBO FSM — coreografía/índice/subfase/acercamiento internos snapshotables; combo ya no usa coroutine")
+		print("[91.00.00-H10.88] CORE II REMATADOR ENTRY AUTO — cruza stage 3->4; rematador aún async; no usar F11")
+		print("[91.00.00-H10.88] CORE II REMATADOR FSM — póster lógico + impacto + espera 0.10 por physics ticks; sin coroutine")
+		print("[91.00.00-H10.88] CORE II SEQUENCE END AUTO — cruza espera final 0.10 -> stage0/control; diagnóstico puro")
+		print("[91.00.00-H10.88] CORE III ENTRY AUTO — tercera activación + inicio de recarga lenta 1.55 s; sin cambios de gameplay")
+		print("[91.00.00-H10.88] CORE III EXACT ENTRY — espera 6 ticks post-evento; restore un tick antes; sin contaminación de movimiento previo")
+		print("[91.00.00-H10.88] CORE III EXPLICIT HISTORICAL DELTA — J1/J2/PB reproducen el delta LIVE; sin depender del scheduler")
+		print("[91.00.00-H10.88] CORE III ENTRY CERTIFIED — J1/J2 8 ticks idénticos en H10.8; frontera congelada")
+		print("[91.00.00-H10.88] CORE III RECARGA+APPROACH PHYSICS — timer no escalado + Target Lock snapshotable; SceneTreeTimer/Tween lógicos eliminados")
+		print("[91.00.00-H10.88] CORE III RECARGA END CERTIFIED — J1/J2 8 ticks idénticos en H10.11; frontera congelada")
+		print("[91.00.00-H10.88] CORE III PB DELTA CERTIFIED — H10.18 reconfirmó ENTRY/RECARGA/APPROACH J1/J2; frontera congelada")
+		print("[91.00.00-H10.88] CORE III FIRST+SECOND+THIRD+FOURTH+FIFTH+SIXTH+SEVENTH+EIGHTH+NINTH+TENTH+ELEVENTH+TWELFTH+THIRTEENTH+FOURTEENTH+FIFTEENTH+SIXTEENTH+SEVENTEENTH+EIGHTEENTH BEAT PHYSICS — beats 1-18 sin Tween/coroutine; resto histórico desde beat 19")
+		print("[91.00.00-H10.88] CORE III FIRST BEAT END CERTIFIED — J1/J2 8 ticks idénticos en H10.15; frontera congelada")
+		print("[91.00.00-H10.88] CORE III SECOND BEAT END CERTIFIED — J1/J2 8 ticks idénticos en H10.18; frontera congelada")
+		print("[91.00.00-H10.88] CORE III THIRD BEAT END CERTIFIED — J1/J2 8 ticks idénticos en H10.20; frontera congelada")
+		print("[91.00.00-H10.88] CORE III FOURTH BEAT END CERTIFIED — J1/J2 8 ticks idénticos en H10.22; frontera congelada")
+		print("[91.00.00-H10.88] CORE III FIFTH BEAT END CERTIFIED — J1/J2 8 ticks idénticos en H10.24; frontera congelada")
+		print("[91.00.00-H10.88] CORE III SIXTH BEAT END CERTIFIED — J1/J2 8 ticks idénticos en H10.26; frontera congelada")
+		print("[91.00.00-H10.88] CORE III SEVENTH BEAT END CERTIFIED — H10.30 revalidó J1/J2 8 ticks idénticos; frontera recongelada")
+		print("[91.00.00-H10.88] CORE III EIGHTH BEAT END CERTIFIED — H10.32 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III NINTH BEAT END CERTIFIED — H10.34 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III TENTH BEAT END CERTIFIED — H10.36 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III ELEVENTH BEAT END CERTIFIED — H10.38 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III TWELFTH BEAT END CERTIFIED — H10.40 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III THIRTEENTH BEAT END CERTIFIED — H10.42 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III FOURTEENTH BEAT END CERTIFIED — H10.44 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III FIFTEENTH BEAT END CERTIFIED — H10.46 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III SIXTEENTH BEAT END CERTIFIED — H10.48 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III SEVENTEENTH BEAT END CERTIFIED — H10.50 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III EIGHTEENTH BEAT END CERTIFIED — H10.52 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III ABSOLUTE FINISHER ENTRY CERTIFIED — H10.58 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III ABSOLUTE REVEAL END CERTIFIED — H10.60 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III ABSOLUTE KO ENTRY CERTIFIED — H10.62 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY ENTRY CERTIFIED — H10.66 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY HOLD CERTIFIED — H10.68 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] CORE I/II/III ROLLBACK CERTIFIED BASELINE — frontera terminal en ABSOLUTE VICTORY HOLD; salida a Resultado.tscn queda fuera del dominio rollback")
+		print("[91.00.00-H10.88] PERFECT BLOCK CERTIFIED — H10.72 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] COUNTER CERTIFIED — H10.71 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] LAUNCHER CERTIFIED — H10.73 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] AIR x1 CERTIFIED — H10.74 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] AIR x2 CERTIFIED — H10.75 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] AIR x3 CERTIFIED — H10.76 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] BACKDASH CERTIFIED — H10.77 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] FORWARD DASH CERTIFIED — H10.78 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] NORMAL PUNCH IMPACT CERTIFIED — H10.79 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] NORMAL KICK IMPACT CERTIFIED — H10.80 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] NORMAL PUNCH BLOCK CERTIFIED — H10.82 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] NORMAL KICK BLOCK CERTIFIED — H10.83 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] NORMAL BLOCK RECOVERY CERTIFIED — H10.85 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] NORMAL ATTACK RECOVERY CERTIFIED — H10.86 revalidó J1/J2 8 ticks idénticos; frontera congelada")
+		print("[91.00.00-H10.88] NORMAL COMBAT INTEGRAL CERTIFIED — H10.87 revalidó J1/J2 6/6 checkpoints; frontera congelada")
+		print("[91.00.00-H10.88] CLEAN BASELINE — arnés integral automático desactivado; rollback manual F11 permanece disponible para diagnóstico")
+	if online_activo:
+		_preparar_online_combate()
+	else:
+		call_deferred("_presentar_ready_fight")
 
 # 90.10.94 — Main sigue siendo el único lector de dispositivos en Versus Local.
 # Al ser el padre de los Fighter, inyecta el frame antes de sus physics ticks.
 func _physics_process(_delta: float) -> void:
+	# PASS 14D1 — Main puede terminar de cargar antes que el otro peer. Hasta
+	# recibir COMBATE GO no consumimos ticks lógicos, input ni snapshots.
+	if online_activo and not online_combate_habilitado:
+		return
+
+	# 91.02.70 — reconciliación ONLINE siempre empieza en frontera Main.
+	# NetworkManager puede recibir paquetes en cualquier momento, pero nunca
+	# restauramos estado desde el callback RPC.
+	if online_activo:
+		if online_rollback_finalizar_pendiente:
+			_online_finalizar_rollback()
+		if online_rollback_tick_pendiente >= 0 and not rollback_catchup_activo:
+			_online_iniciar_rollback_pendiente()
+
+	# H10.6 — FRAME A: segundo restore y pausa total. Este frame puede haber
+	# nacido todavía con delta heredado de la cámara lenta LIVE, por eso no se
+	# permite ejecutar ningún simulador ni consumir input histórico.
+	if rollback_catchup_preparando_timescale:
+		rollback_catchup_preparando_timescale = false
+
+		if not rollback_catchup_inicio_timescale.is_empty():
+			RollbackSnapshotScript.restaurar_partida(
+				self,
+				kai,
+				rival,
+				rollback_catchup_inicio_timescale
+			)
+
+		if is_instance_valid(kai):
+			kai.set_physics_process(false)
+		if is_instance_valid(rival):
+			rival.set_physics_process(false)
+		if is_instance_valid(PerfectBlock90_1):
+			PerfectBlock90_1.set_physics_process(false)
+
+		rollback_catchup_activo = false
+		rollback_catchup_reactivar_tactico_next_tick = false
+		rollback_catchup_reactivacion_deferred_pendiente = false
+		rollback_catchup_commit_restore_pendiente = false
+		rollback_catchup_barrier_frames_restantes = 1
+		print("[91.00.00-H10.88] CORE III BARRIER FRAME A — segundo restore; simuladores pausados; falta 1 frame de estabilización")
+		return
+
+	# H10.6 — FRAME B: time_scale ya lleva un frame restaurado en 1.0. Dejamos
+	# pasar otro physics frame COMPLETO con Fighter/PB apagados para que el delta
+	# del frame de commit nazca inequívocamente a 1/60.
+	if rollback_catchup_barrier_frames_restantes > 0:
+		rollback_catchup_barrier_frames_restantes -= 1
+		if not rollback_catchup_inicio_timescale.is_empty():
+			Engine.time_scale = float(rollback_catchup_inicio_timescale.get("time_scale", 1.0))
+		if is_instance_valid(kai):
+			kai.set_physics_process(false)
+		if is_instance_valid(rival):
+			rival.set_physics_process(false)
+		if is_instance_valid(PerfectBlock90_1):
+			PerfectBlock90_1.set_physics_process(false)
+
+		if rollback_catchup_barrier_frames_restantes <= 0 and not rollback_catchup_reactivacion_deferred_pendiente:
+			rollback_catchup_reactivacion_deferred_pendiente = true
+			call_deferred("_h106_armar_core3_commit_post_frame")
+		print("[91.00.00-H10.88] CORE III BARRIER FRAME B — estabilización completa a time_scale=%.4f; commit deferred armado" % [float(Engine.time_scale)])
+		return
+
+	# H10.6 — COMMIT: Fighters ya están schedulados para este frame. Restauramos
+	# por TERCERA vez al entrar Main, antes de cualquier Fighter/PB. El delta de
+	# este frame ya nació a escala 1.0 gracias a FRAME B.
+	if rollback_catchup_commit_restore_pendiente:
+		rollback_catchup_commit_restore_pendiente = false
+		if not rollback_catchup_inicio_timescale.is_empty():
+			RollbackSnapshotScript.restaurar_partida(
+				self,
+				kai,
+				rival,
+				rollback_catchup_inicio_timescale
+			)
+		if is_instance_valid(kai):
+			kai.set_physics_process(true)
+		if is_instance_valid(rival):
+			rival.set_physics_process(true)
+		if is_instance_valid(PerfectBlock90_1):
+			PerfectBlock90_1.set_physics_process(true)
+		rollback_catchup_activo = true
+		print("[91.00.00-H10.88] CORE III BARRIER COMMIT RESTORE — estado histórico reimpuesto; primer subtick inicia en este frame")
+
+	# La comparación debe hacerse al INICIO del tick siguiente al último frame
+	# re-simulado, porque los Fighter procesan después de Main.
+	if rollback_comparacion_pendiente:
+		_finalizar_prueba_rollback_local()
+
+	# 91.00.00-H10.13 — F11 sólo arma una solicitud desde el ciclo de input.
+	# El rebobinado real empieza acá, en una frontera exacta de physics tick.
+	if online_activo and rollback_test_solicitado:
+		# Los armadores históricos de F11 no pertenecen al combate online.
+		rollback_test_solicitado = false
+	if rollback_test_solicitado and not online_activo and not rollback_catchup_activo and not rollback_comparacion_pendiente:
+		rollback_test_solicitado = false
+		_iniciar_prueba_rollback_local()
+
+	# Si _iniciar_prueba_rollback_local() armó H10.2 ahora mismo, no registrar
+	# snapshots ni inyectar input LIVE. Fighters y PB están pausados hasta el
+	# próximo physics frame.
+	if rollback_catchup_preparando_timescale:
+		return
+
+	if rollback_catchup_activo:
+		_rollback_verificar_subtick()
+
+	# Durante catch-up no agregamos snapshots nuevos: estamos recorriendo historia.
+	if (versus_local_activo or online_activo) and not replay_modo_activo and not rollback_catchup_activo:
+		_rollback_registrar_inicio_tick()
+		# El arnés TARGET-ONLY/F11 sigue siendo EXCLUSIVO de Versus Local.
+		# Online 14D2B sólo captura historia; todavía no restaura ni re-simula.
+		if versus_local_activo and not online_activo:
+			_h1057_observar_absolute_finisher_stage_trace_post_snapshot()
+		# H10.88 — regresión integral H10.87 certificada; arnés automático desactivado.
+
 	_inyectar_inputs_versus_local()
+	# H10.65 — VICTORY se actualiza ANTES que KO. Si KO arma la espera 0.65 s
+	# en este mismo frame, VICTORY recién consume su primer tick REAL en el
+	# physics frame siguiente; esto conserva la frontera temporal LIVE.
+	_h1065_actualizar_core3_absolute_victory_fsm()
+	# H10.62 — el K.O. physics se actualiza ANTES del reveal. Así, cuando el
+	# reveal 3.15 s arma la espera 0.70 s en este mismo frame, el contador KO
+	# recién consume su primer tick REAL en el physics frame siguiente.
+	_h1062_actualizar_core3_absolute_ko_fsm()
+	# H10.60 — actualizar DESPUÉS de fijar deltas históricos. Si este tick
+	# cruza el final del reveal, Engine.time_scale queda en 0.42 antes de que
+	# Fighters/PB consuman el subtick causal.
+	_h1060_actualizar_core3_absolute_reveal_fsm()
+
+# H10.6 — deferred al terminar FRAME B. Sólo reactiva Fighters para que queden
+# incluidos en el scheduler del próximo physics frame. PerfectBlock permanece
+# apagado hasta el COMMIT RESTORE de Main; así no puede sumar un tick fantasma.
+func _h106_armar_core3_commit_post_frame() -> void:
+	if not rollback_catchup_reactivacion_deferred_pendiente:
+		return
+	rollback_catchup_reactivacion_deferred_pendiente = false
+
+	if not rollback_catchup_inicio_timescale.is_empty():
+		Engine.time_scale = float(rollback_catchup_inicio_timescale.get("time_scale", 1.0))
+
+	if is_instance_valid(kai):
+		kai.set_physics_process(true)
+	if is_instance_valid(rival):
+		rival.set_physics_process(true)
+	if is_instance_valid(PerfectBlock90_1):
+		PerfectBlock90_1.set_physics_process(false)
+
+	rollback_catchup_activo = false
+	rollback_catchup_commit_restore_pendiente = true
+	print("[91.00.00-H10.88] CORE III BARRIER DEFERRED ARM — Fighters schedulados; PerfectBlock sigue pausado; commit en próximo Main")
 
 # FASE 92: capa de destello de pantalla completa para golpes fuertes. Va en
 # una CanvasLayer bien arriba (por encima incluso de la UI) para que un
 # remate/absoluto se sienta en TODA la pantalla, no solo en el personaje.
 func _crear_capa_destello() -> void:
+	if modo_bajo_visual:
+		vineta_rect = null
+		vineta_material = null
+		destello_rect = null
+		destello_material = null
+		return
 	var capa := CanvasLayer.new()
 	capa.layer = 60
 	add_child(capa)
@@ -337,6 +1112,8 @@ func _actualizar_vineta_tension(delta: float) -> void:
 # un destello en curso, lo reinicia desde el punto más alto en vez de que
 # compitan dos tweens.
 func _destello_pantalla(color: Color, intensidad_max: float, duracion_caida: float = 0.28) -> void:
+	if modo_bajo_visual:
+		return
 	if not destello_material:
 		return
 	if destello_tween and is_instance_valid(destello_tween):
@@ -345,6 +1122,20 @@ func _destello_pantalla(color: Color, intensidad_max: float, duracion_caida: flo
 	destello_material.set_shader_parameter("intensidad", intensidad_max)
 	destello_tween = create_tween()
 	destello_tween.tween_property(destello_material, "shader_parameter/intensidad", 0.0, duracion_caida).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+# 91.00.00-H10.13 — RELOJ DETERMINISTA DE COMBATE.
+# Cualquier espera que habilite/deshabilite gameplay en Versus Local debe medirse
+# en physics ticks, no con timers de tiempo real. Esto evita que READY/FIGHT o
+# el cambio de ronda caigan un tick distinto entre grabación y replay.
+func _segundos_a_ticks_fisica(segundos: float) -> int:
+	return maxi(1, int(round(segundos * float(Engine.physics_ticks_per_second))))
+
+func _esperar_ticks_fisica(cantidad: int) -> void:
+	for _i in range(maxi(cantidad, 0)):
+		await get_tree().physics_frame
+
+func _esperar_segundos_fisica(segundos: float) -> void:
+	await _esperar_ticks_fisica(_segundos_a_ticks_fisica(segundos))
 
 func _presentar_ready_fight() -> void:
 	if not is_instance_valid(kai) or not is_instance_valid(rival) or not etiqueta_resultado:
@@ -364,11 +1155,13 @@ func _presentar_ready_fight() -> void:
 	add_child(anuncio)
 	anuncio.play()
 
-	await get_tree().create_timer(1.65).timeout
+	# 91.00.00-H: 1.65 s y 1.98 s se convierten una sola vez a ticks enteros.
+	# Grabación y replay cruzan el gate en el MISMO physics frame.
+	await _esperar_segundos_fisica(1.65)
 	etiqueta_resultado.text = "FIGHT!"
 	etiqueta_resultado.add_theme_color_override("font_color", Color(1.0, 0.55, 0.12))
 	sacudir_camara(5.0, 0.14)
-	await get_tree().create_timer(1.98).timeout
+	await _esperar_segundos_fisica(1.98)
 	if is_instance_valid(anuncio):
 		anuncio.queue_free()
 	etiqueta_resultado.text = ""
@@ -380,6 +1173,10 @@ func _presentar_ready_fight() -> void:
 	rival.reloj_seguridad_secuencia = 0.0
 	ronda_activa = true
 
+# 91.02.10 — AUDIO COMPLETION PASS
+# Cobertura auditada: impactos/bloqueo/caída/CORE universal; recarga CORE II/III
+# con aura universal; voces masculinas completadas con el pool de Kai; Cibor-X
+# conserva identidad robótica; Helena ya tiene voz femenina dedicada de recarga.
 func _crear_audio() -> void:
 	audio_golpe = AudioStreamPlayer.new()
 	audio_golpe.stream = SND_GOLPE
@@ -406,6 +1203,12 @@ func _crear_audio() -> void:
 	audio_salto = AudioStreamPlayer.new()
 	audio_salto.stream = SND_SALTO
 	add_child(audio_salto)
+
+	# 91.02.12 — Helena usa un player dedicado para poder cortar su voz
+	# exactamente cuando termina la recarga, sin dejarla invadir el combo.
+	audio_helena_recarga = AudioStreamPlayer.new()
+	audio_helena_recarga.stream = SND_HELENA_RECARGA_CORE2
+	add_child(audio_helena_recarga)
 
 	# PROTO 89.9: música/ambiente dedicado por escenario. Cada arena tiene
 	# su propia pista y se repite mientras dure el combate.
@@ -468,6 +1271,14 @@ func _actualizar_audio_escenario(nombre_luchador: String) -> void:
 		"Varkhos":
 			audio_ambiente_escenario.stream = SND_VARKHOS_AMBIENTE
 			audio_ambiente_escenario.volume_db = -14.0
+		"Krovan":
+			audio_ambiente_escenario.stream = SND_KROVAN_AMBIENTE
+			# Pista entregada a ~-17.5 dBFS: queda al fondo sin tapar golpes/voces.
+			audio_ambiente_escenario.volume_db = -10.0
+		"Nekhar":
+			audio_ambiente_escenario.stream = SND_NEKHAR_AMBIENTE
+			# Intro más atmosférica; un poco más presente que Krovan.
+			audio_ambiente_escenario.volume_db = -8.5
 		"Magnus":
 			audio_ambiente_escenario.stream = SND_MAGNUS_AMBIENTE
 			audio_ambiente_escenario.volume_db = -13.0
@@ -533,15 +1344,46 @@ func _pitch_voz(personaje: Fighter) -> float:
 		return 1.0
 	match personaje.nombre_luchador:
 		"Magnus": return randf_range(0.76, 0.82)
+		"Varkhos": return randf_range(0.78, 0.84)
+		"Nekhar": return randf_range(0.84, 0.90)
+		"Krovan": return randf_range(0.90, 0.96)
 		"Fang": return randf_range(0.91, 0.97)
+		"Jester": return randf_range(0.97, 1.03)
+		"Xenoid": return randf_range(1.02, 1.08)
 		"Aethel": return randf_range(1.01, 1.07)
 		_: return randf_range(0.96, 1.03)
 
+func _reproducir_recarga_helena(absoluta: bool) -> void:
+	if not is_instance_valid(audio_helena_recarga):
+		return
+	# CORE II dura 1.05 s y CORE III 1.55 s en Fighter. El corte usa tiempo
+	# real (ignore_time_scale=true) para que la cámara lenta de CORE III no
+	# alargue la voz más allá de la pose de recarga.
+	var duracion: float = 1.55 if absoluta else 1.05
+	helena_recarga_serial += 1
+	var serial_actual: int = helena_recarga_serial
+	audio_helena_recarga.stop()
+	audio_helena_recarga.stream = SND_HELENA_RECARGA_CORE3 if absoluta else SND_HELENA_RECARGA_CORE2
+	audio_helena_recarga.volume_db = -5.0 if absoluta else -6.0
+	audio_helena_recarga.pitch_scale = 1.0
+	audio_helena_recarga.play()
+	# El archivo ya viene recortado exactamente a la duración de la pose;
+	# este timer queda como seguro de corte por si el decoder agrega cola.
+	var corte := get_tree().create_timer(duracion, true, false, true)
+	corte.timeout.connect(func():
+		if serial_actual == helena_recarga_serial and is_instance_valid(audio_helena_recarga):
+			audio_helena_recarga.stop()
+	)
+
 func _reproducir_voz_recarga(personaje: Fighter, absoluta: bool) -> bool:
-	# 90.10.48 — Kai/Fang/Aethel conservan identidad existente. Jester,
-	# Xenoid, Kali y Magnus comparten el nuevo grito masculino de recarga.
-	# Helena queda fuera y Cibor-X conserva exclusivamente su identidad robótica.
-	if not is_instance_valid(personaje) or not (personaje.nombre_luchador in PERSONAJES_VOZ_RECARGA_MASC):
+	# 91.02.12 — Helena ya tiene clip femenino dedicado y corte exacto por duración de recarga.
+	# Cibor-X sigue sin voz humana y el resto conserva el pool masculino ya auditado.
+	if not is_instance_valid(personaje):
+		return false
+	if personaje.nombre_luchador == "Helena":
+		_reproducir_recarga_helena(absoluta)
+		return true
+	if not (personaje.nombre_luchador in PERSONAJES_VOZ_RECARGA_MASC):
 		return false
 	var stream: AudioStream = SND_VOZ_RECARGA_MASC_A
 	var pitch: float = 1.0
@@ -572,12 +1414,110 @@ func _reproducir_voz_recarga(personaje: Fighter, absoluta: bool) -> bool:
 			stream = SND_VOZ_RECARGA_GENERICA
 			pitch = 0.96
 			volumen = -5.5 if absoluta else -6.4
+		"Krovan":
+			# Reutiliza la voz de Kai con pitch más áspero/grave.
+			stream = SND_VOZ_RECARGA_MASC_A
+			pitch = 0.93
+			volumen = -5.4 if absoluta else -6.4
+		"Nekhar":
+			stream = SND_VOZ_RECARGA_MASC_B
+			pitch = 0.87
+			volumen = -5.2 if absoluta else -6.2
+		"Varkhos":
+			stream = SND_VOZ_RECARGA_MASC_B
+			pitch = 0.80
+			volumen = -4.8 if absoluta else -5.8
 	_reproducir_sfx(stream, volumen, pitch)
 	return true
 
+# 91.02.56 — voz corta de lanzamiento de proyectil.
+# Usa los MISMOS bancos de voz de recarga ya existentes, pero sólo deja sonar
+# una fracción inicial para que funcione como "¡HA!" / esfuerzo breve.
+func _al_proyectil_disparado(personaje: Fighter) -> void:
+	if not is_instance_valid(personaje):
+		return
+	# Varkhos queda deliberadamente excluido del sistema de proyectiles.
+	if personaje.nombre_luchador == "Varkhos":
+		return
+
+	var stream: AudioStream = null
+	var pitch: float = 1.0
+	var volumen: float = -9.0
+	var duracion: float = 0.30
+
+	match personaje.nombre_luchador:
+		"Helena":
+			stream = SND_HELENA_RECARGA_CORE2
+			pitch = 1.0
+			volumen = -9.4
+			duracion = 0.28
+		"Cibor-X":
+			# Mantiene identidad robótica: esfuerzo electrónico corto en lugar
+			# de insertar una voz humana que nunca usa en sus recargas.
+			stream = SND_CIBOR_STUN_BURST
+			pitch = 1.03
+			volumen = -12.0
+			duracion = 0.20
+		"Kai":
+			stream = SND_VOZ_RECARGA_MASC_A
+			pitch = 1.0
+		"Fang":
+			stream = SND_VOZ_RECARGA_MASC_B
+			pitch = 0.92
+		"Aethel":
+			stream = SND_VOZ_RECARGA_MASC_A
+			pitch = 1.055
+		"Magnus":
+			stream = SND_VOZ_RECARGA_GENERICA
+			pitch = 0.88
+			duracion = 0.32
+		"Jester":
+			stream = SND_VOZ_RECARGA_GENERICA
+			pitch = 0.98
+		"Xenoid":
+			stream = SND_VOZ_RECARGA_GENERICA
+			pitch = 1.04
+		"Kali":
+			stream = SND_VOZ_RECARGA_GENERICA
+			pitch = 0.96
+		"Dax":
+			stream = SND_VOZ_RECARGA_MASC_A
+			pitch = 0.98
+		"Krovan":
+			stream = SND_VOZ_RECARGA_MASC_A
+			pitch = 0.93
+		"Nekhar":
+			stream = SND_VOZ_RECARGA_MASC_B
+			pitch = 0.87
+			duracion = 0.32
+		_:
+			return
+
+	if not stream:
+		return
+
+	# Player temporal independiente: no corta el SFX propio del proyectil.
+	var voz := AudioStreamPlayer.new()
+	voz.stream = stream
+	voz.volume_db = volumen
+	voz.pitch_scale = pitch
+	add_child(voz)
+	voz.play()
+
+	# Corte en tiempo real para que sea sólo un ataque vocal corto.
+	var corte := get_tree().create_timer(duracion, true, false, true)
+	corte.timeout.connect(func():
+		if is_instance_valid(voz):
+			voz.stop()
+			voz.queue_free()
+	)
+
+
 func _reaccion_vocal_golpe(personaje: Fighter, fuerza: float, tipo: String) -> void:
 	var es_cibor: bool = is_instance_valid(personaje) and personaje.nombre_luchador == "Cibor-X"
-	if not es_cibor and not _usa_voz_masculina(personaje):
+	var es_helena: bool = is_instance_valid(personaje) and personaje.nombre_luchador == "Helena"
+	var es_kali: bool = is_instance_valid(personaje) and personaje.nombre_luchador == "Kali"
+	if not es_cibor and not es_helena and not es_kali and not _usa_voz_masculina(personaje):
 		return
 	var ahora: int = Time.get_ticks_msec()
 	var clave: int = personaje.get_instance_id()
@@ -599,6 +1539,14 @@ func _reaccion_vocal_golpe(personaje: Fighter, fuerza: float, tipo: String) -> v
 	if es_cibor:
 		var stream_cibor: AudioStream = _elegir_sfx([SND_CIBOR_DOLOR_1, SND_CIBOR_DOLOR_2])
 		_reproducir_sfx(stream_cibor, -6.0 if fuerza >= 17.0 else -8.5, randf_range(0.94, 1.05))
+		return
+	# Hasta recibir clips de dolor dedicados, Helena/Kali reutilizan SU propia
+	# voz existente a volumen/pitch de reacción; nunca se les aplica voz masculina.
+	if es_helena:
+		_reproducir_sfx(SND_HELENA_GRITO_ATAQUE_1, -9.2 if fuerza < 17.0 else -7.2, randf_range(0.90, 0.96))
+		return
+	if es_kali:
+		_reproducir_sfx(SND_KALI_ATAQUE_1, -8.8 if fuerza < 17.0 else -6.8, randf_range(0.90, 0.98))
 		return
 	var stream: AudioStream
 	if fuerza >= 17.0 or tipo in ["especial", "rematador", "absoluto"]:
@@ -657,6 +1605,8 @@ func _sfx_elemento(personaje: Fighter) -> AudioStream:
 		_: return SND_ESPECIAL
 
 func _crear_onda_impacto_premium(tipo: String, bloqueado: bool, intensidad: float) -> void:
+	if modo_bajo_visual:
+		return
 	if not escenario_front or not is_instance_valid(kai) or not is_instance_valid(rival):
 		return
 	var centro: Vector2 = (kai.global_position + rival.global_position) * 0.5
@@ -725,6 +1675,8 @@ func _crear_camara() -> void:
 # Environment reemplaza el fondo ya dibujado por un color plano/cielo 3D en
 # vez de solo aplicar el post-proceso encima.
 func _crear_ambiente_glow() -> void:
+	if modo_bajo_visual:
+		return
 	var entorno := Environment.new()
 	entorno.background_mode = Environment.BG_CANVAS
 	entorno.glow_enabled = true
@@ -763,9 +1715,13 @@ func _crear_escenario() -> void:
 	var sobrante_y: float = 720.0 * (zoom_fondo - 1.0)
 	fondo_sprite.position = Vector2(-sobrante_x / 2.0, -sobrante_y * 0.1)
 	fondo_sprite.z_index = -10
-	fondo_material = ShaderMaterial.new()
-	fondo_material.shader = load("res://shaders/escenario_ambiental.gdshader")
-	fondo_sprite.material = fondo_material
+	if not modo_bajo_visual:
+		fondo_material = ShaderMaterial.new()
+		fondo_material.shader = load("res://shaders/escenario_ambiental.gdshader")
+		fondo_sprite.material = fondo_material
+	else:
+		fondo_material = null
+		fondo_sprite.material = null
 	add_child(fondo_sprite)
 
 	var suelo := StaticBody2D.new()
@@ -784,11 +1740,12 @@ func _crear_escenario() -> void:
 	piso_overlay.z_index = 2
 	add_child(piso_overlay)
 
-	luz_impacto = PointLight2D.new()
-	luz_impacto.energy = 0.0
-	luz_impacto.shadow_enabled = false
-	luz_impacto.z_index = 2
-	add_child(luz_impacto)
+	if not modo_bajo_visual:
+		luz_impacto = PointLight2D.new()
+		luz_impacto.energy = 0.0
+		luz_impacto.shadow_enabled = false
+		luz_impacto.z_index = 2
+		add_child(luz_impacto)
 
 	# FASE 97 — luz de escenario constante (a diferencia de luz_impacto,
 	# que solo prende un instante al golpear). Es la que le da relieve
@@ -801,15 +1758,16 @@ func _crear_escenario() -> void:
 	# tiene el shader de relieve y se queda a brillo pleno -- y el
 	# resultado es que la escena entera se ve sobre-expuesta y los
 	# personajes pierden contraste contra el fondo.
-	luz_escenario = DirectionalLight2D.new()
-	luz_escenario.rotation = deg_to_rad(-50.0)
-	luz_escenario.height = 0.75
-	luz_escenario.energy = 0.45
-	luz_escenario.color = Color(1.0, 0.95, 0.88)
-	luz_escenario.shadow_enabled = false
-	luz_escenario.range_item_cull_mask = 2
-	luz_escenario.z_index = 2
-	add_child(luz_escenario)
+	if not modo_bajo_visual:
+		luz_escenario = DirectionalLight2D.new()
+		luz_escenario.rotation = deg_to_rad(-50.0)
+		luz_escenario.height = 0.75
+		luz_escenario.energy = 0.45
+		luz_escenario.color = Color(1.0, 0.95, 0.88)
+		luz_escenario.shadow_enabled = false
+		luz_escenario.range_item_cull_mask = 2
+		luz_escenario.z_index = 2
+		add_child(luz_escenario)
 
 func _crear_iluminacion_luchadores() -> void:
 	# Halos de contacto separados del sprite: integran a cada luchador con
@@ -818,6 +1776,8 @@ func _crear_iluminacion_luchadores() -> void:
 	iluminacion_luchadores.name = "IluminacionLuchadores"
 	iluminacion_luchadores.z_index = -1
 	add_child(iluminacion_luchadores)
+	if modo_bajo_visual:
+		return
 
 	halo_luchador_kai = Polygon2D.new()
 	halo_luchador_kai.polygon = _crear_poligono_elipse(92.0, 17.0)
@@ -877,6 +1837,12 @@ func _obtener_brillo_base_escenario(nombre_luchador: String) -> float:
 		"Xenoid":
 			# 90.11.25 — leve rebaja para que el escenario no compita con el luchador.
 			return 0.84
+		"Krovan":
+			# Campo nocturno cálido: conservar la luna/linternas sin apagar al luchador.
+			return 0.92
+		"Nekhar":
+			# Sepulcro oscuro con fuego ámbar: ligero refuerzo sin lavar los negros.
+			return 0.94
 		_:
 			return 1.0
 
@@ -892,7 +1858,7 @@ func _obtener_tono_base_suelo(nombre_luchador: String) -> Color:
 	return Color(bs, bs, bs, 1.0)
 
 func _escenario_redisenado(nombre_luchador: String) -> bool:
-	return nombre_luchador in ["Varkhos", "Aethel", "Cibor-X", "Helena", "Kali"]
+	return nombre_luchador in ["Varkhos", "Aethel", "Cibor-X", "Helena", "Kali", "Krovan", "Nekhar"]
 
 func _zoom_base_escenario(nombre_luchador: String) -> float:
 	return 1.08 if _escenario_redisenado(nombre_luchador) else 1.18
@@ -974,6 +1940,14 @@ func _crear_ambiente() -> void:
 	ambiente_particulas.name = "AmbienteVivo"
 	ambiente_particulas.z_index = -2
 	add_child(ambiente_particulas)
+
+	ambiente_particulas_delante = Node2D.new()
+	ambiente_particulas_delante.name = "AtmosferaCercana"
+	ambiente_particulas_delante.z_index = -1
+	add_child(ambiente_particulas_delante)
+	if modo_bajo_visual:
+		return
+
 	var tex := load("res://assets/ambient_particle.png")
 	for i in range(24):
 		var p := Sprite2D.new()
@@ -986,10 +1960,6 @@ func _crear_ambiente() -> void:
 
 	# Capa atmosférica cercana: partículas más grandes y lentas, con
 	# opacidad baja. Da separación entre cámara y fondo sin tapar la pelea.
-	ambiente_particulas_delante = Node2D.new()
-	ambiente_particulas_delante.name = "AtmosferaCercana"
-	ambiente_particulas_delante.z_index = -1
-	add_child(ambiente_particulas_delante)
 	for i in range(10):
 		var p2 := Sprite2D.new()
 		p2.texture = tex
@@ -1086,6 +2056,8 @@ func _crear_escenario_vivo() -> void:
 	escenario_front.name = "ElementosFrente"
 	escenario_front.z_index = 3
 	add_child(escenario_front)
+	if modo_bajo_visual:
+		return
 
 	for i in range(7):
 		var banda := Polygon2D.new()
@@ -1115,6 +2087,13 @@ func _configurar_escenario_vivo(nombre_luchador: String, c: Color) -> void:
 	escenario_effect_color = c
 	escenario_tipo = _tipo_escenario(nombre_luchador)
 	escenario_pulso = 0.0
+	if modo_bajo_visual:
+		escenario_ambiente_reloj = 0.0
+		escenario_energia_reactiva = 0.0
+		helena_ojos.clear()
+		helena_aura_cabeza = null
+		cibor_reactor_halo = null
+		return
 		
 	if piso_overlay:
 		for hijo in piso_overlay.get_children():
@@ -1173,6 +2152,8 @@ func _tipo_escenario(nombre: String) -> String:
 		"Helena": return "luz"
 		"Jester": return "veneno"
 		"Xenoid": return "electrico"
+		"Krovan": return "tierra"
+		"Nekhar": return "oscuro"
 		_: return "oscuro"
 
 func _crear_poligono_elipse(rx: float, ry: float) -> PackedVector2Array:
@@ -1729,6 +2710,8 @@ func _crear_luchador(nombre: String) -> Fighter:
 		"Jester": return Jester.new()
 		"Xenoid": return Xenoid.new()
 		"Dax": return Dax.new()
+		"Krovan": return Krovan.new()
+		"Nekhar": return Nekhar.new()
 		"Varkhos": return Varkhos.new()
 		_: return Kai.new()
 
@@ -1738,6 +2721,13 @@ func _detectar_modo_versus_local() -> bool:
 		return false
 	var modo_actual: String = str(estado.get("modo")).to_lower()
 	return modo_actual in ["versus", "versus_local", "pvp_local", "local_vs"]
+
+
+func _detectar_modo_online() -> bool:
+	var estado = get_node_or_null("/root/GameState")
+	if not estado:
+		return false
+	return str(estado.get("modo")).to_lower() == "online"
 
 func _gamepad_para_jugador_local(indice_jugador: int) -> int:
 	# Se conserva para compatibilidad fuera del router. En Versus Local 90.10.93
@@ -1814,10 +2804,557 @@ func _router_frame_mando(id: int) -> Dictionary:
 		"especial": _router_pad_boton(id, ROUTER_PAD_RB) or _router_pad_eje(id, ROUTER_AXIS_RT) > 0.55,
 	}
 
+func _h1_probe_pretick(indice: int, entrada: Dictionary, frame_j1: Dictionary, frame_j2: Dictionary) -> void:
+	if indice < 0 or indice >= rollback_catchup_ventana.size():
+		return
+	var snap: Dictionary = entrada.get("snapshot", {})
+	var e1: Dictionary = snap.get("j1", {})
+	var e2: Dictionary = snap.get("j2", {})
+
+	var relevante_j1: bool = bool(frame_j1.get("puno", false)) or bool(frame_j1.get("patada", false)) \
+		or float(e1.get("hitstop_timer", 0.0)) > 0.0 or int(e1.get("fase_ataque", 0)) != 0 \
+		or float(e1.get("hitstun_timer", 0.0)) > 0.0
+	var relevante_j2: bool = bool(frame_j2.get("puno", false)) or bool(frame_j2.get("patada", false)) \
+		or float(e2.get("hitstop_timer", 0.0)) > 0.0 or int(e2.get("fase_ataque", 0)) != 0 \
+		or float(e2.get("hitstun_timer", 0.0)) > 0.0
+	if not relevante_j1 and not relevante_j2:
+		return
+
+	# H6.1 — Launcher/Air Hit generaban ~15 líneas por subtick y Godot
+	# terminaba con "output overflow". Seguimos COMPARANDO todos los subticks,
+	# pero imprimimos detalle sólo en 1, 2 y 8 salvo que el validador causal
+	# detecte una divergencia (esa traza se imprime por otra ruta).
+	if rollback_h_clasificacion in ["NORMAL IMPACT", "NORMAL ATTACK RECOVERY", "FORWARD DASH", "LAUNCHER", "AIR HIT", "PROYECTIL STARTUP", "PROYECTIL VUELO", "PROYECTIL IMPACTO CORE", "PROYECTIL BLOQUEO", "CORE I ENTRY", "CORE I TARGET END", "CORE I POSTER END", "CORE II ENTRY", "CORE II RECARGA END", "CORE II COMBO ENTRY", "CORE II FIRST BEAT END", "CORE II REMATADOR ENTRY", "CORE II REMATADOR POSTER END", "CORE II SEQUENCE END", "CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"]:
+		var ultimo_probe := rollback_catchup_ventana.size() - 1
+		if indice != 0 and indice != 1 and indice != ultimo_probe:
+			return
+
+	print("[91.00.00-H10.88] PRETICK %d/%d — tick histórico %d" % [
+		indice + 1, rollback_catchup_ventana.size(), int(entrada.get("tick", -1))
+	])
+	print("  • J1 INPUT=%s" % str(frame_j1))
+	print("  • J1 esperado hitstop=%.6f fase=%s timer=%.6f idxP=%s idxK=%s prevP=%s prevK=%s buffer=%s/%.6f extDisp=%s" % [
+		float(e1.get("hitstop_timer", 0.0)), str(e1.get("fase_ataque", 0)),
+		float(e1.get("timer_fase_ataque", 0.0)), str(e1.get("indice_punetazo", -1)),
+		str(e1.get("indice_patada", -1)), str(e1.get("puno_estaba_presionado", false)),
+		str(e1.get("patada_estaba_presionada", false)), str(e1.get("ataque_buffer_tipo", "")),
+		float(e1.get("ataque_buffer_timer", 0.0)), str(e1.get("input_externo_disponible", false))
+	])
+	print("  • J1 actual   hitstop=%.6f fase=%s timer=%.6f idxP=%s idxK=%s prevP=%s prevK=%s buffer=%s/%.6f extDisp=%s" % [
+		float(kai.hitstop_timer), str(kai.fase_ataque), float(kai.timer_fase_ataque),
+		str(kai.indice_punetazo), str(kai.indice_patada),
+		str(kai.puno_estaba_presionado), str(kai.patada_estaba_presionada),
+		str(kai.ataque_buffer_tipo), float(kai.ataque_buffer_timer),
+		str(kai.input_externo_disponible)
+	])
+
+	print("  • J2 INPUT=%s" % str(frame_j2))
+	print("  • J2 esperado hitstop=%.6f hitstun=%.6f fase=%s timer=%.6f idxP=%s idxK=%s prevP=%s prevK=%s buffer=%s/%.6f extDisp=%s" % [
+		float(e2.get("hitstop_timer", 0.0)), float(e2.get("hitstun_timer", 0.0)),
+		str(e2.get("fase_ataque", 0)), float(e2.get("timer_fase_ataque", 0.0)),
+		str(e2.get("indice_punetazo", -1)), str(e2.get("indice_patada", -1)),
+		str(e2.get("puno_estaba_presionado", false)), str(e2.get("patada_estaba_presionada", false)),
+		str(e2.get("ataque_buffer_tipo", "")), float(e2.get("ataque_buffer_timer", 0.0)),
+		str(e2.get("input_externo_disponible", false))
+	])
+	print("  • J2 actual   hitstop=%.6f hitstun=%.6f fase=%s timer=%.6f idxP=%s idxK=%s prevP=%s prevK=%s buffer=%s/%.6f extDisp=%s" % [
+		float(rival.hitstop_timer), float(rival.hitstun_timer), str(rival.fase_ataque),
+		float(rival.timer_fase_ataque), str(rival.indice_punetazo), str(rival.indice_patada),
+		str(rival.puno_estaba_presionado), str(rival.patada_estaba_presionada),
+		str(rival.ataque_buffer_tipo), float(rival.ataque_buffer_timer),
+		str(rival.input_externo_disponible)
+	])
+
+	var tactico := get_node_or_null("/root/PerfectBlock90_1")
+	if tactico != null:
+		var tid1 := kai.get_instance_id()
+		var tid2 := rival.get_instance_id()
+		var prevs: Dictionary = tactico.get("_input_previo_por_id")
+		var disp: Dictionary = tactico.get("_combo_cancel_disponible")
+		var cadena: Dictionary = tactico.get("_combo_cancel_cadena")
+		var snap_t: Dictionary = snap.get("tactico", {})
+		var prevs_e: Dictionary = snap_t.get("_input_previo_por_id", {})
+		var disp_e: Dictionary = snap_t.get("_combo_cancel_disponible", {})
+		var cadena_e: Dictionary = snap_t.get("_combo_cancel_cadena", {})
+		var counters: Dictionary = tactico.get("_counter_disponible")
+		var counters_e: Dictionary = snap_t.get("_counter_disponible", {})
+		var ventanas: Dictionary = tactico.get("_ventana_hasta")
+		var ventanas_e: Dictionary = snap_t.get("_ventana_hasta", {})
+
+		print("  • TACTICO J1 esperado prev=%s perfectWin=%s counter=%s cancel=%s cadena=%s | actual prev=%s perfectWin=%s counter=%s cancel=%s cadena=%s" % [
+			str(prevs_e.get(tid1, {})), str(float(ventanas_e.get(tid1, 0.0)) > 0.0),
+			str(counters_e.get(tid1, false)), str(disp_e.get(tid1, false)), str(cadena_e.get(tid1, 0)),
+			str(prevs.get(tid1, {})), str(float(ventanas.get(tid1, 0.0)) > 0.0),
+			str(counters.get(tid1, false)), str(disp.get(tid1, false)), str(cadena.get(tid1, 0))
+		])
+		print("  • TACTICO J2 esperado prev=%s perfectWin=%s counter=%s cancel=%s cadena=%s | actual prev=%s perfectWin=%s counter=%s cancel=%s cadena=%s" % [
+			str(prevs_e.get(tid2, {})), str(float(ventanas_e.get(tid2, 0.0)) > 0.0),
+			str(counters_e.get(tid2, false)), str(disp_e.get(tid2, false)), str(cadena_e.get(tid2, 0)),
+			str(prevs.get(tid2, {})), str(float(ventanas.get(tid2, 0.0)) > 0.0),
+			str(counters.get(tid2, false)), str(disp.get(tid2, false)), str(cadena.get(tid2, 0))
+		])
+
+		print("  • COUNTER MARK esperado serial=%s id=%s tipo=%s | actual serial=%s id=%s tipo=%s" % [
+			str(snap_t.get("_rollback_counter_event_serial", 0)),
+			str(snap_t.get("_rollback_counter_event_fighter_id", -1)),
+			str(snap_t.get("_rollback_counter_event_tipo", "")),
+			str(tactico.get("_rollback_counter_event_serial")),
+			str(tactico.get("_rollback_counter_event_fighter_id")),
+			str(tactico.get("_rollback_counter_event_tipo"))
+		])
+		print("  • TACTICAL CLOCK esperado tick=%s t=%.6f | actual tick=%s t=%.6f" % [
+			str(snap_t.get("_rollback_tactical_clock_ticks", -1)),
+			float(snap_t.get("_rollback_tactical_clock_seconds", -1.0)),
+			str(tactico.get("_rollback_tactical_clock_ticks")),
+			float(tactico.get("_rollback_tactical_clock_seconds"))
+		])
+		var la_e: Dictionary = snap_t.get("_launcher_armado_hasta", {})
+		var la_a: Dictionary = tactico.get("_launcher_armado_hasta")
+		var ac_e: Dictionary = snap_t.get("_air_combo_activo", {})
+		var ac_a: Dictionary = tactico.get("_air_combo_activo")
+		var ah_e: Dictionary = snap_t.get("_air_combo_hasta", {})
+		var ah_a: Dictionary = tactico.get("_air_combo_hasta")
+		var ag_e: Dictionary = snap_t.get("_air_combo_golpes", {})
+		var ag_a: Dictionary = tactico.get("_air_combo_golpes")
+		print("  • LAUNCH/AIR J1 esperado launcher=%.6f activo=%s hasta=%.6f golpes=%s | actual launcher=%.6f activo=%s hasta=%.6f golpes=%s" % [
+			float(la_e.get(tid1, 0.0)), str(ac_e.get(tid1, false)), float(ah_e.get(tid1, 0.0)), str(ag_e.get(tid1, 0)),
+			float(la_a.get(tid1, 0.0)), str(ac_a.get(tid1, false)), float(ah_a.get(tid1, 0.0)), str(ag_a.get(tid1, 0))
+		])
+		print("  • LAUNCH/AIR J2 esperado launcher=%.6f activo=%s hasta=%.6f golpes=%s | actual launcher=%.6f activo=%s hasta=%.6f golpes=%s" % [
+			float(la_e.get(tid2, 0.0)), str(ac_e.get(tid2, false)), float(ah_e.get(tid2, 0.0)), str(ag_e.get(tid2, 0)),
+			float(la_a.get(tid2, 0.0)), str(ac_a.get(tid2, false)), float(ah_a.get(tid2, 0.0)), str(ag_a.get(tid2, 0))
+		])
+		print("  • EVENT MARKS esperado launcher=%s airhit=%s air_x=%s | actual launcher=%s airhit=%s air_x=%s" % [
+			str(snap_t.get("_rollback_launcher_event_serial", 0)), str(snap_t.get("_rollback_airhit_event_serial", 0)), str(snap_t.get("_rollback_airhit_event_count", 0)),
+			str(tactico.get("_rollback_launcher_event_serial")), str(tactico.get("_rollback_airhit_event_serial")), str(tactico.get("_rollback_airhit_event_count"))
+		])
+		if rollback_h_clasificacion in ["CORE I ENTRY", "CORE I TARGET END", "CORE I POSTER END", "CORE II ENTRY", "CORE II RECARGA END", "CORE II COMBO ENTRY", "CORE II FIRST BEAT END", "CORE II REMATADOR ENTRY", "CORE II REMATADOR POSTER END", "CORE II SEQUENCE END", "CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"]:
+			var cj1: Dictionary = snap.get("j1", {})
+			var cj2: Dictionary = snap.get("j2", {})
+			print("  • CORE J1 esp nivel=%s poder=%.3f sec=%s lock=%s t=%.6f/%.6f dest=%s | act nivel=%s poder=%.3f sec=%s lock=%s t=%.6f/%.6f dest=%s" % [
+				str(cj1.get("veces_fase_absoluta", 0)), float(cj1.get("poder", 0.0)),
+				str(cj1.get("en_secuencia_especial", false)), str(cj1.get("core1_target_lock_activo", false)),
+				float(cj1.get("core1_target_lock_tiempo", 0.0)), float(cj1.get("core1_target_lock_duracion", 0.0)),
+				str(cj1.get("core1_target_lock_destino", Vector2.ZERO)),
+				str(kai.get("veces_fase_absoluta")), float(kai.get("poder")),
+				str(kai.get("en_secuencia_especial")), str(kai.get("core1_target_lock_activo")),
+				float(kai.get("core1_target_lock_tiempo")), float(kai.get("core1_target_lock_duracion")),
+				str(kai.get("core1_target_lock_destino"))
+			])
+			print("  • CORE J2 esp nivel=%s poder=%.3f sec=%s lock=%s t=%.6f/%.6f dest=%s | act nivel=%s poder=%.3f sec=%s lock=%s t=%.6f/%.6f dest=%s" % [
+				str(cj2.get("veces_fase_absoluta", 0)), float(cj2.get("poder", 0.0)),
+				str(cj2.get("en_secuencia_especial", false)), str(cj2.get("core1_target_lock_activo", false)),
+				float(cj2.get("core1_target_lock_tiempo", 0.0)), float(cj2.get("core1_target_lock_duracion", 0.0)),
+				str(cj2.get("core1_target_lock_destino", Vector2.ZERO)),
+				str(rival.get("veces_fase_absoluta")), float(rival.get("poder")),
+				str(rival.get("en_secuencia_especial")), str(rival.get("core1_target_lock_activo")),
+				float(rival.get("core1_target_lock_tiempo")), float(rival.get("core1_target_lock_duracion")),
+				str(rival.get("core1_target_lock_destino"))
+			])
+			print("  • CORE1 FSM J1 esp etapa=%s poster=%.6f/%.6f | act etapa=%s poster=%.6f/%.6f" % [
+				str(cj1.get("core1_secuencia_etapa", 0)),
+				float(cj1.get("core1_poster_timer", 0.0)),
+				float(cj1.get("core1_poster_duracion", 0.0)),
+				str(kai.get("core1_secuencia_etapa")),
+				float(kai.get("core1_poster_timer")),
+				float(kai.get("core1_poster_duracion"))
+			])
+			print("  • CORE1 FSM J2 esp etapa=%s poster=%.6f/%.6f | act etapa=%s poster=%.6f/%.6f" % [
+				str(cj2.get("core1_secuencia_etapa", 0)),
+				float(cj2.get("core1_poster_timer", 0.0)),
+				float(cj2.get("core1_poster_duracion", 0.0)),
+				str(rival.get("core1_secuencia_etapa")),
+				float(rival.get("core1_poster_timer")),
+				float(rival.get("core1_poster_duracion"))
+			])
+			if rollback_h_clasificacion in ["CORE II ENTRY", "CORE II RECARGA END", "CORE II COMBO ENTRY", "CORE II FIRST BEAT END", "CORE II REMATADOR ENTRY", "CORE II REMATADOR POSTER END", "CORE II SEQUENCE END", "CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"]:
+				print("  • CORE2 J1 esp nivel=%s sec=%s recarga=%s pose=%.6f cine=%s frozen=%s | act nivel=%s sec=%s recarga=%s pose=%.6f cine=%s frozen=%s" % [
+					str(cj1.get("veces_fase_absoluta", 0)),
+					str(cj1.get("en_secuencia_especial", false)),
+					str(cj1.get("en_pose_recarga", false)),
+					float(cj1.get("pose_timer", 0.0)),
+					str(cj1.get("bloqueo_cinematico", false)),
+					str(cj1.get("congelado_por_rival", false)),
+					str(kai.get("veces_fase_absoluta")),
+					str(kai.get("en_secuencia_especial")),
+					str(kai.get("en_pose_recarga")),
+					float(kai.get("pose_timer")),
+					str(kai.get("bloqueo_cinematico")),
+					str(kai.get("congelado_por_rival"))
+				])
+				print("  • CORE2 J2 esp nivel=%s sec=%s recarga=%s pose=%.6f cine=%s frozen=%s | act nivel=%s sec=%s recarga=%s pose=%.6f cine=%s frozen=%s" % [
+					str(cj2.get("veces_fase_absoluta", 0)),
+					str(cj2.get("en_secuencia_especial", false)),
+					str(cj2.get("en_pose_recarga", false)),
+					float(cj2.get("pose_timer", 0.0)),
+					str(cj2.get("bloqueo_cinematico", false)),
+					str(cj2.get("congelado_por_rival", false)),
+					str(rival.get("veces_fase_absoluta")),
+					str(rival.get("en_secuencia_especial")),
+					str(rival.get("en_pose_recarga")),
+					float(rival.get("pose_timer")),
+					str(rival.get("bloqueo_cinematico")),
+					str(rival.get("congelado_por_rival"))
+				])
+				print("  • CORE2 FSM J1 etapa=%s rec=%.6f/%.6f app=%.6f/%.6f dest=%s | act etapa=%s rec=%.6f/%.6f app=%.6f/%.6f dest=%s" % [
+					str(cj1.get("core2_secuencia_etapa", 0)),
+					float(cj1.get("core2_recarga_timer", 0.0)),
+					float(cj1.get("core2_recarga_duracion", 0.0)),
+					float(cj1.get("core2_acercamiento_tiempo", 0.0)),
+					float(cj1.get("core2_acercamiento_duracion", 0.0)),
+					str(cj1.get("core2_acercamiento_destino", Vector2.ZERO)),
+					str(kai.get("core2_secuencia_etapa")),
+					float(kai.get("core2_recarga_timer")),
+					float(kai.get("core2_recarga_duracion")),
+					float(kai.get("core2_acercamiento_tiempo")),
+					float(kai.get("core2_acercamiento_duracion")),
+					str(kai.get("core2_acercamiento_destino"))
+				])
+				print("  • CORE2 FSM J2 etapa=%s rec=%.6f/%.6f app=%.6f/%.6f dest=%s | act etapa=%s rec=%.6f/%.6f app=%.6f/%.6f dest=%s" % [
+					str(cj2.get("core2_secuencia_etapa", 0)),
+					float(cj2.get("core2_recarga_timer", 0.0)),
+					float(cj2.get("core2_recarga_duracion", 0.0)),
+					float(cj2.get("core2_acercamiento_tiempo", 0.0)),
+					float(cj2.get("core2_acercamiento_duracion", 0.0)),
+					str(cj2.get("core2_acercamiento_destino", Vector2.ZERO)),
+					str(rival.get("core2_secuencia_etapa")),
+					float(rival.get("core2_recarga_timer")),
+					float(rival.get("core2_recarga_duracion")),
+					float(rival.get("core2_acercamiento_tiempo")),
+					float(rival.get("core2_acercamiento_duracion")),
+					str(rival.get("core2_acercamiento_destino"))
+				])
+				print("  • CORE2 COMBO J1 paso=%s/%s sub=%s app=%.6f/%.6f dest=%s | act paso=%s/%s sub=%s app=%.6f/%.6f dest=%s" % [
+					str(cj1.get("core2_combo_paso_idx", 0)),
+					str(cj1.get("core2_combo_total_pasos", 0)),
+					str(cj1.get("core2_combo_subfase", 0)),
+					float(cj1.get("core2_combo_acercamiento_tiempo", 0.0)),
+					float(cj1.get("core2_combo_acercamiento_duracion", 0.0)),
+					str(cj1.get("core2_combo_acercamiento_destino", Vector2.ZERO)),
+					str(kai.get("core2_combo_paso_idx")),
+					str(kai.get("core2_combo_total_pasos")),
+					str(kai.get("core2_combo_subfase")),
+					float(kai.get("core2_combo_acercamiento_tiempo")),
+					float(kai.get("core2_combo_acercamiento_duracion")),
+					str(kai.get("core2_combo_acercamiento_destino"))
+				])
+				print("  • CORE2 COMBO J2 paso=%s/%s sub=%s app=%.6f/%.6f dest=%s | act paso=%s/%s sub=%s app=%.6f/%.6f dest=%s" % [
+					str(cj2.get("core2_combo_paso_idx", 0)),
+					str(cj2.get("core2_combo_total_pasos", 0)),
+					str(cj2.get("core2_combo_subfase", 0)),
+					float(cj2.get("core2_combo_acercamiento_tiempo", 0.0)),
+					float(cj2.get("core2_combo_acercamiento_duracion", 0.0)),
+					str(cj2.get("core2_combo_acercamiento_destino", Vector2.ZERO)),
+					str(rival.get("core2_combo_paso_idx")),
+					str(rival.get("core2_combo_total_pasos")),
+					str(rival.get("core2_combo_subfase")),
+					float(rival.get("core2_combo_acercamiento_tiempo")),
+					float(rival.get("core2_combo_acercamiento_duracion")),
+					str(rival.get("core2_combo_acercamiento_destino"))
+				])
+				print("  • CORE2 REM J1 sub=%s timer=%.6f/%.6f conecta=%s block=%s dir=%.1f | act sub=%s timer=%.6f/%.6f conecta=%s block=%s dir=%.1f" % [
+					str(cj1.get("core2_rematador_subfase", 0)),
+					float(cj1.get("core2_rematador_timer", 0.0)),
+					float(cj1.get("core2_rematador_duracion", 0.0)),
+					str(cj1.get("core2_rematador_puede_conectar", false)),
+					str(cj1.get("core2_rematador_bloqueado", false)),
+					float(cj1.get("core2_rematador_direccion", 1.0)),
+					str(kai.get("core2_rematador_subfase")),
+					float(kai.get("core2_rematador_timer")),
+					float(kai.get("core2_rematador_duracion")),
+					str(kai.get("core2_rematador_puede_conectar")),
+					str(kai.get("core2_rematador_bloqueado")),
+					float(kai.get("core2_rematador_direccion"))
+				])
+				print("  • CORE2 REM J2 sub=%s timer=%.6f/%.6f conecta=%s block=%s dir=%.1f | act sub=%s timer=%.6f/%.6f conecta=%s block=%s dir=%.1f" % [
+					str(cj2.get("core2_rematador_subfase", 0)),
+					float(cj2.get("core2_rematador_timer", 0.0)),
+					float(cj2.get("core2_rematador_duracion", 0.0)),
+					str(cj2.get("core2_rematador_puede_conectar", false)),
+					str(cj2.get("core2_rematador_bloqueado", false)),
+					float(cj2.get("core2_rematador_direccion", 1.0)),
+					str(rival.get("core2_rematador_subfase")),
+					float(rival.get("core2_rematador_timer")),
+					float(rival.get("core2_rematador_duracion")),
+					str(rival.get("core2_rematador_puede_conectar")),
+					str(rival.get("core2_rematador_bloqueado")),
+					float(rival.get("core2_rematador_direccion"))
+				])
+				if rollback_h_clasificacion in ["CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"]:
+					print("  • CORE3 J1 esp nivel=%s sec=%s recarga=%s furia=%s pose=%.6f cine=%s frozen=%s | act nivel=%s sec=%s recarga=%s furia=%s pose=%.6f cine=%s frozen=%s" % [
+						str(cj1.get("veces_fase_absoluta", 0)),
+						str(cj1.get("en_secuencia_especial", false)),
+						str(cj1.get("en_pose_recarga", false)),
+						str(cj1.get("en_fase_absoluta", false)),
+						float(cj1.get("pose_timer", 0.0)),
+						str(cj1.get("bloqueo_cinematico", false)),
+						str(cj1.get("congelado_por_rival", false)),
+						str(kai.get("veces_fase_absoluta")),
+						str(kai.get("en_secuencia_especial")),
+						str(kai.get("en_pose_recarga")),
+						str(kai.get("en_fase_absoluta")),
+						float(kai.get("pose_timer")),
+						str(kai.get("bloqueo_cinematico")),
+						str(kai.get("congelado_por_rival"))
+					])
+					print("  • CORE3 J2 esp nivel=%s sec=%s recarga=%s furia=%s pose=%.6f cine=%s frozen=%s | act nivel=%s sec=%s recarga=%s furia=%s pose=%.6f cine=%s frozen=%s" % [
+						str(cj2.get("veces_fase_absoluta", 0)),
+						str(cj2.get("en_secuencia_especial", false)),
+						str(cj2.get("en_pose_recarga", false)),
+						str(cj2.get("en_fase_absoluta", false)),
+						float(cj2.get("pose_timer", 0.0)),
+						str(cj2.get("bloqueo_cinematico", false)),
+						str(cj2.get("congelado_por_rival", false)),
+						str(rival.get("veces_fase_absoluta")),
+						str(rival.get("en_secuencia_especial")),
+						str(rival.get("en_pose_recarga")),
+						str(rival.get("en_fase_absoluta")),
+						float(rival.get("pose_timer")),
+						str(rival.get("bloqueo_cinematico")),
+						str(rival.get("congelado_por_rival"))
+					])
+					print("  • CORE3 FSM J1 etapa=%s beatSub=%s beatApp=%.6f/%.6f dest=%s | act etapa=%s beatSub=%s beatApp=%.6f/%.6f dest=%s" % [
+						str(cj1.get("core3_secuencia_etapa", 0)),
+						str(cj1.get("core3_primer_beat_subfase", 0)),
+						float(cj1.get("core3_primer_beat_acercamiento_tiempo", 0.0)),
+						float(cj1.get("core3_primer_beat_acercamiento_duracion", 0.0)),
+						str(cj1.get("core3_primer_beat_acercamiento_destino", Vector2.ZERO)),
+						str(kai.get("core3_secuencia_etapa")),
+						str(kai.get("core3_primer_beat_subfase")),
+						float(kai.get("core3_primer_beat_acercamiento_tiempo")),
+						float(kai.get("core3_primer_beat_acercamiento_duracion")),
+						str(kai.get("core3_primer_beat_acercamiento_destino"))
+					])
+					print("  • CORE3 FSM J2 etapa=%s beatSub=%s beatApp=%.6f/%.6f dest=%s | act etapa=%s beatSub=%s beatApp=%.6f/%.6f dest=%s" % [
+						str(cj2.get("core3_secuencia_etapa", 0)),
+						str(cj2.get("core3_primer_beat_subfase", 0)),
+						float(cj2.get("core3_primer_beat_acercamiento_tiempo", 0.0)),
+						float(cj2.get("core3_primer_beat_acercamiento_duracion", 0.0)),
+						str(cj2.get("core3_primer_beat_acercamiento_destino", Vector2.ZERO)),
+						str(rival.get("core3_secuencia_etapa")),
+						str(rival.get("core3_primer_beat_subfase")),
+						float(rival.get("core3_primer_beat_acercamiento_tiempo")),
+						float(rival.get("core3_primer_beat_acercamiento_duracion")),
+						str(rival.get("core3_primer_beat_acercamiento_destino"))
+					])
+		var bd_timer_e: Dictionary = snap_t.get("_backdash_timer", {})
+		var bd_dir_e: Dictionary = snap_t.get("_backdash_direccion", {})
+		var bd_timer_a: Dictionary = tactico.get("_backdash_timer")
+		var bd_dir_a: Dictionary = tactico.get("_backdash_direccion")
+		print("  • BACKDASH MARK esperado serial=%s id=%s dir=%s | actual serial=%s id=%s dir=%s" % [
+			str(snap_t.get("_rollback_backdash_event_serial", 0)),
+			str(snap_t.get("_rollback_backdash_event_fighter_id", -1)),
+			str(snap_t.get("_rollback_backdash_event_direccion", 0.0)),
+			str(tactico.get("_rollback_backdash_event_serial")),
+			str(tactico.get("_rollback_backdash_event_fighter_id")),
+			str(tactico.get("_rollback_backdash_event_direccion"))
+		])
+		print("  • BACKDASH STATE J1 esperado timer=%.6f dir=%.1f | actual timer=%.6f dir=%.1f" % [
+			float(bd_timer_e.get(tid1, 0.0)), float(bd_dir_e.get(tid1, 0.0)),
+			float(bd_timer_a.get(tid1, 0.0)), float(bd_dir_a.get(tid1, 0.0))
+		])
+		print("  • BACKDASH STATE J2 esperado timer=%.6f dir=%.1f | actual timer=%.6f dir=%.1f" % [
+			float(bd_timer_e.get(tid2, 0.0)), float(bd_dir_e.get(tid2, 0.0)),
+			float(bd_timer_a.get(tid2, 0.0)), float(bd_dir_a.get(tid2, 0.0))
+		])
+
+# H10.51 — DELTA HISTÓRICO EXPLÍCITO CORE III. ENTRY hasta EIGHTEENTH BEAT END
+# reproducen el delta de cada snapshot sin depender del frame LIVE que inició rollback.
+# El cambio 1.0 -> 0.32 ocurre dentro del callback del Fighter que activa CORE III.
+# En LIVE eso implica:
+#   - J1 siempre recibe la escala al inicio del tick.
+#   - J2 recibe la escala posterior sólo si J1 fue quien cambió time_scale antes.
+#   - PerfectBlock, que corre después de los Fighters, recibe la escala posterior.
+# Reproducimos exactamente esa semántica sin depender del delta que Godot entregue
+# al reactivar nodos durante una prueba de rollback.
+func _h108_aplicar_delta_historico_core3(indice: int) -> void:
+	if rollback_h_clasificacion not in ["CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"]:
+		return
+	if indice < 0 or indice >= rollback_catchup_ventana.size():
+		return
+	var actual_entry: Dictionary = rollback_catchup_ventana[indice]
+	var actual_snap: Dictionary = actual_entry.get("snapshot", {})
+	var siguiente_snap: Dictionary = {}
+	if indice + 1 < rollback_catchup_ventana.size():
+		siguiente_snap = rollback_catchup_ventana[indice + 1].get("snapshot", {})
+	else:
+		siguiente_snap = rollback_estado_presente_esperado
+	if actual_snap.is_empty():
+		return
+	if siguiente_snap.is_empty():
+		siguiente_snap = actual_snap
+
+	var hz := maxi(1, Engine.physics_ticks_per_second)
+	var base_delta := 1.0 / float(hz)
+	var escala_inicio := float(actual_snap.get("time_scale", 1.0))
+	var escala_post := float(siguiente_snap.get("time_scale", escala_inicio))
+	var delta_j1 := base_delta * escala_inicio
+	var delta_j2 := base_delta * escala_inicio
+	var delta_pb := base_delta * escala_post
+	var cambio_escala := absf(escala_post - escala_inicio) > 0.000001
+	var activador_j1 := rollback_h_atacante.begins_with("J1")
+	var h1052_stage20_a21_j1 := false
+	var h1060_absolute_reveal_end_j1 := false
+	var h1066_absolute_victory_entry_j1 := false
+	if cambio_escala and activador_j1:
+		var j1_trans_actual: Dictionary = actual_snap.get("j1", {})
+		var j1_trans_siguiente: Dictionary = siguiente_snap.get("j1", {})
+		h1052_stage20_a21_j1 = int(j1_trans_actual.get("core3_secuencia_etapa", 0)) == 20 \
+			and int(j1_trans_siguiente.get("core3_secuencia_etapa", 0)) == 21
+		h1060_absolute_reveal_end_j1 = rollback_h_clasificacion == "CORE III ABSOLUTE REVEAL END" \
+			and absf(escala_inicio - 0.18) <= 0.001 and absf(escala_post - 0.42) <= 0.001
+		h1066_absolute_victory_entry_j1 = rollback_h_clasificacion == "CORE III ABSOLUTE VICTORY ENTRY" \
+			and absf(escala_inicio - 0.42) <= 0.001 and absf(escala_post - 1.0) <= 0.001
+
+	# Orden histórico de Fighters en Versus Local: J1 antes de J2. Si J1 activa
+	# CORE III, J2 ya entra al callback con la nueva escala. Si activa J2, ambos
+	# Fighters comenzaron su callback con la escala anterior y sólo PB ve la nueva.
+	var delta_seguridad_rival := -1.0
+	if cambio_escala and activador_j1:
+		delta_j2 = base_delta * escala_post
+		# H10.52: excepción PROBADA sólo para EIGHTEENTH BEAT END stage 20->21.
+		# H10.51 (Kai/J1) mostró que la transición 1.0->0.18 ocurre después de
+		# que J2 ya consumió su callback histórico de ese tick: sus timers LIVE
+		# bajan 0.016667, no 0.003. No alterar ENTRY/RECARGA, ya certificados.
+		if h1052_stage20_a21_j1 or h1060_absolute_reveal_end_j1 or h1066_absolute_victory_entry_j1:
+			delta_j2 = base_delta * escala_inicio
+		# H10.11: los logs LIVE de ENTRY y RECARGA END muestran la misma
+		# semántica asimétrica cuando J1 cambia time_scale antes del callback de J2:
+		# el callback general de J2 ve la escala posterior, pero su reloj auxiliar
+		# de seguridad conserva durante ese único tick el delta pre-transición.
+		# ENTRY: 1.0 -> 0.32 => J2 general 0.005333, safety 0.016667.
+		# RECARGA END: 0.32 -> 1.0 => J2 general 0.016667, safety 0.005333.
+		delta_seguridad_rival = base_delta * escala_inicio
+
+	# H10.18: H10.16 reveló una latencia real de un physics tick después de
+	# 0.32 -> 1.0 cuando APPROACH END queda muy cerca de RECARGA END. Para
+	# Fighters, reloj_seguridad_secuencia avanza DIRECTAMENTE con el delta que
+	# recibió el Fighter, por lo que su diferencia entre snapshots es una fuente
+	# válida para capturar ese tick residual. PerfectBlock es distinto: su reloj
+	# táctico convierte internamente delta a tiempo no escalado (delta/time_scale),
+	# así que NUNCA debemos realimentar la diferencia de ese reloj como delta.
+	# PB conserva la fórmula certificada H10.11: base_delta * escala_post.
+	var clock_override_j1 := false
+	var clock_override_j2 := false
+	if not cambio_escala:
+		var j1_actual: Dictionary = actual_snap.get("j1", {})
+		var j1_siguiente: Dictionary = siguiente_snap.get("j1", {})
+		var j2_actual: Dictionary = actual_snap.get("j2", {})
+		var j2_siguiente: Dictionary = siguiente_snap.get("j2", {})
+
+		var j1_reloj_activo := bool(j1_actual.get("en_secuencia_especial", false)) or bool(j1_actual.get("congelado_por_rival", false))
+		var j2_reloj_activo := bool(j2_actual.get("en_secuencia_especial", false)) or bool(j2_actual.get("congelado_por_rival", false))
+		if j1_reloj_activo and not j1_actual.is_empty() and not j1_siguiente.is_empty():
+			var delta_reloj_j1 := float(j1_siguiente.get("reloj_seguridad_secuencia", 0.0)) - float(j1_actual.get("reloj_seguridad_secuencia", 0.0))
+			if delta_reloj_j1 > 0.000001 and delta_reloj_j1 <= 0.05:
+				delta_j1 = delta_reloj_j1
+				clock_override_j1 = true
+		if j2_reloj_activo and not j2_actual.is_empty() and not j2_siguiente.is_empty():
+			var delta_reloj_j2 := float(j2_siguiente.get("reloj_seguridad_secuencia", 0.0)) - float(j2_actual.get("reloj_seguridad_secuencia", 0.0))
+			if delta_reloj_j2 > 0.000001 and delta_reloj_j2 <= 0.05:
+				delta_j2 = delta_reloj_j2
+				clock_override_j2 = true
+
+		if clock_override_j1 or clock_override_j2:
+			var delta_formula_fighter := base_delta * escala_inicio
+			if absf(delta_j1 - delta_formula_fighter) > 0.000001 or absf(delta_j2 - delta_formula_fighter) > 0.000001:
+				print("[91.00.00-H10.88] CORE III HISTORICAL FIGHTER CLOCK DELTA — subtick=%d escala=%.4f J1=%.6f J2=%.6f PB_formula=%.6f" % [
+					indice, escala_inicio, delta_j1, delta_j2, delta_pb
+				])
+
+	# Reimponer la escala al inicio del subtick evita arrastrar el estado global
+	# del frame administrativo que disparó el rollback.
+	Engine.time_scale = escala_inicio
+	if is_instance_valid(kai):
+		kai.set("rollback_delta_override", delta_j1)
+	if is_instance_valid(rival):
+		rival.set("rollback_delta_override", delta_j2)
+		if delta_seguridad_rival >= 0.0:
+			rival.set("rollback_reloj_seguridad_delta_override", delta_seguridad_rival)
+	if is_instance_valid(PerfectBlock90_1):
+		PerfectBlock90_1.set("rollback_delta_override", delta_pb)
+
+	if cambio_escala:
+		if h1052_stage20_a21_j1:
+			print("[91.00.00-H10.88] CORE III EIGHTEENTH J1 DELTA FIX — stage 20->21; J2 conserva delta pre-transicion %.6f" % delta_j2)
+		if h1060_absolute_reveal_end_j1:
+			print("[91.00.00-H10.88] CORE III ABS REVEAL J1 DELTA FIX — 0.18->0.42 ocurre en Main; J2 conserva delta pre-transicion %.6f" % delta_j2)
+		if h1066_absolute_victory_entry_j1:
+			print("[91.00.00-H10.88] CORE III ABS VICTORY J1 DELTA FIX — 0.42->1.0 ocurre en Main despues del callback historico de J2; J2 conserva delta pre-transicion %.6f" % delta_j2)
+		print("[91.00.00-H10.88] CORE III HISTORICAL DELTA TRANSITION — subtick=%d activador=%s escala %.4f->%.4f J1=%.6f J2=%.6f PB=%.6f J2Safety=%s" % [
+			indice, "J1" if activador_j1 else "J2", escala_inicio, escala_post,
+			delta_j1, delta_j2, delta_pb,
+			"%.6f" % delta_seguridad_rival if delta_seguridad_rival >= 0.0 else "normal"
+		])
+
 func _inyectar_inputs_versus_local() -> void:
 	if not versus_local_activo:
 		return
 	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	# 91.00.00-H: catch-up de rollback local. Se alimentan únicamente los inputs
+	# históricos de la ventana rebobinada; teclado/mando quedan ignorados.
+	if rollback_catchup_activo:
+		if rollback_catchup_indice < rollback_catchup_ventana.size():
+			_h108_aplicar_delta_historico_core3(rollback_catchup_indice)
+			var entrada_rb: Dictionary = rollback_catchup_ventana[rollback_catchup_indice]
+			var rb_j1: Dictionary = entrada_rb.get("j1", _router_frame_neutro())
+			var rb_j2: Dictionary = entrada_rb.get("j2", _router_frame_neutro())
+			if not online_rollback_catchup_modo:
+				_h1_probe_pretick(rollback_catchup_indice, entrada_rb, rb_j1, rb_j2)
+			kai.inyectar_input_frame(rb_j1)
+			rival.inyectar_input_frame(rb_j2)
+			rollback_catchup_indice += 1
+			if rollback_catchup_indice >= rollback_catchup_ventana.size():
+				rollback_catchup_activo = false
+				if online_rollback_catchup_modo:
+					online_rollback_finalizar_pendiente = true
+				else:
+					rollback_comparacion_pendiente = true
+			return
+		rollback_catchup_activo = false
+		if online_rollback_catchup_modo:
+			online_rollback_finalizar_pendiente = true
+		else:
+			rollback_comparacion_pendiente = true
+		kai.inyectar_input_frame(_router_frame_neutro())
+		rival.inyectar_input_frame(_router_frame_neutro())
+		return
+
+	# 91.00.00-H: durante replay NO se consulta teclado ni mando. Cada tick sale
+	# exclusivamente del archivo grabado y entra por la misma API de Fighter.
+	if replay_modo_activo and input_replay != null:
+		var paquete: Dictionary = input_replay.siguiente_tick()
+		var valido: bool = bool(paquete.get("valido", false))
+		var frame_replay_j1: Dictionary = paquete.get("j1", _router_frame_neutro())
+		var frame_replay_j2: Dictionary = paquete.get("j2", _router_frame_neutro())
+		kai.inyectar_input_frame(frame_replay_j1)
+		rival.inyectar_input_frame(frame_replay_j2)
+
+		if valido:
+			replay_ticks_neutros_post_buffer = 0
+			_validar_traza_replay(input_replay.tick_actual)
+			_validar_checkpoint_replay(input_replay.tick_actual)
+		else:
+			# El último input puede disparar una animación/await cuyo evento terminal
+			# ocurre unos physics ticks después. B lo marcaba como DESYNC demasiado
+			# pronto. C mantiene inputs neutros brevemente y espera el evento real.
+			replay_ticks_neutros_post_buffer += 1
+			if not replay_agotado_reportado:
+				replay_agotado_reportado = true
+				print("[91.00.00-H10.88] Buffer de inputs completo — tick %d; esperando evento terminal" % input_replay.tick_actual)
+			if replay_ticks_neutros_post_buffer > REPLAY_GRACIA_POST_BUFFER_TICKS and not replay_final_evaluado:
+				if replay_tick_primer_desync < 0:
+					replay_tick_primer_desync = input_replay.tick_actual
+				print("[91.00.00-H10.88] REPLAY DESYNC — no llegó el evento terminal tras %d ticks neutros" % REPLAY_GRACIA_POST_BUFFER_TICKS)
+				replay_final_evaluado = true
+		return
+
+	# 91.02.64 — Online: cada máquina lee sólo su dispositivo local y recibe
+	# el rival por ENet. No se consulta el layout J2 local.
+	if online_activo:
+		_inyectar_inputs_online()
 		return
 
 	var pads := Input.get_connected_joypads()
@@ -1837,8 +3374,984 @@ func _inyectar_inputs_versus_local() -> void:
 		frame_j1 = _router_frame_teclado_j1()
 		frame_j2 = _router_frame_teclado_j2()
 
+	# El ring buffer asocia estos inputs con el snapshot capturado al inicio
+	# de este mismo physics tick.
+	if rollback_ring != null and not rollback_catchup_activo:
+		rollback_ring.asignar_inputs_ultimo(frame_j1, frame_j2)
+
+	# 91.00.00-H: copiamos exactamente los frames que YA iban a recibir los
+	# Fighter. Cada 60 ticks guardamos además un checkpoint lógico de diagnóstico.
+	if input_recorder != null:
+		input_recorder.grabar_tick(frame_j1, frame_j2)
+		var tick_grabado: int = input_recorder.total_ticks()
+		# Diagnóstico D: una traza lógica por tick para localizar el PRIMER frame
+		# divergente, no sólo el bloque de 60 en el que ya se hizo visible.
+		input_recorder.grabar_traza_tick(_capturar_estado_traza_replay())
+		if tick_grabado % REPLAY_CHECKPOINT_INTERVALO == 0:
+			input_recorder.grabar_checkpoint(tick_grabado, _capturar_estado_checkpoint_replay())
+
 	kai.inyectar_input_frame(frame_j1)
 	rival.inyectar_input_frame(frame_j2)
+
+# -------------------- PASS 14D1 / INPUT ONLINE REAL --------------------
+func _network_online() -> Node:
+	return get_node_or_null("/root/NetworkManager")
+
+
+func _preparar_online_combate() -> void:
+	var red := _network_online()
+	if red == null or not red.hay_rival_conectado():
+		push_warning("91.02.64-P14D1: Main online sin rival conectado")
+		return
+	if not red.combate_go.is_connected(_al_online_combate_go):
+		red.combate_go.connect(_al_online_combate_go)
+	if not red.input_remoto_recibido.is_connected(_al_online_input_remoto_recibido):
+		red.input_remoto_recibido.connect(_al_online_input_remoto_recibido)
+
+	online_combate_habilitado = false
+	online_tick_simulacion = 0
+	rollback_tick_logico = 0
+	if rollback_ring != null:
+		rollback_ring.limpiar()
+	online_inputs_locales.clear()
+	online_inputs_loopback_j2.clear()
+	online_ultimo_frame_remoto = _router_frame_neutro()
+	online_loopback_ultimo_j1 = _router_frame_neutro()
+	online_loopback_ultimo_j2 = _router_frame_neutro()
+	online_remote_misses = 0
+	online_remote_hits = 0
+	online_prediccion_remota_por_tick.clear()
+	online_late_evaluados = 0
+	online_late_iguales = 0
+	online_rollback_necesarios = 0
+	online_rollback_max_edad = 0
+	online_rollback_tick_mas_antiguo = -1
+	online_rollback_tick_pendiente = -1
+	online_rollback_catchup_modo = false
+	online_rollback_finalizar_pendiente = false
+	online_rollbacks_ejecutados = 0
+	online_rollback_ticks_reprocesados = 0
+	online_rollback_fuera_ventana = 0
+	online_rollback_ultimo_inicio = -1
+	online_rollback_ultima_cantidad = 0
+	rollback_catchup_activo = false
+	rollback_comparacion_pendiente = false
+	rollback_catchup_ventana.clear()
+	rollback_catchup_indice = 0
+	online_loopback_hits = 0
+	online_loopback_misses = 0
+
+	print("[91.02.64-P14D1] MAIN LISTO peer=%d rol=%s — esperando barrera" % [red.mi_peer_id(), red.rol])
+	red.marcar_main_lista()
+
+
+func _al_online_combate_go(seed_recibida: int) -> void:
+	# Reiniciar RNG JUSTO en la barrera elimina cualquier consumo visual ocurrido
+	# mientras un peer cargaba antes que el otro.
+	replay_rng_seed_actual = seed_recibida if seed_recibida != 0 else 9100004
+	seed(replay_rng_seed_actual)
+
+	online_tick_simulacion = 0
+	rollback_tick_logico = 0
+	if rollback_ring != null:
+		rollback_ring.limpiar()
+	online_inputs_locales.clear()
+	online_inputs_loopback_j2.clear()
+	online_ultimo_frame_remoto = _router_frame_neutro()
+	online_loopback_ultimo_j1 = _router_frame_neutro()
+	online_loopback_ultimo_j2 = _router_frame_neutro()
+	online_remote_misses = 0
+	online_remote_hits = 0
+	online_prediccion_remota_por_tick.clear()
+	online_late_evaluados = 0
+	online_late_iguales = 0
+	online_rollback_necesarios = 0
+	online_rollback_max_edad = 0
+	online_rollback_tick_mas_antiguo = -1
+	online_rollback_tick_pendiente = -1
+	online_rollback_catchup_modo = false
+	online_rollback_finalizar_pendiente = false
+	online_rollbacks_ejecutados = 0
+	online_rollback_ticks_reprocesados = 0
+	online_rollback_fuera_ventana = 0
+	online_rollback_ultimo_inicio = -1
+	online_rollback_ultima_cantidad = 0
+	rollback_catchup_activo = false
+	rollback_comparacion_pendiente = false
+	rollback_catchup_ventana.clear()
+	rollback_catchup_indice = 0
+	online_loopback_hits = 0
+	online_loopback_misses = 0
+
+	# Los primeros N ticks son neutrales en ambos peers; mientras tanto los
+	# inputs reales etiquetados N ticks hacia adelante viajan por ENet.
+	for t in range(ONLINE_INPUT_DELAY_TICKS):
+		online_inputs_locales[str(t)] = _router_frame_neutro()
+		online_inputs_loopback_j2[str(t)] = _router_frame_neutro()
+
+	online_combate_habilitado = true
+	var red_control := _network_online()
+	var control_legible := str(red_control.obtener_control_local()).to_upper() if red_control != null and red_control.has_method("obtener_control_local") else "TECLADO"
+	print("[91.02.65-P14D1B] INPUT ONLINE ACTIVO — control=%s delay=%d ticks (~%d ms) seed=%d" % [
+		control_legible,
+		ONLINE_INPUT_DELAY_TICKS,
+		int(round(1000.0 * float(ONLINE_INPUT_DELAY_TICKS) / float(Engine.physics_ticks_per_second))),
+		replay_rng_seed_actual
+	])
+	if red_control != null and red_control.has_method("es_loopback_misma_pc") and bool(red_control.es_loopback_misma_pc()):
+		if red_control.es_host():
+			print("[91.02.66-P14D1C] QA MISMA PC — HOST captura J1=TECLADO + J2=PRIMER MANDO — pads=%s" % str(Input.get_connected_joypads()))
+		else:
+			print("[91.02.66-P14D1C] QA MISMA PC — CLIENTE replica los 2 frames del HOST; no lee hardware")
+	call_deferred("_presentar_ready_fight")
+
+
+func _online_ring_indice_por_tick(tick: int) -> int:
+	if rollback_ring == null:
+		return -1
+	for i in range(rollback_ring.entradas.size()):
+		var entrada: Dictionary = rollback_ring.entradas[i]
+		if int(entrada.get("tick", -1)) == tick:
+			return i
+	return -1
+
+
+func _online_parchear_input_recorder_tick(tick: int, j1: Dictionary, j2: Dictionary) -> void:
+	if input_recorder == null:
+		return
+	var frames_var = input_recorder.get("frames")
+	if not (frames_var is Array):
+		return
+	var frames_arr: Array = frames_var
+	if tick < 0 or tick >= frames_arr.size():
+		return
+	frames_arr[tick] = [
+		InputRecorderScript.codificar_frame(j1),
+		InputRecorderScript.codificar_frame(j2),
+	]
+
+
+func _online_ventana_corregida(desde_tick: int, hasta_exclusivo: int) -> Array[Dictionary]:
+	var salida: Array[Dictionary] = []
+	if rollback_ring == null:
+		return salida
+	var red := _network_online()
+	if red == null:
+		return salida
+
+	var ultimo_remoto_corregido: Dictionary = {}
+	for tick in range(desde_tick, hasta_exclusivo):
+		var idx: int = _online_ring_indice_por_tick(tick)
+		if idx < 0:
+			salida.clear()
+			return salida
+
+		var entrada: Dictionary = (rollback_ring.entradas[idx] as Dictionary).duplicate(true)
+		var j1: Dictionary = (entrada.get("j1", _router_frame_neutro()) as Dictionary).duplicate(true)
+		var j2: Dictionary = (entrada.get("j2", _router_frame_neutro()) as Dictionary).duplicate(true)
+		var paquete: Dictionary = red.obtener_input_remoto(tick)
+		if bool(paquete.get("disponible", false)):
+			var remoto_real: Dictionary = InputRecorderScript.decodificar_frame(int(paquete.get("mascara", 0)))
+			if red.es_host():
+				j2 = remoto_real.duplicate(true)
+			else:
+				j1 = remoto_real.duplicate(true)
+			ultimo_remoto_corregido = remoto_real.duplicate(true)
+
+		entrada["j1"] = j1.duplicate(true)
+		entrada["j2"] = j2.duplicate(true)
+		rollback_ring.entradas[idx]["j1"] = j1.duplicate(true)
+		rollback_ring.entradas[idx]["j2"] = j2.duplicate(true)
+		_online_parchear_input_recorder_tick(tick, j1, j2)
+		salida.append(entrada)
+
+	if not ultimo_remoto_corregido.is_empty():
+		online_ultimo_frame_remoto = ultimo_remoto_corregido.duplicate(true)
+	return salida
+
+
+func _online_reescribir_snapshot_catchup_actual() -> void:
+	if not online_rollback_catchup_modo:
+		return
+	if rollback_catchup_indice <= 0 or rollback_catchup_indice >= rollback_catchup_ventana.size():
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var tick_actual: int = int(rollback_catchup_ventana[rollback_catchup_indice].get("tick", -1))
+	var idx_ring: int = _online_ring_indice_por_tick(tick_actual)
+	if idx_ring < 0:
+		return
+	var snap: Dictionary = RollbackSnapshotScript.capturar_partida(self, kai, rival)
+	rollback_catchup_ventana[rollback_catchup_indice]["snapshot"] = snap.duplicate(true)
+	rollback_ring.entradas[idx_ring]["snapshot"] = snap.duplicate(true)
+	rollback_ring.entradas[idx_ring]["seguro"] = _snapshot_estado_rollback_h_seguro()
+
+
+func _online_iniciar_rollback_pendiente() -> bool:
+	if not online_activo or not online_combate_habilitado:
+		return false
+	if online_rollback_tick_pendiente < 0:
+		return false
+	if rollback_catchup_activo or online_rollback_finalizar_pendiente:
+		return false
+	if rollback_ring == null or not is_instance_valid(kai) or not is_instance_valid(rival):
+		return false
+
+	var desde_tick: int = online_rollback_tick_pendiente
+	online_rollback_tick_pendiente = -1
+	var hasta_exclusivo: int = online_tick_simulacion
+	var cantidad: int = hasta_exclusivo - desde_tick
+	if cantidad <= 0:
+		return false
+	if cantidad > ONLINE_ROLLBACK_MAX_TICKS:
+		online_rollback_fuera_ventana += 1
+		print("[91.02.70-P14D2C] ROLLBACK FUERA DE VENTANA — desde=%d presente=%d edad=%d max=%d" % [
+			desde_tick, hasta_exclusivo, cantidad, ONLINE_ROLLBACK_MAX_TICKS
+		])
+		return false
+
+	var ventana: Array[Dictionary] = _online_ventana_corregida(desde_tick, hasta_exclusivo)
+	if ventana.size() != cantidad:
+		online_rollback_fuera_ventana += 1
+		print("[91.02.70-P14D2C] ROLLBACK SIN HISTORIA — desde=%d presente=%d pedidos=%d disponibles=%d ring=%d..%d" % [
+			desde_tick, hasta_exclusivo, cantidad, ventana.size(),
+			rollback_ring.tick_mas_antiguo(), rollback_ring.tick_mas_nuevo()
+		])
+		return false
+
+	# 14D2C limita el primer rollback real al reloj normal. CORE III usa cambios
+	# de time_scale certificados por otro arnés; no mezclamos esa frontera en el
+	# primer pase online. En combate normal/CORE I/CORE II el scale es 1.0.
+	for entrada in ventana:
+		var snap_check: Dictionary = entrada.get("snapshot", {})
+		if absf(float(snap_check.get("time_scale", 1.0)) - 1.0) > 0.001:
+			online_rollback_fuera_ventana += 1
+			print("[91.02.70-P14D2C] ROLLBACK OMITIDO TIMESCALE — tick=%d scale=%.4f" % [
+				int(entrada.get("tick", -1)), float(snap_check.get("time_scale", 1.0))
+			])
+			return false
+
+	var inicio: Dictionary = ventana[0].get("snapshot", {})
+	if inicio.is_empty():
+		return false
+
+	rollback_catchup_ventana = ventana
+	rollback_catchup_indice = 0
+	rollback_tick_origen = desde_tick
+	rollback_comparacion_pendiente = false
+	rollback_catchup_preparando_timescale = false
+	rollback_catchup_inicio_timescale = {}
+	rollback_catchup_reactivar_tactico_next_tick = false
+	rollback_catchup_reactivacion_deferred_pendiente = false
+	rollback_catchup_barrier_frames_restantes = 0
+	rollback_catchup_commit_restore_pendiente = false
+	online_rollback_catchup_modo = true
+	online_rollback_finalizar_pendiente = false
+	online_rollbacks_ejecutados += 1
+	online_rollback_ticks_reprocesados += cantidad
+	online_rollback_ultimo_inicio = desde_tick
+	online_rollback_ultima_cantidad = cantidad
+
+	# Evita repetir pósters/sonidos de CORE I/II al recorrer historia.
+	if is_instance_valid(kai):
+		kai.set("rollback_suprimir_presentacion_core1", true)
+		kai.set("rollback_suprimir_presentacion_core2", true)
+	if is_instance_valid(rival):
+		rival.set("rollback_suprimir_presentacion_core1", true)
+		rival.set("rollback_suprimir_presentacion_core2", true)
+		rival.set("rollback_reloj_seguridad_delta_override", -1.0)
+
+	# Si el snapshot contiene un proyectil vivo, activamos la compensación ya
+	# certificada en 91.02.60 para el primer tick del nodo reconstruido.
+	var proy_j1: Dictionary = inicio.get("proyectil_j1", {})
+	var proy_j2: Dictionary = inicio.get("proyectil_j2", {})
+	if bool(proy_j1.get("activo", false)) or bool(proy_j2.get("activo", false)):
+		rollback_h_clasificacion = "PROYECTIL ONLINE"
+	else:
+		rollback_h_clasificacion = "ONLINE ROLLBACK"
+	rollback_h_atacante = "NET"
+
+	RollbackSnapshotScript.restaurar_partida(self, kai, rival, inicio)
+	rollback_catchup_activo = true
+	print("[91.02.70-P14D2C] ROLLBACK START — desde=%d presente=%d ticks=%d ejecutados=%d" % [
+		desde_tick, hasta_exclusivo, cantidad, online_rollbacks_ejecutados
+	])
+	return true
+
+
+func _online_finalizar_rollback() -> void:
+	if not online_rollback_finalizar_pendiente:
+		return
+	online_rollback_finalizar_pendiente = false
+	online_rollback_catchup_modo = false
+	rollback_catchup_activo = false
+	rollback_comparacion_pendiente = false
+	rollback_catchup_ventana.clear()
+	rollback_catchup_indice = 0
+	rollback_tick_origen = -1
+	rollback_catchup_preparando_timescale = false
+	rollback_catchup_inicio_timescale = {}
+	rollback_catchup_reactivar_tactico_next_tick = false
+	rollback_catchup_reactivacion_deferred_pendiente = false
+	rollback_catchup_barrier_frames_restantes = 0
+	rollback_catchup_commit_restore_pendiente = false
+
+	if is_instance_valid(kai):
+		kai.set("rollback_delta_override", -1.0)
+		kai.set("rollback_suprimir_presentacion_core1", false)
+		kai.set("rollback_suprimir_presentacion_core2", false)
+	if is_instance_valid(rival):
+		rival.set("rollback_delta_override", -1.0)
+		rival.set("rollback_reloj_seguridad_delta_override", -1.0)
+		rival.set("rollback_suprimir_presentacion_core1", false)
+		rival.set("rollback_suprimir_presentacion_core2", false)
+	if is_instance_valid(PerfectBlock90_1):
+		PerfectBlock90_1.set("rollback_delta_override", -1.0)
+
+	rollback_h_clasificacion = ""
+	rollback_h_atacante = ""
+	print("[91.02.70-P14D2C] ROLLBACK END — presente=%d ultimo_desde=%d ticks=%d total_rb=%d total_reprocesados=%d" % [
+		online_tick_simulacion, online_rollback_ultimo_inicio, online_rollback_ultima_cantidad,
+		online_rollbacks_ejecutados, online_rollback_ticks_reprocesados
+	])
+
+
+func _al_online_input_remoto_recibido(tick: int) -> void:
+	# Sólo interesa un frame que llegó DESPUÉS de que ese tick ya fue simulado.
+	# Los frames futuros o recibidos a tiempo no necesitan reconciliación.
+	if not online_activo or not online_combate_habilitado:
+		return
+	if tick >= online_tick_simulacion:
+		return
+
+	var clave: String = str(tick)
+	if not online_prediccion_remota_por_tick.has(clave):
+		return
+	var registro: Dictionary = online_prediccion_remota_por_tick[clave]
+	if not bool(registro.get("predicho", false)):
+		return
+	if bool(registro.get("evaluado", false)):
+		return
+
+	var red := _network_online()
+	if red == null:
+		return
+	var paquete: Dictionary = red.obtener_input_remoto(tick)
+	if not bool(paquete.get("disponible", false)):
+		return
+
+	var mascara_real: int = int(paquete.get("mascara", 0))
+	var mascara_predicha: int = int(registro.get("mascara", 0))
+	var edad: int = maxi(0, online_tick_simulacion - tick)
+	registro["evaluado"] = true
+	registro["real"] = mascara_real
+	registro["edad"] = edad
+	online_prediccion_remota_por_tick[clave] = registro
+
+	online_late_evaluados += 1
+	online_rollback_max_edad = maxi(online_rollback_max_edad, edad)
+	if mascara_real == mascara_predicha:
+		online_late_iguales += 1
+		if online_late_iguales <= 6:
+			print("[91.02.68-P14D2A] LATE SIN ROLLBACK — tick=%d edad=%d pred=%d real=%d" % [
+				tick, edad, mascara_predicha, mascara_real
+			])
+		return
+
+	online_rollback_necesarios += 1
+	if online_rollback_tick_mas_antiguo < 0 or tick < online_rollback_tick_mas_antiguo:
+		online_rollback_tick_mas_antiguo = tick
+	print("[91.02.68-P14D2A] ROLLBACK NECESARIO — tick=%d edad=%d pred=%d real=%d total=%d" % [
+		tick, edad, mascara_predicha, mascara_real, online_rollback_necesarios
+	])
+
+	if edad <= ONLINE_ROLLBACK_MAX_TICKS:
+		if online_rollback_tick_pendiente < 0 or tick < online_rollback_tick_pendiente:
+			online_rollback_tick_pendiente = tick
+	else:
+		online_rollback_fuera_ventana += 1
+		print("[91.02.70-P14D2C] LATE NO CORREGIBLE — tick=%d edad=%d max=%d" % [
+			tick, edad, ONLINE_ROLLBACK_MAX_TICKS
+		])
+
+
+func _router_frame_online_local() -> Dictionary:
+	# 91.02.65 — El origen de input es EXPLÍCITO por instancia.
+	# Antes, la mera presencia de un Xbox hacía que ambas instancias ignorasen
+	# teclado y leyesen el mismo mando físico, duplicando el movimiento.
+	var red := _network_online()
+	var origen := "teclado"
+	if red != null and red.has_method("obtener_control_local"):
+		origen = str(red.obtener_control_local()).to_lower()
+
+	if origen == "mando":
+		var pads := Input.get_connected_joypads()
+		if pads.is_empty():
+			return _router_frame_neutro()
+		return _router_frame_mando(int(pads[0]))
+
+	# TECLADO siempre significa exclusivamente el layout principal; un gamepad
+	# conectado ya no puede secuestrar esta instancia.
+	return _router_frame_teclado_j1()
+
+
+func _inyectar_inputs_online_loopback(red: Node) -> void:
+	var tick_sim: int = online_tick_simulacion
+	var tick_captura: int = tick_sim + ONLINE_INPUT_DELAY_TICKS
+	var frame_j1: Dictionary = _router_frame_neutro()
+	var frame_j2: Dictionary = _router_frame_neutro()
+
+	if red.es_host():
+		# Una sola ventana enfocada posee los dispositivos físicos durante QA.
+		# J1 siempre es teclado principal; J2 siempre el primer Xbox/gamepad.
+		var frame_j1_capturado: Dictionary = _router_frame_teclado_j1()
+		var frame_j2_capturado: Dictionary = _router_frame_neutro()
+		var pads := Input.get_connected_joypads()
+		if not pads.is_empty():
+			frame_j2_capturado = _router_frame_mando(int(pads[0]))
+
+		online_inputs_locales[str(tick_captura)] = frame_j1_capturado.duplicate(true)
+		online_inputs_loopback_j2[str(tick_captura)] = frame_j2_capturado.duplicate(true)
+		red.enviar_input_frames_loopback(
+			tick_captura,
+			InputRecorderScript.codificar_frame(frame_j1_capturado),
+			InputRecorderScript.codificar_frame(frame_j2_capturado)
+		)
+
+		frame_j1 = online_inputs_locales.get(str(tick_sim), _router_frame_neutro())
+		frame_j2 = online_inputs_loopback_j2.get(str(tick_sim), _router_frame_neutro())
+	else:
+		if tick_sim >= ONLINE_INPUT_DELAY_TICKS:
+			var paquete: Dictionary = red.obtener_input_frames_loopback(tick_sim)
+			if bool(paquete.get("disponible", false)):
+				frame_j1 = InputRecorderScript.decodificar_frame(int(paquete.get("j1", 0)))
+				frame_j2 = InputRecorderScript.decodificar_frame(int(paquete.get("j2", 0)))
+				online_loopback_ultimo_j1 = frame_j1.duplicate(true)
+				online_loopback_ultimo_j2 = frame_j2.duplicate(true)
+				online_loopback_hits += 1
+			else:
+				frame_j1 = online_loopback_ultimo_j1.duplicate(true)
+				frame_j2 = online_loopback_ultimo_j2.duplicate(true)
+				online_loopback_misses += 1
+				if online_loopback_misses <= 8:
+					print("[91.02.66-P14D1C] LOOPBACK FRAME LATE — tick=%d" % tick_sim)
+
+	if rollback_ring != null and not rollback_catchup_activo:
+		rollback_ring.asignar_inputs_ultimo(frame_j1, frame_j2)
+
+	if input_recorder != null:
+		input_recorder.grabar_tick(frame_j1, frame_j2)
+		var tick_grabado: int = input_recorder.total_ticks()
+		input_recorder.grabar_traza_tick(_capturar_estado_traza_replay())
+		if tick_grabado % REPLAY_CHECKPOINT_INTERVALO == 0:
+			input_recorder.grabar_checkpoint(tick_grabado, _capturar_estado_checkpoint_replay())
+
+	kai.inyectar_input_frame(frame_j1)
+	rival.inyectar_input_frame(frame_j2)
+
+	online_tick_simulacion += 1
+	if online_tick_simulacion % 60 == 0:
+		var mascara_j1: int = InputRecorderScript.codificar_frame(frame_j1)
+		var mascara_j2: int = InputRecorderScript.codificar_frame(frame_j2)
+		print("[91.02.66-P14D1C] LOOPBACK INPUT — peer=%d rol=%s tick=%d J1mask=%d J2mask=%d hits=%d late=%d" % [
+			red.mi_peer_id(), red.rol, online_tick_simulacion, mascara_j1, mascara_j2,
+			online_loopback_hits, online_loopback_misses
+		])
+	if online_tick_simulacion > ONLINE_INPUT_DELAY_TICKS + 180:
+		red.descartar_inputs_loopback_anteriores_a(online_tick_simulacion - 180)
+
+
+func _inyectar_inputs_online() -> void:
+	if not online_combate_habilitado:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var red := _network_online()
+	if red == null or not red.hay_rival_conectado():
+		kai.inyectar_input_frame(_router_frame_neutro())
+		rival.inyectar_input_frame(_router_frame_neutro())
+		return
+
+	# 91.02.66 — En 127.0.0.1 no repartimos hardware entre dos procesos de
+	# Windows. El HOST, que está enfocado, captura teclado + mando y manda ambos
+	# Input Frames al cliente. El online real entre 2 PCs NO entra aquí.
+	if red.has_method("es_loopback_misma_pc") and bool(red.es_loopback_misma_pc()):
+		_inyectar_inputs_online_loopback(red)
+		return
+
+	var tick_sim := online_tick_simulacion
+	var tick_captura := tick_sim + ONLINE_INPUT_DELAY_TICKS
+
+	# Capturamos el input local para un tick FUTURO. Esto da a ENet cuatro
+	# physics ticks para entregar el paquete sin introducir predicción en LAN.
+	var frame_local_capturado := _router_frame_online_local()
+	online_inputs_locales[str(tick_captura)] = frame_local_capturado.duplicate(true)
+	var mascara_local := InputRecorderScript.codificar_frame(frame_local_capturado)
+	red.enviar_input_frame(tick_captura, mascara_local)
+
+	var frame_local_sim: Dictionary = online_inputs_locales.get(str(tick_sim), _router_frame_neutro())
+	var frame_remoto_sim := _router_frame_neutro()
+	var frame_remoto_fue_predicho: bool = false
+
+	if tick_sim >= ONLINE_INPUT_DELAY_TICKS:
+		var paquete_remoto: Dictionary = red.obtener_input_remoto(tick_sim)
+		if bool(paquete_remoto.get("disponible", false)):
+			frame_remoto_sim = InputRecorderScript.decodificar_frame(int(paquete_remoto.get("mascara", 0)))
+			online_ultimo_frame_remoto = frame_remoto_sim.duplicate(true)
+			online_remote_hits += 1
+		else:
+			# PASS 14D2A todavía NO rebobina. Marcamos exactamente la predicción
+			# aplicada para compararla cuando llegue el paquete real.
+			frame_remoto_sim = online_ultimo_frame_remoto.duplicate(true)
+			frame_remoto_fue_predicho = true
+			online_remote_misses += 1
+			if online_remote_misses <= 8:
+				print("[91.02.64-P14D1] REMOTE INPUT LATE — tick=%d; predicción=último frame" % tick_sim)
+
+	# Registro de reconciliación 14D2A: sólo intención remota ya aplicada.
+	# No forma parte del snapshot y no modifica el resultado del tick.
+	online_prediccion_remota_por_tick[str(tick_sim)] = {
+		"mascara": InputRecorderScript.codificar_frame(frame_remoto_sim),
+		"predicho": frame_remoto_fue_predicho,
+		"evaluado": false,
+	}
+
+	var frame_j1 := _router_frame_neutro()
+	var frame_j2 := _router_frame_neutro()
+	if red.es_host():
+		frame_j1 = frame_local_sim
+		frame_j2 = frame_remoto_sim
+	else:
+		frame_j1 = frame_remoto_sim
+		frame_j2 = frame_local_sim
+
+	# El ring certificado guarda exactamente los frames que se simulan.
+	if rollback_ring != null and not rollback_catchup_activo:
+		rollback_ring.asignar_inputs_ultimo(frame_j1, frame_j2)
+
+	if input_recorder != null:
+		input_recorder.grabar_tick(frame_j1, frame_j2)
+		var tick_grabado: int = input_recorder.total_ticks()
+		input_recorder.grabar_traza_tick(_capturar_estado_traza_replay())
+		if tick_grabado % REPLAY_CHECKPOINT_INTERVALO == 0:
+			input_recorder.grabar_checkpoint(tick_grabado, _capturar_estado_checkpoint_replay())
+
+	kai.inyectar_input_frame(frame_j1)
+	rival.inyectar_input_frame(frame_j2)
+
+	online_tick_simulacion += 1
+	if online_tick_simulacion % 60 == 0:
+		print("[91.02.64-P14D1] NET INPUT — peer=%d rol=%s tick=%d hits=%d late=%d remoto_hasta=%d" % [
+			red.mi_peer_id(),
+			red.rol,
+			online_tick_simulacion,
+			online_remote_hits,
+			online_remote_misses,
+			red.ultimo_tick_remoto_recibido
+		])
+		print("[91.02.68-P14D2A] ROLLBACK DIAG — peer=%d tick=%d late_eval=%d iguales=%d necesarios=%d max_edad=%d" % [
+			red.mi_peer_id(), online_tick_simulacion, online_late_evaluados,
+			online_late_iguales, online_rollback_necesarios, online_rollback_max_edad
+		])
+		print("[91.02.70-P14D2C] ROLLBACK REAL — peer=%d tick=%d ejecutados=%d reprocesados=%d pendientes=%d fuera=%d" % [
+			red.mi_peer_id(), online_tick_simulacion, online_rollbacks_ejecutados,
+			online_rollback_ticks_reprocesados, online_rollback_tick_pendiente,
+			online_rollback_fuera_ventana
+		])
+		if rollback_ring != null:
+			var ring_total: int = rollback_ring.total()
+			var ring_old: int = rollback_ring.tick_mas_antiguo()
+			var ring_new: int = rollback_ring.tick_mas_nuevo()
+			var ring_esperado: int = online_tick_simulacion - 1
+			print("[91.02.69-P14D2B] ONLINE RING — peer=%d sim=%d total=%d old=%d new=%d esperado=%d alineado=%s" % [
+				red.mi_peer_id(), online_tick_simulacion, ring_total, ring_old, ring_new, ring_esperado,
+				str(ring_new == ring_esperado)
+			])
+
+	# Mantener buffers pequeños. El ring de rollback conserva su propia historia.
+	if online_tick_simulacion % 30 == 0:
+		var minimo := maxi(online_tick_simulacion - 16, 0)
+		var borrar_local: Array[String] = []
+		for clave in online_inputs_locales.keys():
+			if int(clave) < minimo:
+				borrar_local.append(str(clave))
+		for clave in borrar_local:
+			online_inputs_locales.erase(clave)
+		red.descartar_inputs_remotos_anteriores_a(minimo)
+
+		var minimo_diag: int = maxi(online_tick_simulacion - ONLINE_ROLLBACK_DIAG_HISTORY_TICKS, 0)
+		var borrar_diag: Array[String] = []
+		for clave_diag in online_prediccion_remota_por_tick.keys():
+			if int(clave_diag) < minimo_diag:
+				borrar_diag.append(str(clave_diag))
+		for clave_diag in borrar_diag:
+			online_prediccion_remota_por_tick.erase(clave_diag)
+
+
+func _iniciar_grabacion_inputs() -> void:
+	if not versus_local_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	input_recorder = InputRecorderScript.new()
+	input_recorder_ronda_actual = 1
+	var estado = get_node_or_null("/root/GameState")
+	var escenario_grabado: String = escenario_nombre_actual
+	if estado and estado.flujo_menu_activo:
+		escenario_grabado = str(estado.escenario_actual)
+	input_recorder.iniciar({
+		"build": "91.00.00-H10.13",
+		"rng_seed": replay_rng_seed_actual,
+		"modo": "online" if online_activo else "versus_local",
+		"j1": kai.nombre_luchador,
+		"j2": rival.nombre_luchador,
+		"escenario": escenario_grabado,
+		"physics_hz": Engine.physics_ticks_per_second,
+		"rondas_para_ganar": RONDAS_PARA_GANAR,
+	})
+	input_recorder.marcar_inicio_ronda(input_recorder_ronda_actual)
+	input_recorder.grabar_checkpoint(0, _capturar_estado_checkpoint_replay())
+	print("[91.00.00-H10.88] Input Recorder ACTIVO — %s vs %s" % [kai.nombre_luchador, rival.nombre_luchador])
+	print("[91.00.00-H10.88] SNAPSHOT TEST — F9 guardar / F10 restaurar (estado neutral)")
+	print("[91.00.00-H10.88] LOCAL ROLLBACK TEST — F11 rebobina 8 ticks (~133 ms)")
+	print("[91.02.59-P13B] PROJECTILE ROLLBACK TEST — F11 localiza VUELO / IMPACTO+CORE / BLOQUEO")
+
+func _marcar_nueva_ronda_input_recorder() -> void:
+	if input_recorder == null or not input_recorder.grabando:
+		return
+	input_recorder_ronda_actual += 1
+	input_recorder.marcar_inicio_ronda(input_recorder_ronda_actual)
+
+func _cerrar_grabacion_inputs(ganador: Fighter, motivo: String) -> void:
+	if input_recorder == null or not input_recorder.grabando:
+		return
+	var nombre_ganador := ganador.nombre_luchador if is_instance_valid(ganador) else ""
+	var ruta: String = input_recorder.finalizar_y_guardar({
+		"ganador": nombre_ganador,
+		"motivo_fin": motivo,
+		"rondas_j1": rondas_kai,
+		"rondas_j2": rondas_rival,
+		# 91.00.00-B: las grabaciones nuevas incluyen una fotografía mínima del
+		# estado final. El replay viejo 91.00.00-A sigue siendo compatible.
+		"estado_final": _capturar_estado_replay(),
+	})
+	if ruta != "":
+		print("[91.00.00-H10.88] Input Recorder GUARDADO — %d ticks — %s" % [input_recorder.total_ticks(), ruta])
+
+func _preparar_solicitud_replay() -> void:
+	var estado = get_node_or_null("/root/GameState")
+	if estado == null or not bool(estado.get("replay_solicitado")):
+		return
+	# Consumimos la solicitud una sola vez. Si la carga falla, el combate vuelve
+	# a ser Versus Local normal y se puede generar otra grabación.
+	estado.replay_solicitado = false
+	input_replay = InputReplayScript.new()
+	if not input_replay.cargar():
+		print("[91.00.00-H10.88] REPLAY ERROR — %s" % input_replay.ultimo_error)
+		estado.replay_ultimo_mensaje = "REPLAY ERROR: " + input_replay.ultimo_error
+		input_replay = null
+		return
+
+	var meta: Dictionary = input_replay.metadata
+	if str(meta.get("modo", "")) != "versus_local":
+		print("[91.00.00-H10.88] REPLAY ERROR — la grabación no es Versus Local")
+		estado.replay_ultimo_mensaje = "REPLAY ERROR: modo incompatible"
+		input_replay = null
+		return
+	var hz_grabado := int(meta.get("physics_hz", Engine.physics_ticks_per_second))
+	if hz_grabado != Engine.physics_ticks_per_second:
+		print("[91.00.00-H10.88] REPLAY ERROR — physics_hz grabado=%d actual=%d" % [hz_grabado, Engine.physics_ticks_per_second])
+		estado.replay_ultimo_mensaje = "REPLAY ERROR: physics_hz distinto"
+		input_replay = null
+		return
+
+	var j1 := str(meta.get("j1", "Kai"))
+	var j2 := str(meta.get("j2", "Cibor-X"))
+	var escenario := str(meta.get("escenario", "Kai"))
+	estado.iniciar_versus_local(j1, j2)
+	estado.seleccionar_escenario(escenario)
+	replay_modo_activo = true
+	replay_ronda_actual = 1
+	replay_agotado_reportado = false
+	replay_final_evaluado = false
+	replay_marcadores_ok = true
+	replay_checkpoints_ok = true
+	replay_trace_ok = true
+	replay_tick_primer_desync = -1
+	replay_ticks_neutros_post_buffer = 0
+
+func _preparar_rng_determinista_versus() -> void:
+	# El RNG global también alimenta partículas, voces y microvariaciones visuales.
+	# Versus Local genera seed; Online DEBE usar la seed canónica ya acordada
+	# por Host/Cliente en PASS 14C.
+	var es_local := _detectar_modo_versus_local()
+	var es_online := _detectar_modo_online()
+	if not es_local and not es_online:
+		return
+	if replay_modo_activo and input_replay != null:
+		replay_rng_seed_actual = int(input_replay.metadata.get("rng_seed", 0))
+	elif es_online:
+		var estado_online = get_node_or_null("/root/GameState")
+		replay_rng_seed_actual = int(estado_online.online_seed) if estado_online != null else 0
+	else:
+		replay_rng_seed_actual = int(Time.get_ticks_usec() & 0x7fffffff)
+	if replay_rng_seed_actual == 0:
+		replay_rng_seed_actual = 9100004
+	seed(replay_rng_seed_actual)
+	print("[91.02.64-P14D1] RNG combate — modo=%s seed=%d" % ["ONLINE" if es_online else "LOCAL", replay_rng_seed_actual])
+
+func _iniciar_replay_inputs() -> void:
+	if input_replay == null or not replay_modo_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	var meta: Dictionary = input_replay.metadata
+	if kai.nombre_luchador != str(meta.get("j1", "")) or rival.nombre_luchador != str(meta.get("j2", "")):
+		print("[91.00.00-H10.88] REPLAY ERROR — personajes instanciados no coinciden con metadata")
+		replay_modo_activo = false
+		return
+	_validar_marcador_ronda_replay()
+	_validar_checkpoint_replay(0)
+	print("[91.00.00-H10.88] REPLAY ACTIVO — %s vs %s — %d ticks" % [kai.nombre_luchador, rival.nombre_luchador, input_replay.total_ticks()])
+
+func _validar_marcador_ronda_replay() -> void:
+	if not replay_modo_activo or input_replay == null:
+		return
+	var esperado: int = input_replay.tick_inicio_ronda(replay_ronda_actual)
+	if esperado < 0:
+		return
+	var actual: int = input_replay.tick_actual
+	if actual == esperado:
+		print("[91.00.00-H10.88] RONDA %d sincronizada — tick %d" % [replay_ronda_actual, actual])
+	else:
+		replay_marcadores_ok = false
+		print("[91.00.00-H10.88] DESYNC RONDA %d — esperado tick %d / actual %d / delta %d" % [replay_ronda_actual, esperado, actual, actual - esperado])
+
+func _capturar_estado_traza_replay() -> Dictionary:
+	return {
+		"rondas_j1": rondas_kai,
+		"rondas_j2": rondas_rival,
+		"ronda_activa": ronda_activa,
+		"time_scale": snappedf(Engine.time_scale, 0.0001),
+		"j1": _capturar_estado_luchador_traza(kai),
+		"j2": _capturar_estado_luchador_traza(rival),
+	}
+
+func _capturar_estado_luchador_traza(personaje: Fighter) -> Dictionary:
+	if not is_instance_valid(personaje):
+		return {}
+	return {
+		"x": snappedf(personaje.position.x, 0.001),
+		"y": snappedf(personaje.position.y, 0.001),
+		"vx": snappedf(personaje.velocity.x, 0.001),
+		"vy": snappedf(personaje.velocity.y, 0.001),
+		"vida": snappedf(personaje.vida, 0.001),
+		"poder": snappedf(personaje.poder, 0.001),
+		"cargas": int(personaje.veces_fase_absoluta),
+		"mirando": snappedf(personaje.mirando, 0.001),
+		"fase_ataque": int(personaje.fase_ataque),
+		"timer_ataque": snappedf(personaje.timer_fase_ataque, 0.0001),
+		"atk_conecto": bool(personaje._atk_ya_conecto),
+		"atk_tipo": str(personaje._atk_tipo),
+		"hitstun": snappedf(personaje.hitstun_timer, 0.0001),
+		"hitstop": snappedf(personaje.hitstop_timer, 0.0001),
+		"empuje_timer": snappedf(personaje.empuje_timer, 0.0001),
+		"empuje_x": snappedf(personaje.empuje_x, 0.001),
+		"empuje_pendiente_timer": snappedf(personaje.empuje_pendiente_timer, 0.0001),
+		"empuje_pendiente_fuerza": snappedf(personaje.empuje_pendiente_fuerza, 0.001),
+		"carrera": bool(personaje.carrera_activa),
+		"carrera_dir": snappedf(personaje.carrera_direccion, 0.001),
+		"carrera_inicio": snappedf(personaje.carrera_inicio_timer, 0.0001),
+		"carrera_freno": snappedf(personaje.carrera_frenado_timer, 0.0001),
+		"dash_aereo": bool(personaje.dash_aereo_activo),
+		"dash_aereo_dir": snappedf(personaje.dash_aereo_direccion, 0.001),
+		"dash_aereo_timer": snappedf(personaje.dash_aereo_timer, 0.0001),
+		"dash_aereo_usado": bool(personaje.dash_aereo_usado),
+		"saltos": int(personaje.saltos_usados),
+		"en_aire": bool(personaje.en_el_aire),
+		"cruce_aereo": bool(personaje.cruce_aereo_activo),
+		"bloqueando": bool(personaje.bloqueando),
+		"bloqueo_timer": snappedf(personaje.bloqueo_timer, 0.0001),
+		"contacto_timer": snappedf(personaje.contacto_post_golpe_timer, 0.0001),
+		"contacto_dist": snappedf(personaje.contacto_post_golpe_distancia, 0.001),
+		"recuperacion_levantada": snappedf(personaje.recuperacion_post_levantada_timer, 0.0001),
+		"combo_count": int(personaje.combo_count),
+		"combo_timer": snappedf(personaje.combo_timer, 0.0001),
+		"secuencia": bool(personaje.en_secuencia_especial),
+		"cinematico": bool(personaje.bloqueo_cinematico),
+		"congelado_rival": bool(personaje.congelado_por_rival),
+		"derribo": bool(personaje.derribo_especial_activo),
+		"furia": bool(personaje.en_fase_absoluta),
+	}
+
+func _comparar_diccionario_traza(esperado: Dictionary, actual: Dictionary, prefijo: String) -> Array[String]:
+	var diferencias: Array[String] = []
+	for clave in esperado.keys():
+		if not actual.has(clave):
+			diferencias.append("%s.%s ausente" % [prefijo, clave])
+			continue
+		var ve = esperado[clave]
+		var va = actual[clave]
+		if typeof(ve) == TYPE_FLOAT or typeof(va) == TYPE_FLOAT:
+			if absf(float(va) - float(ve)) > 0.0009:
+				diferencias.append("%s.%s esperado=%s actual=%s" % [prefijo, clave, ve, va])
+		elif va != ve:
+			diferencias.append("%s.%s esperado=%s actual=%s" % [prefijo, clave, ve, va])
+	return diferencias
+
+func _validar_traza_replay(tick: int) -> void:
+	if not replay_modo_activo or input_replay == null or not replay_trace_ok:
+		return
+	var esperado: Dictionary = input_replay.traza_para_tick(tick)
+	if esperado.is_empty():
+		return
+	var actual := _capturar_estado_traza_replay()
+	var diferencias: Array[String] = []
+	for clave in ["rondas_j1", "rondas_j2", "ronda_activa", "time_scale"]:
+		if esperado.has(clave):
+			var ve = esperado[clave]
+			var va = actual.get(clave)
+			if (typeof(ve) == TYPE_FLOAT or typeof(va) == TYPE_FLOAT):
+				if absf(float(va) - float(ve)) > 0.0009:
+					diferencias.append("%s esperado=%s actual=%s" % [clave, ve, va])
+			elif va != ve:
+				diferencias.append("%s esperado=%s actual=%s" % [clave, ve, va])
+	var esp_j1 = esperado.get("j1", {})
+	var esp_j2 = esperado.get("j2", {})
+	if typeof(esp_j1) == TYPE_DICTIONARY:
+		diferencias.append_array(_comparar_diccionario_traza(esp_j1, actual.get("j1", {}), "J1"))
+	if typeof(esp_j2) == TYPE_DICTIONARY:
+		diferencias.append_array(_comparar_diccionario_traza(esp_j2, actual.get("j2", {}), "J2"))
+	if diferencias.is_empty():
+		return
+	replay_trace_ok = false
+	if replay_tick_primer_desync < 0:
+		replay_tick_primer_desync = tick
+	print("[91.00.00-H10.88] TRACE DESYNC — primer tick EXACTO: %d" % tick)
+	for i in range(mini(diferencias.size(), 14)):
+		print("  • " + diferencias[i])
+	if diferencias.size() > 14:
+		print("  • ... %d diferencia(s) adicionales" % (diferencias.size() - 14))
+
+func _capturar_estado_checkpoint_replay() -> Dictionary:
+	return {
+		"rondas_j1": rondas_kai,
+		"rondas_j2": rondas_rival,
+		"ronda_activa": ronda_activa,
+		"j1": _capturar_estado_luchador_replay(kai),
+		"j2": _capturar_estado_luchador_replay(rival),
+	}
+
+func _validar_checkpoint_replay(tick: int) -> void:
+	if not replay_modo_activo or input_replay == null:
+		return
+	var esperado: Dictionary = input_replay.checkpoint_para_tick(tick)
+	if esperado.is_empty():
+		return
+	var actual := _capturar_estado_checkpoint_replay()
+	var diferencias: Array[String] = []
+	if int(esperado.get("rondas_j1", rondas_kai)) != rondas_kai:
+		diferencias.append("rondas J1 esperado=%s actual=%d" % [esperado.get("rondas_j1"), rondas_kai])
+	if int(esperado.get("rondas_j2", rondas_rival)) != rondas_rival:
+		diferencias.append("rondas J2 esperado=%s actual=%d" % [esperado.get("rondas_j2"), rondas_rival])
+	if bool(esperado.get("ronda_activa", ronda_activa)) != ronda_activa:
+		diferencias.append("ronda_activa esperado=%s actual=%s" % [esperado.get("ronda_activa"), ronda_activa])
+	var esp_j1 = esperado.get("j1", {})
+	var esp_j2 = esperado.get("j2", {})
+	if typeof(esp_j1) == TYPE_DICTIONARY:
+		diferencias.append_array(_comparar_estado_luchador_replay(esp_j1, actual.get("j1", {}), "J1"))
+	if typeof(esp_j2) == TYPE_DICTIONARY:
+		diferencias.append_array(_comparar_estado_luchador_replay(esp_j2, actual.get("j2", {}), "J2"))
+	if diferencias.is_empty():
+		return
+	replay_checkpoints_ok = false
+	if replay_tick_primer_desync < 0:
+		replay_tick_primer_desync = tick
+		print("[91.00.00-H10.88] CHECKSUM DESYNC — primer tick detectado: %d" % tick)
+		for diferencia in diferencias:
+			print("  • " + diferencia)
+
+func _capturar_estado_luchador_replay(personaje: Fighter) -> Dictionary:
+	if not is_instance_valid(personaje):
+		return {}
+	return {
+		"x": snappedf(personaje.position.x, 0.01),
+		"y": snappedf(personaje.position.y, 0.01),
+		"vx": snappedf(personaje.velocity.x, 0.01),
+		"vy": snappedf(personaje.velocity.y, 0.01),
+		"vida": snappedf(personaje.vida, 0.01),
+		"poder": snappedf(personaje.poder, 0.01),
+		"cargas": int(personaje.veces_fase_absoluta),
+		"bloqueando": bool(personaje.bloqueando),
+		"furia": bool(personaje.en_fase_absoluta),
+	}
+
+func _capturar_estado_replay() -> Dictionary:
+	return {
+		"j1": _capturar_estado_luchador_replay(kai),
+		"j2": _capturar_estado_luchador_replay(rival),
+	}
+
+func _comparar_estado_luchador_replay(esperado: Dictionary, actual: Dictionary, etiqueta: String) -> Array[String]:
+	var diferencias: Array[String] = []
+	for clave in ["x", "y", "vx", "vy", "vida", "poder"]:
+		if esperado.has(clave) and absf(float(actual.get(clave, 0.0)) - float(esperado.get(clave, 0.0))) > 0.05:
+			diferencias.append("%s.%s esperado=%s actual=%s" % [etiqueta, clave, esperado.get(clave), actual.get(clave)])
+	for clave in ["cargas", "bloqueando", "furia"]:
+		if esperado.has(clave) and actual.get(clave) != esperado.get(clave):
+			diferencias.append("%s.%s esperado=%s actual=%s" % [etiqueta, clave, esperado.get(clave), actual.get(clave)])
+	return diferencias
+
+func _evaluar_replay_final(ganador: Fighter) -> bool:
+	if not replay_modo_activo or input_replay == null:
+		return true
+	replay_final_evaluado = true
+	var meta: Dictionary = input_replay.metadata
+	var diferencias: Array[String] = []
+	var ganador_actual := ganador.nombre_luchador if is_instance_valid(ganador) else ""
+	var ganador_esperado := str(meta.get("ganador", ""))
+	if ganador_esperado != "" and ganador_actual != ganador_esperado:
+		diferencias.append("ganador esperado=%s actual=%s" % [ganador_esperado, ganador_actual])
+	if meta.has("rondas_j1") and rondas_kai != int(meta.get("rondas_j1", rondas_kai)):
+		diferencias.append("rondas J1 esperado=%s actual=%d" % [meta.get("rondas_j1"), rondas_kai])
+	if meta.has("rondas_j2") and rondas_rival != int(meta.get("rondas_j2", rondas_rival)):
+		diferencias.append("rondas J2 esperado=%s actual=%d" % [meta.get("rondas_j2"), rondas_rival])
+	var ticks_esperados := int(meta.get("ticks_totales", input_replay.total_ticks()))
+	if input_replay.tick_actual != ticks_esperados:
+		diferencias.append("tick final esperado=%d actual=%d" % [ticks_esperados, input_replay.tick_actual])
+	if not replay_marcadores_ok:
+		diferencias.append("uno o más inicios de ronda no coincidieron")
+	if not replay_checkpoints_ok:
+		diferencias.append("checkpoints divergieron desde tick %d" % replay_tick_primer_desync)
+	if not replay_trace_ok:
+		diferencias.append("traza por tick divergió desde tick %d" % replay_tick_primer_desync)
+
+	var estado_final = meta.get("estado_final", {})
+	if typeof(estado_final) == TYPE_DICTIONARY and not estado_final.is_empty():
+		var estado_actual := _capturar_estado_replay()
+		var esp_j1 = estado_final.get("j1", {})
+		var esp_j2 = estado_final.get("j2", {})
+		if typeof(esp_j1) == TYPE_DICTIONARY:
+			diferencias.append_array(_comparar_estado_luchador_replay(esp_j1, estado_actual.get("j1", {}), "J1"))
+		if typeof(esp_j2) == TYPE_DICTIONARY:
+			diferencias.append_array(_comparar_estado_luchador_replay(esp_j2, estado_actual.get("j2", {}), "J2"))
+
+	var estado = get_node_or_null("/root/GameState")
+	if diferencias.is_empty():
+		var mensaje := "REPLAY OK — %d/%d ticks — resultado idéntico" % [input_replay.tick_actual, ticks_esperados]
+		print("[91.00.00-H10.88] " + mensaje)
+		if estado:
+			estado.replay_ultimo_mensaje = mensaje
+		return true
+
+	print("[91.00.00-H10.88] REPLAY DESYNC — %d diferencia(s):" % diferencias.size())
+	for diferencia in diferencias:
+		print("  • " + diferencia)
+	if estado:
+		estado.replay_ultimo_mensaje = "REPLAY DESYNC — ver Output"
+	return false
 
 func _configurar_control_lado(personaje: Fighter, es_lado_kai: bool) -> void:
 	if es_lado_kai:
@@ -1851,7 +4364,13 @@ func _configurar_control_lado(personaje: Fighter, es_lado_kai: bool) -> void:
 		if versus_local_activo:
 			personaje.configurar_control_enrutado(1)
 		else:
-			personaje.configurar_control_ia(0)
+			# 91.02.40 — PASS 11B: la CPU usa la dificultad central de GameState.
+			# Si el estado no la expone, MEDIO (1) es el fallback de release.
+			var dificultad_cpu: int = 1
+			var estado_dificultad = get_node_or_null("/root/GameState")
+			if estado_dificultad and "dificultad_ia" in estado_dificultad:
+				dificultad_cpu = int(estado_dificultad.get("dificultad_ia"))
+			personaje.configurar_control_ia(dificultad_cpu)
 
 func _conectar_luchador(personaje: Fighter, es_jugador: bool) -> void:
 	# 90.10.84 — lado estable para que el pushbox se resuelva una sola vez.
@@ -1862,10 +4381,13 @@ func _conectar_luchador(personaje: Fighter, es_jugador: bool) -> void:
 	personaje.aterrizaje_hecho.connect(_al_aterrizaje_hecho)
 	personaje.core_listo.connect(_al_core_listo.bind(personaje))
 	personaje.fase_activada.connect(_al_activar_fase.bind(personaje))
+	personaje.core1_target_lock_finalizado.connect(_al_core1_target_lock_finalizado_h84.bind(personaje))
+	personaje.core2_rematador_poster_finalizado.connect(_al_core2_rematador_poster_finalizado_h99.bind(personaje))
 	personaje.rematador_iniciado.connect(_al_rematador_iniciado.bind(personaje))
 	personaje.rematador_conectado.connect(_al_rematador.bind(personaje))
 	personaje.finalizacion_absoluta.connect(_al_finalizacion_absoluta.bind(personaje))
 	personaje.recarga_iniciada.connect(_al_recarga_iniciada.bind(personaje))
+	personaje.proyectil_disparado.connect(_al_proyectil_disparado.bind(personaje))
 	personaje.salto_hecho.connect(_al_saltar)
 	if es_jugador:
 		personaje.derrotado.connect(_al_kai_derrotado)
@@ -1879,7 +4401,11 @@ func _crear_personajes() -> void:
 	var nombre_rival := "Cibor-X"
 	var nombre_escenario := "Cibor-X"
 	var estado = get_node_or_null("/root/GameState")
-	versus_local_activo = _detectar_modo_versus_local()
+	online_activo = _detectar_modo_online()
+	# La infraestructura de control externo/rollback de Versus Local es la base
+	# certificada que también utiliza Online. La captura de dispositivos cambia
+	# en _inyectar_inputs_online().
+	versus_local_activo = _detectar_modo_versus_local() or online_activo
 	if estado and estado.flujo_menu_activo:
 		nombre_jugador = estado.personaje_jugador
 		nombre_rival = estado.rival_actual
@@ -2041,6 +4567,59 @@ func _al_core_listo(personaje: Fighter) -> void:
 	_reaccion_escenario_poder(personaje, 0.34)
 
 func _al_activar_fase(personaje: Fighter) -> void:
+	# H8.1 — observador inerte de la PRIMERA activación CORE.
+	# La señal llega durante physics de Fighter, después de que Main registró
+	# el snapshot de inicio de ese tick. Por eso rollback_tick_logico apunta
+	# exactamente al snapshot que capturará el estado CORE en el próximo tick.
+	if versus_local_activo and not replay_modo_activo and is_instance_valid(personaje):
+		var nivel_core := int(personaje.veces_fase_absoluta)
+		var lado_core := "J1" if personaje == kai else "J2"
+
+		if nivel_core == 1:
+			rollback_core1_event_serial += 1
+			rollback_core1_event_tick_hint = rollback_tick_logico
+			rollback_core1_event_lado = lado_core
+			# H10.56 — target-only real: CORE I queda fuera del arnés de rollback.
+			rollback_core1_event_serial_ya_probado = rollback_core1_event_serial
+			print("[91.00.00-H10.88] CORE I EVENT OBSERVADO — serial=%d tick_hint=%d %s — sin autocaptura (target-only)" % [
+				rollback_core1_event_serial,
+				rollback_core1_event_tick_hint,
+				rollback_core1_event_lado
+			])
+		elif nivel_core == 2:
+			if rollback_catchup_activo:
+				print("[91.00.00-H10.88] CORE II ENTRY RESIM — %s tick_logico=%d" % [
+					lado_core, rollback_tick_logico
+				])
+			else:
+				rollback_core2_event_serial += 1
+				rollback_core2_event_tick_hint = rollback_tick_logico
+				rollback_core2_event_lado = lado_core
+				# H10.56 — target-only real: no dejar CORE II pendiente para el buscador.
+				rollback_core2_event_serial_ya_probado = rollback_core2_event_serial
+				print("[91.00.00-H10.88] CORE II EVENT OBSERVADO — serial=%d tick_hint=%d %s — sin autocaptura (target-only)" % [
+					rollback_core2_event_serial,
+					rollback_core2_event_tick_hint,
+					rollback_core2_event_lado
+				])
+		elif nivel_core == 3:
+			if rollback_catchup_activo:
+				print("[91.00.00-H10.88] CORE III ENTRY RESIM — %s tick_logico=%d" % [
+					lado_core, rollback_tick_logico
+				])
+			else:
+				rollback_core3_event_serial += 1
+				rollback_core3_event_tick_hint = rollback_tick_logico
+				rollback_core3_event_lado = lado_core
+				# H10.56 — target-only real: ENTRY está certificado y no debe disparar rollback.
+				h10_core3_auto_armado = false
+				rollback_core3_event_serial_ya_probado = rollback_core3_event_serial
+				print("[91.00.00-H10.88] CORE III ENTRY OBSERVADO — serial=%d tick_hint=%d %s — sin autocaptura; esperando ABSOLUTE VICTORY HOLD" % [
+					rollback_core3_event_serial,
+					rollback_core3_event_tick_hint,
+					rollback_core3_event_lado
+				])
+
 	sacudir_camara(10.0, 0.25)
 	_reaccion_escenario_poder(personaje, 1.0)
 	_reproducir_sfx(_sfx_elemento(personaje), -1.5, 1.0)
@@ -2050,6 +4629,63 @@ func _al_activar_fase(personaje: Fighter) -> void:
 		audio_poder_final.stop()
 		audio_poder_final.pitch_scale = 1.0
 		audio_poder_final.play()
+
+func _al_core1_target_lock_finalizado_h84(personaje: Fighter) -> void:
+	if not versus_local_activo or replay_modo_activo:
+		return
+	if not is_instance_valid(personaje):
+		return
+	if int(personaje.veces_fase_absoluta) != 1:
+		return
+
+	var lado := "J1" if personaje == kai else "J2"
+
+	# Durante la re-simulación queremos que la señal ocurra, pero el marcador
+	# de diagnóstico no debe convertirse en estado causal ni alterar la búsqueda.
+	if rollback_catchup_activo:
+		print("[91.00.00-H10.88] CORE I TARGET END RESIM — %s tick_logico=%d" % [
+			lado, rollback_tick_logico
+		])
+		return
+
+	rollback_core1_target_end_serial += 1
+	rollback_core1_target_end_tick_hint = rollback_tick_logico
+	rollback_core1_target_end_lado = lado
+	print("[91.00.00-H10.88] CORE I TARGET END MARCADO — serial=%d tick_hint=%d %s" % [
+		rollback_core1_target_end_serial,
+		rollback_core1_target_end_tick_hint,
+		rollback_core1_target_end_lado
+	])
+
+
+func _al_core2_rematador_poster_finalizado_h99(personaje: Fighter) -> void:
+	if not versus_local_activo or replay_modo_activo:
+		return
+	if not is_instance_valid(personaje):
+		return
+	if int(personaje.veces_fase_absoluta) != 2:
+		return
+	if int(personaje.get("core2_secuencia_etapa")) != 4:
+		return
+
+	var lado := "J1" if personaje == kai else "J2"
+
+	if rollback_catchup_activo:
+		print("[91.00.00-H10.88] CORE II REMATADOR POSTER END RESIM — %s tick_logico=%d" % [
+			lado, rollback_tick_logico
+		])
+		return
+
+	rollback_core2_rematador_poster_serial += 1
+	rollback_core2_rematador_poster_tick_hint = rollback_tick_logico
+	rollback_core2_rematador_poster_lado = lado
+
+	print("[91.00.00-H10.88] CORE II REMATADOR POSTER END MARCADO — serial=%d tick_hint=%d %s" % [
+		rollback_core2_rematador_poster_serial,
+		rollback_core2_rematador_poster_tick_hint,
+		rollback_core2_rematador_poster_lado
+	])
+
 
 func _al_rematador_iniciado(personaje: Fighter) -> void:
 	_reaccion_escenario_poder(personaje, 1.05)
@@ -2080,6 +4716,9 @@ func _al_recarga_iniciada(camara_lenta: bool, personaje: Fighter) -> void:
 	# Kai/Fang/Aethel/Magnus usan una voz dedicada de carga tanto en CORE 2
 	# como en CORE 3. Si ya sonó esa voz, evitamos apilar encima el grito genérico.
 	var uso_voz_recarga: bool = _reproducir_voz_recarga(personaje, camara_lenta)
+	# Si un personaje no tiene voz dedicada de RECARGA, como respaldo usamos
+	# el grito fuerte existente. Helena ya no entra en esta excepción porque
+	# ahora tiene su clip femenino propio.
 	if camara_lenta and not uso_voz_recarga:
 		_intentar_grito_ataque(personaje, true, 0.72)
 	var duracion: float = 1.75 if camara_lenta else 1.15
@@ -2096,11 +4735,9 @@ func _al_recarga_iniciada(camara_lenta: bool, personaje: Fighter) -> void:
 		Engine.time_scale = 0.32
 		var t_camara := get_tree().create_timer(1.50, true, false, true)
 		t_camara.timeout.connect(_entregar_camara_core3_al_combate.bind(personaje))
-		var t := get_tree().create_timer(1.55, true, false, true)
-		t.timeout.connect(func():
-			if not congelando_ko:
-				Engine.time_scale = 1.0
-		)
+		# H10.10 — Main ya NO gobierna el fin lógico de la cámara lenta con un
+		# SceneTreeTimer no snapshotable. Fighter CORE3_FSM devuelve time_scale a
+		# 1.0 exactamente al cerrar su recarga lógica de 1.55 s.
 
 func _entregar_camara_core3_al_combate(personaje: Fighter) -> void:
 	# 90.10.47 — handoff explícito entre la recarga lenta y el homing rápido.
@@ -2163,6 +4800,8 @@ func _oscurecer_escenario(fuerza: float, tiempo_total: float, personaje_a_atenua
 		tw.tween_property(personaje_a_atenuar.sprite, "modulate", Color.WHITE, 0.32)
 
 func _reaccion_escenario_poder(personaje: Fighter, intensidad: float) -> void:
+	if modo_bajo_visual:
+		return
 	if not is_instance_valid(personaje):
 		return
 	var color: Color = personaje.color_fase
@@ -2190,6 +4829,8 @@ func _reaccion_escenario_poder(personaje: Fighter, intensidad: float) -> void:
 		tw.chain().tween_callback(onda.queue_free)
 
 func _crear_estallido_ambiental(intensidad: float) -> void:
+	if modo_bajo_visual:
+		return
 	if not escenario_front or not is_instance_valid(kai) or not is_instance_valid(rival):
 		return
 	var centro: Vector2 = (kai.global_position + rival.global_position) * 0.5
@@ -2220,6 +4861,8 @@ func _crear_estallido_ambiental(intensidad: float) -> void:
 		tw.chain().tween_callback(mota.queue_free)
 
 func _reaccion_ambiente_al_impacto(fuerza: float) -> void:
+	if modo_bajo_visual:
+		return
 	var factor: float = clampf(fuerza / 220.0, 0.25, 1.0)
 	if ambiente_particulas_delante:
 		for nodo in ambiente_particulas_delante.get_children():
@@ -2360,9 +5003,16 @@ func _al_rival_derrotado() -> void:
 func _al_finalizacion_absoluta(personaje: Fighter) -> void:
 	if not ronda_activa:
 		return
+	# H10.60 — la entrada ABSOLUTA ya está certificada en H10.58. Aquí sólo
+	# recordamos qué lado inició la cinematográfica; NO disparamos rollback.
+	# El único target de esta build es el cruce time_scale 0.18->0.42.
+	if versus_local_activo and not replay_modo_activo:
+		var lado_abs := "J1" if personaje == kai else "J2"
+		if not rollback_catchup_activo:
+			h1057_event_lado = lado_abs
+			print("[91.00.00-H10.88] CORE III ABSOLUTE FINISHER ENTRY OBSERVADO — %s; KO/reveal/victory entry certificados; esperando ABSOLUTE VICTORY HOLD" % lado_abs)
 	_reaccion_escenario_poder(personaje, 1.8)
 	ronda_activa = false
-	var perdedor: Fighter = rival if personaje == kai else kai
 
 	congelando_ko = true
 	sacudir_camara(26.0, 0.5)
@@ -2382,33 +5032,125 @@ func _al_finalizacion_absoluta(personaje: Fighter) -> void:
 		_reproducir_sfx(SND_AETHEL_PODER_FINAL, -2.0, randf_range(0.97, 1.03))
 	Engine.time_scale = 0.18
 
-	# FASE 83: el rival NO reacciona mientras el póster está visible. El
-	# Fighter aplica el vuelo/derribo recién al terminar su arte cinematográfico.
-	await get_tree().create_timer(3.15, true, false, true).timeout
-	# Dejamos un instante para leer el vuelo final y luego fijamos el K.O.
+	# H10.60 — FASE 83 física/snapshotable. El viejo SceneTreeTimer(3.15,
+	# ignore_time_scale=true) no podía volver al pasado. El contador arranca
+	# después del callback actual y consume 1 physics tick REAL por frame.
+	core3_absolute_reveal_fsm_activo = true
+	core3_absolute_reveal_timer = CORE3_ABSOLUTE_REVEAL_DURACION
+	core3_absolute_reveal_lado = 1 if personaje == kai else 2
+
+func _h1060_actualizar_core3_absolute_reveal_fsm() -> void:
+	if not core3_absolute_reveal_fsm_activo:
+		return
+	var paso_real := 1.0 / float(maxi(1, Engine.physics_ticks_per_second))
+	core3_absolute_reveal_timer = maxf(0.0, core3_absolute_reveal_timer - paso_real)
+	if core3_absolute_reveal_timer > 0.000001:
+		return
+
+	core3_absolute_reveal_fsm_activo = false
+	core3_absolute_reveal_timer = 0.0
+	# Este cambio es la frontera H10.60. Debe ocurrir aunque estemos en catch-up.
 	Engine.time_scale = 0.42
-	await get_tree().create_timer(0.70, true, false, true).timeout
+
+	# H10.62 — el reveal certificado entrega directamente a la espera física
+	# de 0.70 s. Se arma también durante catch-up para que el K.O. pueda volver
+	# a ocurrir en el mismo tick histórico.
+	core3_absolute_ko_fsm_activo = true
+	core3_absolute_ko_timer = CORE3_ABSOLUTE_KO_DURACION
+	core3_absolute_ko_lado = core3_absolute_reveal_lado
+
+func _h1062_actualizar_core3_absolute_ko_fsm() -> void:
+	if not core3_absolute_ko_fsm_activo:
+		return
+	var paso_real := 1.0 / float(maxi(1, Engine.physics_ticks_per_second))
+	core3_absolute_ko_timer = maxf(0.0, core3_absolute_ko_timer - paso_real)
+	if core3_absolute_ko_timer > 0.000001:
+		return
+
+	core3_absolute_ko_fsm_activo = false
+	core3_absolute_ko_timer = 0.0
+	var lado := core3_absolute_ko_lado
+	var personaje: Fighter = kai if lado == 1 else rival
+	if not is_instance_valid(personaje):
+		return
+	var perdedor: Fighter = rival if personaje == kai else kai
+	if not is_instance_valid(perdedor):
+		return
+
+	# Esta es exactamente la frontera H10.62. Debe ejecutarse también durante
+	# catch-up: _derrotado() limpia hitstun/derribo, fija la pose y separación
+	# final y emite derrotado; Main ignora esa señal porque ronda_activa=false.
 	perdedor.vida = 0.0
 	perdedor._derrotado()
-	await get_tree().create_timer(0.65, true, false, true).timeout
 
+	# H10.65 — el K.O. certificado entrega directamente a una espera física
+	# snapshotable de 0.65 s. Se arma también durante catch-up.
+	core3_absolute_victory_fsm_activo = true
+	core3_absolute_victory_timer = CORE3_ABSOLUTE_VICTORY_DURACION
+	core3_absolute_victory_lado = lado
+
+func _h1065_actualizar_core3_absolute_victory_fsm() -> void:
+	if not core3_absolute_victory_fsm_activo:
+		return
+	var paso_real := 1.0 / float(maxi(1, Engine.physics_ticks_per_second))
+	core3_absolute_victory_timer = maxf(0.0, core3_absolute_victory_timer - paso_real)
+	if core3_absolute_victory_timer > 0.000001:
+		return
+
+	core3_absolute_victory_fsm_activo = false
+	core3_absolute_victory_timer = 0.0
+	var lado := core3_absolute_victory_lado
+	core3_absolute_victory_lado = 0
+	_h1065_entrar_victoria_absoluta(lado)
+
+func _h1065_entrar_victoria_absoluta(lado: int) -> void:
+	var personaje: Fighter = kai if lado == 1 else rival
+	if not is_instance_valid(personaje):
+		return
+	var perdedor: Fighter = rival if personaje == kai else kai
+	if not is_instance_valid(perdedor):
+		return
+
+	# H10.65 — núcleo determinista de ABSOLUTE VICTORY ENTRY. Esta parte DEBE
+	# ejecutarse también en catch-up porque forma parte del snapshot histórico.
 	Engine.time_scale = 1.0
 	congelando_ko = false
 
 	# FASE 85: después de leer la caída definitiva, el ganador tiene su beat
-	# de victoria. Si más adelante agregamos victoria.png por personaje,
-	# Fighter ya tiene el hook; por ahora usa Furia/parado como respaldo.
+	# de victoria. Fighter.mostrar_pose_victoria() fija además el estado físico
+	# que debe reaparecer exactamente en el subtick histórico de entrada.
 	personaje.mostrar_pose_victoria()
+	rondas_kai = 3 if personaje == kai else 0
+	rondas_rival = 3 if personaje == rival else 0
+	_actualizar_marcador()
+	core3_absolute_reveal_lado = 0
+	core3_absolute_ko_lado = 0
+	core3_absolute_ko_fsm_activo = false
+	core3_absolute_ko_timer = 0.0
+
+	# Cámara, audio, tweens, grabación y timer de salida son presentación LIVE.
+	# No se duplican durante catch-up; no pertenecen al estado rollback.
+	if rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+
 	_zoom_dramatico(personaje, 1.18, 0.22, 2.9, false)
 	_reaccion_escenario_poder(personaje, 0.72)
 	if perdedor.sprite:
 		var tw_perdedor := create_tween()
 		tw_perdedor.tween_property(perdedor.sprite, "modulate", Color(0.48, 0.48, 0.52, 1.0), 0.28)
 
-	rondas_kai = 3 if personaje == kai else 0
-	rondas_rival = 3 if personaje == rival else 0
-	_actualizar_marcador()
-	etiqueta_resultado.text = "¡%s GANA LA PARTIDA!" % personaje.nombre_luchador.to_upper()
+	# 91.00.00-H10.13 — conserva el fix de C: CORE III tiene su propio terminal de partida. En B el replay
+	# nunca llamaba a _evaluar_replay_final() por esta ruta y por eso un replay
+	# correcto podía imprimirse como "inputs agotados antes del final".
+	var replay_ok_core := true
+	if replay_modo_activo:
+		replay_ok_core = _evaluar_replay_final(personaje)
+	else:
+		_cerrar_grabacion_inputs(personaje, "core_iii")
+	if replay_modo_activo:
+		etiqueta_resultado.text = ("REPLAY OK — " if replay_ok_core else "REPLAY DESYNC — ") + personaje.nombre_luchador.to_upper()
+	else:
+		etiqueta_resultado.text = "¡%s GANA LA PARTIDA!" % personaje.nombre_luchador.to_upper()
 	audio_victoria.play()
 	var t := get_tree().create_timer(9.20)
 	t.timeout.connect(_finalizar_partida_flujo.bind(personaje))
@@ -2438,10 +5180,15 @@ func _procesar_fin_de_ronda(ganador: Fighter, _perdedor: Fighter) -> void:
 	_actualizar_marcador()
 
 	if rondas_kai >= RONDAS_PARA_GANAR or rondas_rival >= RONDAS_PARA_GANAR:
+		_cerrar_grabacion_inputs(ganador, "rondas")
 		# 90.10.15 — cualquier forma de ganar la partida termina en pose de
 		# victoria bloqueada, no solamente el Golpe Absoluto.
 		ganador.mostrar_pose_victoria()
-		etiqueta_resultado.text = "¡%s GANA LA PARTIDA!" % ganador.nombre_luchador.to_upper()
+		var replay_ok := _evaluar_replay_final(ganador)
+		if replay_modo_activo:
+			etiqueta_resultado.text = ("REPLAY OK — " if replay_ok else "REPLAY DESYNC — ") + ganador.nombre_luchador.to_upper()
+		else:
+			etiqueta_resultado.text = "¡%s GANA LA PARTIDA!" % ganador.nombre_luchador.to_upper()
 		# 90.10.50 — una victoria normal también cierra la música del escenario
 		# antes del sting de victoria, para evitar dos pistas simultáneas.
 		_detener_audio_escenario_final()
@@ -2450,8 +5197,14 @@ func _procesar_fin_de_ronda(ganador: Fighter, _perdedor: Fighter) -> void:
 		t.timeout.connect(_finalizar_partida_flujo.bind(ganador))
 	else:
 		etiqueta_resultado.text = "K.O. — %s gana la ronda" % ganador.nombre_luchador.to_upper()
-		var t := get_tree().create_timer(2.2)
-		t.timeout.connect(_siguiente_ronda)
+		_programar_siguiente_ronda_por_ticks()
+
+func _programar_siguiente_ronda_por_ticks() -> void:
+	# 91.00.00-H: este delay cambia estado de combate, por lo tanto no puede
+	# depender del reloj de render/idle.
+	await _esperar_segundos_fisica(2.2)
+	if is_inside_tree():
+		_siguiente_ronda()
 
 func _siguiente_ronda() -> void:
 	kai.position = POS_KAI
@@ -2459,9 +5212,18 @@ func _siguiente_ronda() -> void:
 	kai.reiniciar_para_ronda()
 	rival.reiniciar_para_ronda()
 	ronda_activa = true
+	if replay_modo_activo:
+		replay_ronda_actual += 1
+		_validar_marcador_ronda_replay()
+	else:
+		_marcar_nueva_ronda_input_recorder()
 	etiqueta_resultado.text = "¡Ronda!"
-	var t := get_tree().create_timer(0.9)
-	t.timeout.connect(func(): etiqueta_resultado.text = "")
+	_limpiar_etiqueta_ronda_por_ticks()
+
+func _limpiar_etiqueta_ronda_por_ticks() -> void:
+	await _esperar_segundos_fisica(0.9)
+	if is_inside_tree() and etiqueta_resultado:
+		etiqueta_resultado.text = ""
 
 func _finalizar_partida_flujo(ganador: Fighter) -> void:
 	var estado = get_node_or_null("/root/GameState")
@@ -2479,6 +5241,10 @@ func _reiniciar_partida() -> void:
 	kai.veces_fase_absoluta = 0
 	rival.veces_fase_absoluta = 0
 	_siguiente_ronda()
+	# En debug, una nueva partida arranca una grabación nueva después de resetear
+	# la ronda; así el primer marcador vuelve a ser ronda 1 y no ronda 2.
+	if versus_local_activo and not replay_modo_activo:
+		_iniciar_grabacion_inputs()
 
 func _actualizar_marcador() -> void:
 	etiqueta_marcador.text = "CORE RACE"
@@ -2633,7 +5399,9 @@ func _crear_ui() -> void:
 
 	var ayuda := Label.new()
 	var pads_ui := Input.get_connected_joypads()
-	if versus_local_activo:
+	if replay_modo_activo:
+		ayuda.text = "REPLAY 91.00.00-B   •   INPUTS GRABADOS   •   TECLADO/MANDO NO CONTROLAN LA PELEA"
+	elif versus_local_activo:
 		if pads_ui.size() >= 2:
 			ayuda.text = "VERSUS LOCAL   •   J1 MANDO 1   •   J2 MANDO 2"
 		elif pads_ui.size() == 1:
@@ -2703,9 +5471,5228 @@ func _aplicar_modo_versus_local_runtime(activar: bool) -> void:
 				etiqueta_resultado.text = ""
 		)
 
+func _rollback_verificar_subtick() -> void:
+	if online_rollback_catchup_modo:
+		_online_reescribir_snapshot_catchup_actual()
+		return
+	if rollback_catchup_indice < 0 or rollback_catchup_indice >= rollback_catchup_ventana.size():
+		return
+	var esperado: Dictionary = rollback_catchup_ventana[rollback_catchup_indice].get("snapshot", {})
+	if esperado.is_empty():
+		return
+	var actual: Dictionary = RollbackSnapshotScript.capturar_partida(self, kai, rival)
+	var diferencias: Array[String] = RollbackSnapshotScript.comparar_snapshots(esperado, actual)
+	if diferencias.is_empty() or rollback_subtrace_primer_error >= 0:
+		return
+
+	rollback_subtrace_primer_error = rollback_catchup_indice
+	rollback_subtrace_diferencias = diferencias.duplicate()
+
+	var idx_actual: int = rollback_catchup_indice
+	var idx_causal: int = maxi(0, idx_actual - 1)
+	var entrada_actual: Dictionary = rollback_catchup_ventana[idx_actual]
+	var entrada_causal: Dictionary = rollback_catchup_ventana[idx_causal]
+	var inicio_causal: Dictionary = entrada_causal.get("snapshot", {})
+	var tick_actual: int = int(entrada_actual.get("tick", -1))
+	var tick_causal: int = int(entrada_causal.get("tick", -1))
+
+	var e1: Dictionary = esperado.get("j1", {})
+	var e2: Dictionary = esperado.get("j2", {})
+	var s1: Dictionary = inicio_causal.get("j1", {})
+	var s2: Dictionary = inicio_causal.get("j2", {})
+
+	var input_causal_j1: Dictionary = entrada_causal.get("j1", {})
+	var input_causal_j2: Dictionary = entrada_causal.get("j2", {})
+
+	var pos_ini_j1: Vector2 = s1.get("position", Vector2.ZERO)
+	var pos_ini_j2: Vector2 = s2.get("position", Vector2.ZERO)
+	var pos_exp_j1: Vector2 = e1.get("position", Vector2.ZERO)
+	var pos_exp_j2: Vector2 = e2.get("position", Vector2.ZERO)
+	var motion_exp_j1: Vector2 = e1.get("__last_motion", Vector2.ZERO)
+	var motion_exp_j2: Vector2 = e2.get("__last_motion", Vector2.ZERO)
+	var motion_act_j1: Vector2 = kai.get_last_motion()
+	var motion_act_j2: Vector2 = rival.get_last_motion()
+
+	# Movimiento externo = delta mundial menos el desplazamiento propio informado
+	# por CharacterBody2D. Si no es cero, alguien movió ese Fighter desde afuera
+	# (pushbox, contacto post golpe, anchor de dash o límite de arena).
+	var externo_exp_j1 := pos_exp_j1.x - pos_ini_j1.x - motion_exp_j1.x
+	var externo_exp_j2 := pos_exp_j2.x - pos_ini_j2.x - motion_exp_j2.x
+	var externo_act_j1 := kai.position.x - pos_ini_j1.x - motion_act_j1.x
+	var externo_act_j2 := rival.position.x - pos_ini_j2.x - motion_act_j2.x
+
+	var dist_inicio := absf(pos_ini_j2.x - pos_ini_j1.x)
+	var dist_esperada := absf(pos_exp_j2.x - pos_exp_j1.x)
+	var dist_actual := absf(rival.position.x - kai.position.x)
+
+	print("[91.00.00-H10.88] ROLLBACK CAUSAL DESYNC — estado tick %d; causado por tick %d (subtick %d/%d)" % [
+		tick_actual, tick_causal, idx_actual, rollback_catchup_ventana.size()
+	])
+	for i in range(mini(diferencias.size(), 12)):
+		print("  • " + diferencias[i])
+
+	print("  • INPUT CAUSAL J1=%s" % str(input_causal_j1))
+	print("  • INPUT CAUSAL J2=%s" % str(input_causal_j2))
+	print("  • ATAQUE J1 esperado fase=%s timer=%.5f tipo=%s conecto=%s hitstop=%.5f hitstun=%.5f vida=%.3f contacto=%.5f" % [
+		str(e1.get("fase_ataque", 0)), float(e1.get("timer_fase_ataque", 0.0)),
+		str(e1.get("_atk_tipo", "")), str(e1.get("_atk_ya_conecto", false)),
+		float(e1.get("hitstop_timer", 0.0)), float(e1.get("hitstun_timer", 0.0)),
+		float(e1.get("vida", 0.0)), float(e1.get("contacto_post_golpe_timer", 0.0))
+	])
+	print("  • ATAQUE J1 actual   fase=%s timer=%.5f tipo=%s conecto=%s hitstop=%.5f hitstun=%.5f vida=%.3f contacto=%.5f" % [
+		str(kai.fase_ataque), float(kai.timer_fase_ataque), str(kai._atk_tipo), str(kai._atk_ya_conecto),
+		float(kai.hitstop_timer), float(kai.hitstun_timer), float(kai.vida), float(kai.contacto_post_golpe_timer)
+	])
+	print("  • ATAQUE J2 esperado fase=%s timer=%.5f tipo=%s conecto=%s hitstop=%.5f hitstun=%.5f vida=%.3f contacto=%.5f" % [
+		str(e2.get("fase_ataque", 0)), float(e2.get("timer_fase_ataque", 0.0)),
+		str(e2.get("_atk_tipo", "")), str(e2.get("_atk_ya_conecto", false)),
+		float(e2.get("hitstop_timer", 0.0)), float(e2.get("hitstun_timer", 0.0)),
+		float(e2.get("vida", 0.0)), float(e2.get("contacto_post_golpe_timer", 0.0))
+	])
+	print("  • ATAQUE J2 actual   fase=%s timer=%.5f tipo=%s conecto=%s hitstop=%.5f hitstun=%.5f vida=%.3f contacto=%.5f" % [
+		str(rival.fase_ataque), float(rival.timer_fase_ataque), str(rival._atk_tipo), str(rival._atk_ya_conecto),
+		float(rival.hitstop_timer), float(rival.hitstun_timer), float(rival.vida), float(rival.contacto_post_golpe_timer)
+	])
+	print("  • DISTANCIA inicio=%.4f esperada=%.4f actual=%.4f" % [dist_inicio, dist_esperada, dist_actual])
+	print("  • DESPLAZAMIENTO EXTERNO J1 esperado=%.4f actual=%.4f | J2 esperado=%.4f actual=%.4f" % [
+		externo_exp_j1, externo_act_j1, externo_exp_j2, externo_act_j2
+	])
+
+	print("  • J1 INICIO pos=%s vel=%s carrera=%s dir=%s timer=%s contacto=%.4f/%.2f block=%s hitstun=%.4f hitstop=%.6f fase=%s atkTimer=%.6f idxP=%s idxK=%s prevP=%s prevK=%s buffer=%s/%.6f extDisp=%s" % [
+		str(pos_ini_j1), str(s1.get("velocity", Vector2.ZERO)),
+		str(s1.get("carrera_activa", false)), str(s1.get("carrera_direccion", 0.0)),
+		str(s1.get("carrera_inicio_timer", 0.0)),
+		float(s1.get("contacto_post_golpe_timer", 0.0)), float(s1.get("contacto_post_golpe_distancia", 0.0)),
+		str(s1.get("bloqueando", false)), float(s1.get("hitstun_timer", 0.0)),
+		float(s1.get("hitstop_timer", 0.0)), str(s1.get("fase_ataque", 0)),
+		float(s1.get("timer_fase_ataque", 0.0)), str(s1.get("indice_punetazo", -1)),
+		str(s1.get("indice_patada", -1)), str(s1.get("puno_estaba_presionado", false)),
+		str(s1.get("patada_estaba_presionada", false)), str(s1.get("ataque_buffer_tipo", "")),
+		float(s1.get("ataque_buffer_timer", 0.0)), str(s1.get("input_externo_disponible", false))
+	])
+	print("  • J2 INICIO pos=%s vel=%s carrera=%s dir=%s timer=%s contacto=%.4f/%.2f block=%s hitstun=%.4f fase=%s" % [
+		str(pos_ini_j2), str(s2.get("velocity", Vector2.ZERO)),
+		str(s2.get("carrera_activa", false)), str(s2.get("carrera_direccion", 0.0)),
+		str(s2.get("carrera_inicio_timer", 0.0)),
+		float(s2.get("contacto_post_golpe_timer", 0.0)), float(s2.get("contacto_post_golpe_distancia", 0.0)),
+		str(s2.get("bloqueando", false)), float(s2.get("hitstun_timer", 0.0)), str(s2.get("fase_ataque", 0))
+	])
+
+	print("  • J1 FIN esperado pos=%s vel=%s last_motion=%s | actual pos=%s vel=%s last_motion=%s" % [
+		str(pos_exp_j1), str(e1.get("velocity", Vector2.ZERO)), str(motion_exp_j1),
+		str(kai.position), str(kai.velocity), str(motion_act_j1)
+	])
+	print("  • J2 FIN esperado pos=%s vel=%s last_motion=%s | actual pos=%s vel=%s last_motion=%s" % [
+		str(pos_exp_j2), str(e2.get("velocity", Vector2.ZERO)), str(motion_exp_j2),
+		str(rival.position), str(rival.velocity), str(motion_act_j2)
+	])
+
+	print("  • VISUAL INICIO J1 tex=%s scale=%s | J2 tex=%s scale=%s" % [
+		str(s1.get("__sprite_texture_path", "")), str(s1.get("__sprite_scale", Vector2.ONE)),
+		str(s2.get("__sprite_texture_path", "")), str(s2.get("__sprite_scale", Vector2.ONE))
+	])
+	print("  • EDGES INICIO J1 prevL=%s prevR=%s dblL=%s dblR=%s | J2 prevL=%s prevR=%s dblL=%s dblR=%s" % [
+		str(s1.get("tecla_izq_previa", false)), str(s1.get("tecla_der_previa", false)),
+		str(s1.get("doble_pulso_izq_timer", 0.0)), str(s1.get("doble_pulso_der_timer", 0.0)),
+		str(s2.get("tecla_izq_previa", false)), str(s2.get("tecla_der_previa", false)),
+		str(s2.get("doble_pulso_izq_timer", 0.0)), str(s2.get("doble_pulso_der_timer", 0.0))
+	])
+
+func _rollback_registrar_inicio_tick() -> void:
+	if rollback_ring == null:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	var estado_tick: Dictionary = RollbackSnapshotScript.capturar_partida(self, kai, rival)
+	# 91.00.00-H10.13 — el ring ahora acepta el ciclo completo de un ataque NORMAL
+	# (startup/activo/recovery + hitstop/hitstun). CORE/KO/cinemáticas siguen fuera.
+	rollback_ring.agregar_inicio_tick(rollback_tick_logico, estado_tick, _snapshot_estado_rollback_h_seguro())
+	rollback_tick_logico += 1
+
+func _h911_buscar_ventana_core2_sequence_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	if not h911_auto_test_armado:
+		return {}
+	if h911_auto_test_tick_evento < 0:
+		return {}
+	if h911_auto_test_tick_evento <= rollback_core2_sequence_end_tick_ya_probado:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == h911_auto_test_tick_evento:
+			idx_evento = i
+			break
+	if idx_evento < 0:
+		return {}
+
+	# Un tick antes del cierre para atravesar WAIT_FINAL -> INACTIVO.
+	var inicio_idx := maxi(0, idx_evento - 1)
+	if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+		inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+	if inicio_idx < 0:
+		return {}
+
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"tick_evento": h911_auto_test_tick_evento,
+		"lado": h911_auto_test_lado,
+	}
+
+
+func _h911_observar_core2_sequence_end_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core2_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core2_secuencia_etapa"))
+	var sub_j1 := int(kai.get("core2_rematador_subfase"))
+	var sub_j2 := int(rival.get("core2_rematador_subfase"))
+	var sec_j1 := bool(kai.en_secuencia_especial)
+	var sec_j2 := bool(rival.en_secuencia_especial)
+
+	if not h911_observador_inicializado:
+		h911_etapa_prev_j1 = etapa_j1
+		h911_etapa_prev_j2 = etapa_j2
+		h911_sub_prev_j1 = sub_j1
+		h911_sub_prev_j2 = sub_j2
+		h911_sec_prev_j1 = sec_j1
+		h911_sec_prev_j2 = sec_j2
+		h911_observador_inicializado = true
+		return
+
+	var lado := ""
+
+	if h911_etapa_prev_j1 == 4 \
+	and h911_sub_prev_j1 == 1 \
+	and h911_sec_prev_j1 \
+	and etapa_j1 == 0 \
+	and not sec_j1 \
+	and int(kai.veces_fase_absoluta) == 2:
+		lado = "J1"
+	elif h911_etapa_prev_j2 == 4 \
+	and h911_sub_prev_j2 == 1 \
+	and h911_sec_prev_j2 \
+	and etapa_j2 == 0 \
+	and not sec_j2 \
+	and int(rival.veces_fase_absoluta) == 2:
+		lado = "J2"
+
+	h911_etapa_prev_j1 = etapa_j1
+	h911_etapa_prev_j2 = etapa_j2
+	h911_sub_prev_j1 = sub_j1
+	h911_sub_prev_j2 = sub_j2
+	h911_sec_prev_j1 = sec_j1
+	h911_sec_prev_j2 = sec_j2
+
+	if lado.is_empty() or h911_auto_test_armado:
+		return
+
+	h911_auto_test_armado = true
+	h911_auto_test_tick_evento = rollback_tick_logico - 1
+	h911_auto_test_lado = lado
+	rollback_test_solicitado = true
+
+	print("[91.00.00-H10.88] CORE II SEQUENCE END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h911_auto_test_tick_evento,
+		h911_auto_test_lado
+	])
+
+
+func _h99_buscar_ventana_core2_rematador_poster_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	if rollback_core2_rematador_poster_serial <= rollback_core2_rematador_poster_serial_ya_probado:
+		return {}
+	if rollback_core2_rematador_poster_tick_hint < 0:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == rollback_core2_rematador_poster_tick_hint:
+			idx_evento = i
+			break
+	if idx_evento < 0:
+		return {}
+
+	# Un tick antes del snapshot post-póster: se restaura dentro de stage 4
+	# antes de que exista una continuación reconstruible del await.
+	var inicio_idx := maxi(0, idx_evento - 1)
+	if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+		inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+	if inicio_idx < 0:
+		return {}
+
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"serial": rollback_core2_rematador_poster_serial,
+		"tick_evento": rollback_core2_rematador_poster_tick_hint,
+		"lado": rollback_core2_rematador_poster_lado,
+	}
+
+
+func _h99_armar_rematador_poster_end_post_snapshot() -> void:
+	if rollback_catchup_activo or replay_modo_activo or not versus_local_activo:
+		return
+	if rollback_core2_rematador_poster_serial <= rollback_core2_rematador_poster_serial_ya_probado:
+		return
+	if rollback_core2_rematador_poster_tick_hint < 0:
+		return
+	if h99_auto_test_armado:
+		return
+
+	# El snapshot que corresponde al tick_hint debe existir ya en el ring.
+	var ultimo_tick_capturado := rollback_tick_logico - 1
+	if ultimo_tick_capturado < rollback_core2_rematador_poster_tick_hint:
+		return
+
+	h99_auto_test_armado = true
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE II REMATADOR POSTER END AUTO — snapshot capturado; rollback próximo physics tick")
+
+
+func _h98_buscar_ventana_core2_rematador_entry() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	if not h98_auto_test_armado:
+		return {}
+	if h98_auto_test_tick_evento < 0:
+		return {}
+	if h98_auto_test_tick_evento <= rollback_core2_rematador_entry_tick_ya_probado:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == h98_auto_test_tick_evento:
+			idx_evento = i
+			break
+	if idx_evento < 0:
+		return {}
+
+	var inicio_idx := maxi(0, idx_evento - 1)
+	if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+		inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+	if inicio_idx < 0:
+		return {}
+
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"tick_evento": h98_auto_test_tick_evento,
+		"lado": h98_auto_test_lado,
+	}
+
+
+func _h98_observar_rematador_entry_core2_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core2_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core2_secuencia_etapa"))
+
+	if not h98_observador_inicializado:
+		h98_etapa_prev_j1 = etapa_j1
+		h98_etapa_prev_j2 = etapa_j2
+		h98_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h98_etapa_prev_j1 == 3 and etapa_j1 == 4 \
+	and int(kai.veces_fase_absoluta) == 2 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h98_etapa_prev_j2 == 3 and etapa_j2 == 4 \
+	and int(rival.veces_fase_absoluta) == 2 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h98_etapa_prev_j1 = etapa_j1
+	h98_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h98_auto_test_armado:
+		return
+
+	h98_auto_test_armado = true
+	h98_auto_test_tick_evento = rollback_tick_logico - 1
+	h98_auto_test_lado = lado
+	rollback_test_solicitado = true
+
+	print("[91.00.00-H10.88] CORE II REMATADOR ENTRY AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h98_auto_test_tick_evento,
+		h98_auto_test_lado
+	])
+
+
+func _h96_buscar_ventana_core2_first_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	if not h96_auto_test_armado:
+		return {}
+	if h96_auto_test_tick_evento < 0:
+		return {}
+	if h96_auto_test_tick_evento <= rollback_core2_first_beat_end_tick_ya_probado:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == h96_auto_test_tick_evento:
+			idx_evento = i
+			break
+	if idx_evento < 0:
+		return {}
+
+	# Restaurar el snapshot inmediatamente anterior al fin del primer ataque.
+	var inicio_idx := maxi(0, idx_evento - 1)
+	if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+		inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+	if inicio_idx < 0:
+		return {}
+
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"tick_evento": h96_auto_test_tick_evento,
+		"lado": h96_auto_test_lado,
+	}
+
+
+func _h96_observar_first_beat_end_core2_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core2_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core2_secuencia_etapa"))
+	var fase_j1 := int(kai.fase_ataque)
+	var fase_j2 := int(rival.fase_ataque)
+
+	if not h96_observador_inicializado:
+		h96_etapa_prev_j1 = etapa_j1
+		h96_etapa_prev_j2 = etapa_j2
+		h96_fase_prev_j1 = fase_j1
+		h96_fase_prev_j2 = fase_j2
+		h96_observador_inicializado = true
+		return
+
+	# Stage 2 -> 3 significa que acaba de comenzar la ráfaga.
+	if h96_etapa_prev_j1 == 2 and etapa_j1 == 3 \
+	and int(kai.veces_fase_absoluta) == 2 \
+	and bool(kai.en_secuencia_especial):
+		h96_esperando_first_beat_j1 = true
+
+	if h96_etapa_prev_j2 == 2 and etapa_j2 == 3 \
+	and int(rival.veces_fase_absoluta) == 2 \
+	and bool(rival.en_secuencia_especial):
+		h96_esperando_first_beat_j2 = true
+
+	var lado := ""
+
+	# Primer ciclo de ataque terminado: fase no-cero -> NINGUNA.
+	if h96_esperando_first_beat_j1 \
+	and h96_fase_prev_j1 != 0 and fase_j1 == 0 \
+	and etapa_j1 == 3 \
+	and int(kai.veces_fase_absoluta) == 2 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+		h96_esperando_first_beat_j1 = false
+	elif h96_esperando_first_beat_j2 \
+	and h96_fase_prev_j2 != 0 and fase_j2 == 0 \
+	and etapa_j2 == 3 \
+	and int(rival.veces_fase_absoluta) == 2 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+		h96_esperando_first_beat_j2 = false
+
+	h96_etapa_prev_j1 = etapa_j1
+	h96_etapa_prev_j2 = etapa_j2
+	h96_fase_prev_j1 = fase_j1
+	h96_fase_prev_j2 = fase_j2
+
+	if lado.is_empty() or h96_auto_test_armado:
+		return
+
+	h96_auto_test_armado = true
+	h96_auto_test_tick_evento = rollback_tick_logico - 1
+	h96_auto_test_lado = lado
+	rollback_test_solicitado = true
+
+	print("[91.00.00-H10.88] CORE II FIRST BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h96_auto_test_tick_evento,
+		h96_auto_test_lado
+	])
+
+
+func _h94_buscar_ventana_core2_combo_entry() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core2_combo_entry_tick_ya_probado:
+			continue
+
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+
+			if int(fprev.get("veces_fase_absoluta", 0)) != 2:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) != 2:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+
+			var etapa_prev := int(fprev.get("core2_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core2_secuencia_etapa", 0))
+			if etapa_prev == 2 and etapa_act == 3:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+
+		if lado.is_empty():
+			continue
+
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+
+	return {}
+
+
+func _h94_observar_combo_entry_core2_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core2_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core2_secuencia_etapa"))
+
+	if not h94_observador_inicializado:
+		h94_core2_etapa_prev_j1 = etapa_j1
+		h94_core2_etapa_prev_j2 = etapa_j2
+		h94_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h94_core2_etapa_prev_j1 == 2 and etapa_j1 == 3 \
+	and int(kai.veces_fase_absoluta) == 2 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h94_core2_etapa_prev_j2 == 2 and etapa_j2 == 3 \
+	and int(rival.veces_fase_absoluta) == 2 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h94_core2_etapa_prev_j1 = etapa_j1
+	h94_core2_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h94_auto_test_armado:
+		return
+
+	h94_auto_test_armado = true
+	h94_auto_test_tick_evento = rollback_tick_logico - 1
+	h94_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE II COMBO ENTRY AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h94_auto_test_tick_evento,
+		h94_auto_test_lado
+	])
+
+
+func _h92_observar_fin_recarga_core2_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var rec_j1 := bool(kai.en_pose_recarga)
+	var rec_j2 := bool(rival.en_pose_recarga)
+
+	if not h92_recarga_observador_inicializado:
+		h92_recarga_prev_j1 = rec_j1
+		h92_recarga_prev_j2 = rec_j2
+		h92_recarga_observador_inicializado = true
+		return
+
+	var evento_lado := ""
+
+	# En este punto _rollback_registrar_inicio_tick() ya agregó el snapshot
+	# actual y aumentó rollback_tick_logico. Por eso el tick recién capturado
+	# es rollback_tick_logico - 1.
+	if h92_recarga_prev_j1 and not rec_j1 \
+	and int(kai.veces_fase_absoluta) == 2 \
+	and bool(kai.en_secuencia_especial):
+		evento_lado = "J1"
+	elif h92_recarga_prev_j2 and not rec_j2 \
+	and int(rival.veces_fase_absoluta) == 2 \
+	and bool(rival.en_secuencia_especial):
+		evento_lado = "J2"
+
+	h92_recarga_prev_j1 = rec_j1
+	h92_recarga_prev_j2 = rec_j2
+
+	if evento_lado.is_empty():
+		return
+	if h92_auto_test_armado:
+		return
+
+	h92_auto_test_armado = true
+	h92_auto_test_tick_evento = rollback_tick_logico - 1
+	h92_auto_test_lado = evento_lado
+	rollback_test_solicitado = true
+
+	print("[91.00.00-H10.88] CORE II RECARGA END AUTO MARCADO — tick=%d %s — rollback se ejecutará en próximo physics tick" % [
+		h92_auto_test_tick_evento,
+		h92_auto_test_lado
+	])
+
+
+
+func _h109_observar_fin_recarga_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var rec_j1 := bool(kai.en_pose_recarga)
+	var rec_j2 := bool(rival.en_pose_recarga)
+
+	if not h109_recarga_observador_inicializado:
+		h109_recarga_prev_j1 = rec_j1
+		h109_recarga_prev_j2 = rec_j2
+		h109_recarga_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h109_recarga_prev_j1 and not rec_j1 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h109_recarga_prev_j2 and not rec_j2 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h109_recarga_prev_j1 = rec_j1
+	h109_recarga_prev_j2 = rec_j2
+
+	if lado.is_empty() or h109_auto_test_armado:
+		return
+
+	h109_auto_test_armado = true
+	h109_auto_test_tick_evento = rollback_tick_logico - 1
+	h109_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III RECARGA END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h109_auto_test_tick_evento,
+		h109_auto_test_lado
+	])
+
+
+func _h109_buscar_ventana_core3_recarga_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_recarga_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		var clave := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			var nivel_prev := int(fprev.get("veces_fase_absoluta", 0))
+			var nivel_act := int(fact.get("veces_fase_absoluta", 0))
+			var sec_prev := bool(fprev.get("en_secuencia_especial", false))
+			var sec_act := bool(fact.get("en_secuencia_especial", false))
+			var rec_prev := bool(fprev.get("en_pose_recarga", false))
+			var rec_act := bool(fact.get("en_pose_recarga", false))
+			if nivel_prev >= 3 and nivel_act >= 3 \
+			and sec_prev and sec_act \
+			and rec_prev and not rec_act:
+				clave = candidato
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Ocho ticks terminando exactamente en el primer snapshot post-recarga.
+		# Así el restore comienza dentro de la espera 1.55 y debe reconstruir el
+		# cruce sin ayuda de un timer LIVE ya consumido.
+		var inicio_idx := i - (ROLLBACK_TEST_TICKS - 1)
+		if inicio_idx < 0:
+			continue
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, i + 1):
+			ventana.append(historial[k])
+		if ventana.size() != ROLLBACK_TEST_TICKS:
+			continue
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+			"clave": clave,
+		}
+	return {}
+
+func _h1012_observar_approach_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1012_approach_observador_inicializado:
+		h1012_core3_etapa_prev_j1 = etapa_j1
+		h1012_core3_etapa_prev_j2 = etapa_j2
+		h1012_approach_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1012_core3_etapa_prev_j1 == 2 and etapa_j1 == 3 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1012_core3_etapa_prev_j2 == 2 and etapa_j2 == 3 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1012_core3_etapa_prev_j1 = etapa_j1
+	h1012_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1012_auto_test_armado:
+		return
+
+	h1012_auto_test_armado = true
+	h1012_auto_test_tick_evento = rollback_tick_logico - 1
+	h1012_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III APPROACH END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1012_auto_test_tick_evento,
+		h1012_auto_test_lado
+	])
+
+
+func _h1012_buscar_ventana_core3_approach_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_approach_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 2 and etapa_act == 3:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Igual que CORE II COMBO ENTRY: un tick antes del cruce y suficiente
+		# historia posterior para observar el primer beat de la ráfaga.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h1014_observar_first_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1014_first_beat_observador_inicializado:
+		h1014_core3_etapa_prev_j1 = etapa_j1
+		h1014_core3_etapa_prev_j2 = etapa_j2
+		h1014_first_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1014_core3_etapa_prev_j1 == 3 and etapa_j1 == 4 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1014_core3_etapa_prev_j2 == 3 and etapa_j2 == 4 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1014_core3_etapa_prev_j1 = etapa_j1
+	h1014_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1014_auto_test_armado:
+		return
+
+	h1014_auto_test_armado = true
+	h1014_auto_test_tick_evento = rollback_tick_logico - 1
+	h1014_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III FIRST BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1014_auto_test_tick_evento,
+		h1014_auto_test_lado
+	])
+
+
+func _h1014_buscar_ventana_core3_first_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_first_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 3 and etapa_act == 4:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Un tick antes del cruce + seis ticks posteriores: suficiente para
+		# observar el arranque del segundo beat histórico sin ampliar alcance.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h1016_observar_second_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1016_second_beat_observador_inicializado:
+		h1016_core3_etapa_prev_j1 = etapa_j1
+		h1016_core3_etapa_prev_j2 = etapa_j2
+		h1016_second_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1016_core3_etapa_prev_j1 == 4 and etapa_j1 == 5 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1016_core3_etapa_prev_j2 == 4 and etapa_j2 == 5 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1016_core3_etapa_prev_j1 = etapa_j1
+	h1016_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1016_auto_test_armado:
+		return
+
+	h1016_auto_test_armado = true
+	h1016_auto_test_tick_evento = rollback_tick_logico - 1
+	h1016_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III SECOND BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1016_auto_test_tick_evento,
+		h1016_auto_test_lado
+	])
+
+
+func _h1016_buscar_ventana_core3_second_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_second_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 4 and etapa_act == 5:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Un tick antes del cruce y seis posteriores: el objetivo es observar
+		# únicamente la entrada al tercer beat físico snapshotable.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h1019_observar_third_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1019_third_beat_observador_inicializado:
+		h1019_core3_etapa_prev_j1 = etapa_j1
+		h1019_core3_etapa_prev_j2 = etapa_j2
+		h1019_third_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1019_core3_etapa_prev_j1 == 5 and etapa_j1 == 6 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1019_core3_etapa_prev_j2 == 5 and etapa_j2 == 6 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1019_core3_etapa_prev_j1 = etapa_j1
+	h1019_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1019_auto_test_armado:
+		return
+
+	h1019_auto_test_armado = true
+	h1019_auto_test_tick_evento = rollback_tick_logico - 1
+	h1019_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III THIRD BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1019_auto_test_tick_evento,
+		h1019_auto_test_lado
+	])
+
+
+func _h1019_buscar_ventana_core3_third_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_third_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 5 and etapa_act == 6:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Un tick antes del cruce y seis posteriores. El cuarto beat permanece
+		# físico/snapshotable en H10.20: el cuarto beat ya no nace como Tween/coroutine.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h1021_observar_fourth_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1021_fourth_beat_observador_inicializado:
+		h1021_core3_etapa_prev_j1 = etapa_j1
+		h1021_core3_etapa_prev_j2 = etapa_j2
+		h1021_fourth_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1021_core3_etapa_prev_j1 == 6 and etapa_j1 == 7 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1021_core3_etapa_prev_j2 == 6 and etapa_j2 == 7 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1021_core3_etapa_prev_j1 = etapa_j1
+	h1021_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1021_auto_test_armado:
+		return
+
+	h1021_auto_test_armado = true
+	h1021_auto_test_tick_evento = rollback_tick_logico - 1
+	h1021_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III FOURTH BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1021_auto_test_tick_evento,
+		h1021_auto_test_lado
+	])
+
+
+func _h1021_buscar_ventana_core3_fourth_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_fourth_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 6 and etapa_act == 7:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Un tick antes del cruce y seis posteriores. Stage 7 sigue siendo histórico
+		# en H10.21: este test diagnostica exactamente la entrega al quinto beat async.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h1023_observar_fifth_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1023_fifth_beat_observador_inicializado:
+		h1023_core3_etapa_prev_j1 = etapa_j1
+		h1023_core3_etapa_prev_j2 = etapa_j2
+		h1023_fifth_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1023_core3_etapa_prev_j1 == 7 and etapa_j1 == 8 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1023_core3_etapa_prev_j2 == 7 and etapa_j2 == 8 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1023_core3_etapa_prev_j1 = etapa_j1
+	h1023_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1023_auto_test_armado:
+		return
+
+	h1023_auto_test_armado = true
+	h1023_auto_test_tick_evento = rollback_tick_logico - 1
+	h1023_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III FIFTH BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1023_auto_test_tick_evento,
+		h1023_auto_test_lado
+	])
+
+
+func _h1023_buscar_ventana_core3_fifth_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_fifth_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 7 and etapa_act == 8:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Un tick antes del cruce y seis posteriores. Stage 8 es físico desde H10.24;
+		# esta frontera queda congelada y sirve como regresión.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h1025_observar_sixth_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1025_sixth_beat_observador_inicializado:
+		h1025_core3_etapa_prev_j1 = etapa_j1
+		h1025_core3_etapa_prev_j2 = etapa_j2
+		h1025_sixth_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1025_core3_etapa_prev_j1 == 8 and etapa_j1 == 9 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1025_core3_etapa_prev_j2 == 8 and etapa_j2 == 9 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1025_core3_etapa_prev_j1 = etapa_j1
+	h1025_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1025_auto_test_armado:
+		return
+
+	h1025_auto_test_armado = true
+	h1025_auto_test_tick_evento = rollback_tick_logico - 1
+	h1025_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III SIXTH BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1025_auto_test_tick_evento,
+		h1025_auto_test_lado
+	])
+
+
+func _h1025_buscar_ventana_core3_sixth_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_sixth_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 8 and etapa_act == 9:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Un tick antes del cruce y seis posteriores. En H10.26 stage 9 ya es el
+		# séptimo beat físico: revalidamos exactamente la antigua frontera async.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h1027_observar_seventh_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1027_seventh_beat_observador_inicializado:
+		h1027_core3_etapa_prev_j1 = etapa_j1
+		h1027_core3_etapa_prev_j2 = etapa_j2
+		h1027_seventh_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1027_core3_etapa_prev_j1 == 9 and etapa_j1 == 10 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1027_core3_etapa_prev_j2 == 9 and etapa_j2 == 10 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1027_core3_etapa_prev_j1 = etapa_j1
+	h1027_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1027_auto_test_armado:
+		return
+
+	h1027_auto_test_armado = true
+	h1027_auto_test_tick_evento = rollback_tick_logico - 1
+	h1027_auto_test_lado = lado
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III SEVENTH BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1027_auto_test_tick_evento,
+		h1027_auto_test_lado
+	])
+
+
+func _h1027_buscar_ventana_core3_seventh_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_seventh_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 9 and etapa_act == 10:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Un tick antes del cruce y suficientes posteriores para completar 8 ticks.
+		# Stage 10 es ahora el octavo beat físico snapshotable.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+
+func _h1057_observar_absolute_finisher_stage_trace_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+	var escala_actual := float(Engine.time_scale)
+	if not h1053_nineteenth_attack_observador_inicializado:
+		h1053_core3_etapa_prev_j1 = etapa_j1
+		h1053_core3_etapa_prev_j2 = etapa_j2
+		h1053_nineteenth_attack_observador_inicializado = true
+	if etapa_j1 != h1053_core3_etapa_prev_j1 and (etapa_j1 >= 17 or h1053_core3_etapa_prev_j1 >= 17):
+		print("[91.00.00-H10.88] CORE III ABS TARGET TRACE — J1 stage %d->%d abs=%d sec=%s ronda=%s scale=%.4f" % [
+			h1053_core3_etapa_prev_j1, etapa_j1, int(kai.veces_fase_absoluta), str(bool(kai.en_secuencia_especial)), str(ronda_activa), escala_actual
+		])
+	if etapa_j2 != h1053_core3_etapa_prev_j2 and (etapa_j2 >= 17 or h1053_core3_etapa_prev_j2 >= 17):
+		print("[91.00.00-H10.88] CORE III ABS TARGET TRACE — J2 stage %d->%d abs=%d sec=%s ronda=%s scale=%.4f" % [
+			h1053_core3_etapa_prev_j2, etapa_j2, int(rival.veces_fase_absoluta), str(bool(rival.en_secuencia_especial)), str(ronda_activa), escala_actual
+		])
+	h1053_core3_etapa_prev_j1 = etapa_j1
+	h1053_core3_etapa_prev_j2 = etapa_j2
+
+	var victoria_j1 := bool(kai.en_pose_victoria)
+	var victoria_j2 := bool(rival.en_pose_victoria)
+	if not h1063_victoria_observador_inicializado:
+		h1063_victoria_prev_j1 = victoria_j1
+		h1063_victoria_prev_j2 = victoria_j2
+		h1063_victoria_observador_inicializado = true
+		return
+
+	# H10.68 — H10.66 ya certificó la transición de entrada. Ahora esa frontera
+	# sólo ARMA el observador de HOLD; no rebobinamos todavía. Necesitamos nueve
+	# snapshots consecutivos estables (8 ticks + presente histórico posterior).
+	if false and not h1067_victory_hold_auto_test_armado and h1057_event_lado != "" and not ronda_activa:
+		var victoria_cruzo := false
+		var perdedor_ko := false
+		if h1057_event_lado == "J1":
+			victoria_cruzo = (not h1063_victoria_prev_j1) and victoria_j1
+			perdedor_ko = bool(rival.esta_derrotado)
+		else:
+			victoria_cruzo = (not h1063_victoria_prev_j2) and victoria_j2
+			perdedor_ko = bool(kai.esta_derrotado)
+		if victoria_cruzo and perdedor_ko and absf(escala_actual - 1.0) <= 0.001:
+			h1067_victory_hold_auto_test_armado = true
+			h1067_victory_hold_lado = h1057_event_lado
+			h1067_victory_hold_snapshots_estables = 1
+			h1067_victory_hold_localizacion_espera_ticks = 0
+			print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY HOLD ARMADO — %s; snapshot estable 1/%d; esperando ventana completa" % [
+				h1067_victory_hold_lado, H1067_VICTORY_HOLD_SNAPSHOTS_NECESARIOS
+			])
+	elif h1067_victory_hold_auto_test_armado and not rollback_test_solicitado:
+		var ganador_hold: Fighter = kai if h1067_victory_hold_lado == "J1" else rival
+		var perdedor_hold: Fighter = rival if h1067_victory_hold_lado == "J1" else kai
+		var hold_estable := is_instance_valid(ganador_hold) and is_instance_valid(perdedor_hold) \
+			and not ronda_activa and absf(escala_actual - 1.0) <= 0.001 \
+			and bool(ganador_hold.en_pose_victoria) and bool(perdedor_hold.esta_derrotado) \
+			and not core3_absolute_victory_fsm_activo and core3_absolute_victory_lado == 0
+		if not hold_estable:
+			print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY HOLD CANCELADO — estado dejó de ser estable antes de completar la ventana")
+			h1067_victory_hold_auto_test_armado = false
+			h1067_victory_hold_lado = ""
+			h1067_victory_hold_snapshots_estables = 0
+		else:
+			h1067_victory_hold_snapshots_estables += 1
+			if h1067_victory_hold_snapshots_estables >= H1067_VICTORY_HOLD_SNAPSHOTS_NECESARIOS:
+				rollback_test_solicitado = true
+				print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY HOLD AUTO MARCADO — %s; %d snapshots estables; rollback próximo physics tick" % [
+					h1067_victory_hold_lado, h1067_victory_hold_snapshots_estables
+				])
+
+	h1063_victoria_prev_j1 = victoria_j1
+	h1063_victoria_prev_j2 = victoria_j2
+
+
+func _h1069_observar_match_reset_post_snapshot() -> void:
+	if not h1069_match_reset_auto_test_armado or rollback_test_solicitado:
+		return
+	# El callback LIVE ya ejecutó _reiniciar_partida(). Esperamos una ventana con
+	# el primer snapshot post-reset + seis snapshots posteriores; junto al snapshot
+	# pre-reset forman exactamente ocho ticks para el catch-up.
+	var reset_estable := ronda_activa and rondas_kai == 0 and rondas_rival == 0 \
+		and not kai.en_pose_victoria and not rival.en_pose_victoria \
+		and not kai.esta_derrotado and not rival.esta_derrotado \
+		and int(kai.veces_fase_absoluta) == 0 and int(rival.veces_fase_absoluta) == 0
+	if not reset_estable:
+		return
+	h1069_match_reset_post_snapshots += 1
+	if h1069_match_reset_post_snapshots >= H1069_MATCH_RESET_POST_SNAPSHOTS_NECESARIOS:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III ABSOLUTE MATCH RESET ENTRY AUTO MARCADO — %s; %d snapshots post-reset; rollback próximo physics tick" % [
+			h1069_match_reset_lado, h1069_match_reset_post_snapshots
+		])
+
+
+func _h1069_buscar_ventana_core3_absolute_match_reset_entry() -> Dictionary:
+	if rollback_ring == null or not h1069_match_reset_auto_test_armado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+	var ganador_clave := "j1" if h1069_match_reset_lado == "J1" else "j2"
+	var perdedor_clave := "j2" if h1069_match_reset_lado == "J1" else "j1"
+	for i in range(historial.size() - 1, 0, -1):
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		if previo.is_empty() or actual.is_empty():
+			continue
+		var ganador_prev: Dictionary = previo.get(ganador_clave, {})
+		var perdedor_prev: Dictionary = previo.get(perdedor_clave, {})
+		var ganador_act: Dictionary = actual.get(ganador_clave, {})
+		var perdedor_act: Dictionary = actual.get(perdedor_clave, {})
+		var prev_rondas_g := int(previo.get("rondas_j1" if h1069_match_reset_lado == "J1" else "rondas_j2", 0))
+		var borde := not bool(previo.get("ronda_activa", true)) \
+			and prev_rondas_g == 3 \
+			and bool(ganador_prev.get("en_pose_victoria", false)) \
+			and bool(perdedor_prev.get("esta_derrotado", false)) \
+			and bool(actual.get("ronda_activa", false)) \
+			and int(actual.get("rondas_j1", -1)) == 0 and int(actual.get("rondas_j2", -1)) == 0 \
+			and not bool(ganador_act.get("en_pose_victoria", true)) \
+			and not bool(perdedor_act.get("esta_derrotado", true)) \
+			and int(ganador_act.get("veces_fase_absoluta", -1)) == 0 \
+			and int(perdedor_act.get("veces_fase_absoluta", -1)) == 0
+		if not borde:
+			continue
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_absolute_match_reset_tick_ya_probado:
+			continue
+		var inicio_idx := i - 1
+		if inicio_idx < 0 or inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			continue
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"lado": h1069_match_reset_lado,
+			"tick_evento": tick_evt,
+			"tick_inicio": int(ventana[0].get("tick", -1)),
+			"tick_final": int(ventana[ventana.size() - 1].get("tick", -1)),
+		}
+	return {}
+
+
+func _h1067_buscar_ventana_core3_absolute_victory_hold() -> Dictionary:
+	if rollback_ring == null or not h1067_victory_hold_auto_test_armado:
+		return {}
+	if rollback_ring.total() < H1067_VICTORY_HOLD_SNAPSHOTS_NECESARIOS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(H1067_VICTORY_HOLD_SNAPSHOTS_NECESARIOS)
+	if historial.size() < H1067_VICTORY_HOLD_SNAPSHOTS_NECESARIOS:
+		return {}
+	var ganador_clave := "j1" if h1067_victory_hold_lado == "J1" else "j2"
+	var perdedor_clave := "j2" if h1067_victory_hold_lado == "J1" else "j1"
+	for entrada in historial:
+		var snap: Dictionary = entrada.get("snapshot", {})
+		if snap.is_empty() or bool(snap.get("ronda_activa", true)):
+			return {}
+		if absf(float(snap.get("time_scale", 1.0)) - 1.0) > 0.001:
+			return {}
+		if bool(snap.get("core3_absolute_victory_fsm_activo", false)):
+			return {}
+		if int(snap.get("core3_absolute_victory_lado", 0)) != 0:
+			return {}
+		if int(snap.get("core3_absolute_reveal_lado", 0)) != 0 or int(snap.get("core3_absolute_ko_lado", 0)) != 0:
+			return {}
+		var ganador: Dictionary = snap.get(ganador_clave, {})
+		var perdedor: Dictionary = snap.get(perdedor_clave, {})
+		if not bool(ganador.get("en_pose_victoria", false)) or not bool(perdedor.get("esta_derrotado", false)):
+			return {}
+		if h1067_victory_hold_lado == "J1":
+			if int(snap.get("rondas_j1", 0)) != 3 or int(snap.get("rondas_j2", 0)) != 0:
+				return {}
+		else:
+			if int(snap.get("rondas_j2", 0)) != 3 or int(snap.get("rondas_j1", 0)) != 0:
+				return {}
+
+	var ultimo_tick := int(historial[historial.size() - 1].get("tick", -1))
+	if ultimo_tick <= rollback_core3_absolute_victory_hold_tick_ya_probado:
+		return {}
+	var ventana: Array[Dictionary] = []
+	for i in range(ROLLBACK_TEST_TICKS):
+		ventana.append(historial[i])
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"tick_inicio": int(historial[0].get("tick", -1)),
+		"tick_final": ultimo_tick,
+		"lado": h1067_victory_hold_lado,
+	}
+
+
+func _h1057_buscar_ventana_core3_absolute_finisher_entry() -> Dictionary:
+	if rollback_ring == null or not h1057_auto_test_armado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt != h1057_event_tick_hint:
+			continue
+		if tick_evt <= rollback_core3_absolute_victory_entry_tick_ya_probado:
+			continue
+
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		if bool(previo.get("ronda_activa", true)) or bool(actual.get("ronda_activa", true)):
+			return {}
+		if absf(float(previo.get("time_scale", 1.0)) - 0.42) > 0.001 \
+		or absf(float(actual.get("time_scale", 1.0)) - 1.0) > 0.001:
+			return {}
+
+		var ganador_clave := "j1" if h1057_event_lado == "J1" else "j2"
+		var perdedor_clave := "j2" if h1057_event_lado == "J1" else "j1"
+		var ganador_prev: Dictionary = previo.get(ganador_clave, {})
+		var ganador_act: Dictionary = actual.get(ganador_clave, {})
+		var perdedor_prev: Dictionary = previo.get(perdedor_clave, {})
+		var perdedor_act: Dictionary = actual.get(perdedor_clave, {})
+		if int(ganador_prev.get("veces_fase_absoluta", 0)) < 3 \
+		or int(ganador_act.get("veces_fase_absoluta", 0)) < 3:
+			return {}
+		if bool(ganador_prev.get("en_pose_victoria", false)):
+			return {}
+		if not bool(ganador_act.get("en_pose_victoria", false)):
+			return {}
+		if not bool(perdedor_prev.get("esta_derrotado", false)) \
+		or not bool(perdedor_act.get("esta_derrotado", false)):
+			return {}
+
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": h1057_event_lado,
+		}
+	return {}
+
+
+func _h1053_observar_nineteenth_beat_attack_start_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+	var fase_j1 := int(kai.get("fase_ataque"))
+	var fase_j2 := int(rival.get("fase_ataque"))
+
+	if not h1053_nineteenth_attack_observador_inicializado:
+		h1053_core3_etapa_prev_j1 = etapa_j1
+		h1053_core3_etapa_prev_j2 = etapa_j2
+		h1053_fase_prev_j1 = fase_j1
+		h1053_fase_prev_j2 = fase_j2
+		h1053_nineteenth_attack_observador_inicializado = true
+		return
+
+	# H10.56 — traza pasiva de las últimas fronteras físicas. No altera estado.
+	if etapa_j1 != h1053_core3_etapa_prev_j1 and (etapa_j1 >= 17 or h1053_core3_etapa_prev_j1 >= 17):
+		print("[91.00.00-H10.88] CORE III TARGET TRACE — J1 stage %d->%d fase=%d abs=%d sec=%s" % [
+			h1053_core3_etapa_prev_j1, etapa_j1, fase_j1, int(kai.veces_fase_absoluta), str(bool(kai.en_secuencia_especial))
+		])
+	if etapa_j2 != h1053_core3_etapa_prev_j2 and (etapa_j2 >= 17 or h1053_core3_etapa_prev_j2 >= 17):
+		print("[91.00.00-H10.88] CORE III TARGET TRACE — J2 stage %d->%d fase=%d abs=%d sec=%s" % [
+			h1053_core3_etapa_prev_j2, etapa_j2, fase_j2, int(rival.veces_fase_absoluta), str(bool(rival.en_secuencia_especial))
+		])
+
+	# H10.54 — Main captura antes de Fighter. Si beat 19 ya está a distancia,
+	# Fighter puede hacer stage 20->21 y arrancar el ataque en el mismo physics tick.
+	# En ese caso el snapshot siguiente ya ve stage 21 + fase activa y nunca existe
+	# un snapshot Main intermedio con stage 21 + fase 0. Capturamos ambas variantes:
+	#   A) entrada a stage 21 con fase ya activa;
+	#   B) entrada a stage 21 con fase 0 y transición 0->ataque en un tick posterior.
+	var lado := ""
+	if h1053_core3_etapa_prev_j1 != 21 and etapa_j1 == 21 \
+	and int(kai.veces_fase_absoluta) >= 3 and bool(kai.en_secuencia_especial):
+		if fase_j1 != 0:
+			lado = "J1"
+			h1053_esperando_primer_ataque_j1 = false
+		else:
+			h1053_esperando_primer_ataque_j1 = true
+	if h1053_core3_etapa_prev_j2 != 21 and etapa_j2 == 21 \
+	and int(rival.veces_fase_absoluta) >= 3 and bool(rival.en_secuencia_especial):
+		if fase_j2 != 0 and lado.is_empty():
+			lado = "J2"
+			h1053_esperando_primer_ataque_j2 = false
+		else:
+			h1053_esperando_primer_ataque_j2 = true
+
+	if lado.is_empty() and h1053_esperando_primer_ataque_j1 and etapa_j1 == 21 \
+	and h1053_fase_prev_j1 == 0 and fase_j1 != 0 \
+	and int(kai.veces_fase_absoluta) >= 3 and bool(kai.en_secuencia_especial):
+		lado = "J1"
+		h1053_esperando_primer_ataque_j1 = false
+	elif lado.is_empty() and h1053_esperando_primer_ataque_j2 and etapa_j2 == 21 \
+	and h1053_fase_prev_j2 == 0 and fase_j2 != 0 \
+	and int(rival.veces_fase_absoluta) >= 3 and bool(rival.en_secuencia_especial):
+		lado = "J2"
+		h1053_esperando_primer_ataque_j2 = false
+
+	# Si stage 21 terminó sin capturar, no arrastramos el armamento a otra secuencia.
+	if etapa_j1 != 21 and h1053_core3_etapa_prev_j1 == 21:
+		h1053_esperando_primer_ataque_j1 = false
+	if etapa_j2 != 21 and h1053_core3_etapa_prev_j2 == 21:
+		h1053_esperando_primer_ataque_j2 = false
+
+	h1053_core3_etapa_prev_j1 = etapa_j1
+	h1053_core3_etapa_prev_j2 = etapa_j2
+	h1053_fase_prev_j1 = fase_j1
+	h1053_fase_prev_j2 = fase_j2
+
+	if lado.is_empty() or h1053_auto_test_armado:
+		return
+
+	h1053_auto_test_armado = true
+	h1053_auto_test_tick_evento = rollback_tick_logico - 1
+	h1053_auto_test_lado = lado
+	h1053_localizacion_espera_ticks = 0
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III NINETEENTH BEAT ATTACK START AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1053_auto_test_tick_evento,
+		h1053_auto_test_lado
+	])
+
+
+func _h1053_buscar_ventana_core3_nineteenth_beat_attack_start() -> Dictionary:
+	if rollback_ring == null or not h1053_auto_test_armado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt != h1053_auto_test_tick_evento:
+			continue
+		if tick_evt <= rollback_core3_nineteenth_beat_attack_start_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3 or int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)) or not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			var fase_prev := int(fprev.get("fase_ataque", 0))
+			var fase_act := int(fact.get("fase_ataque", 0))
+			# Caso A: Fighter entra 20->21 y arranca el beat 19 en el mismo callback.
+			var entrada_con_ataque_activo := etapa_prev != 21 and etapa_act == 21 and fase_act != 0
+			# Caso B: stage 21 ya estaba visible y el ataque empieza después.
+			var transicion_dentro_stage21 := etapa_prev == 21 and etapa_act == 21 and fase_prev == 0 and fase_act != 0
+			if entrada_con_ataque_activo or transicion_dentro_stage21:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			return {}
+
+		# Restauramos un tick antes del primer ataque histórico. Esto prueba el final
+		# del acercamiento async del beat 19 y su entrega al ataque sin inventar stage 22.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h1051_observar_eighteenth_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1051_eighteenth_beat_observador_inicializado:
+		h1051_core3_etapa_prev_j1 = etapa_j1
+		h1051_core3_etapa_prev_j2 = etapa_j2
+		h1051_eighteenth_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1051_core3_etapa_prev_j1 == 20 and etapa_j1 == 21 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1051_core3_etapa_prev_j2 == 20 and etapa_j2 == 21 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1051_core3_etapa_prev_j1 = etapa_j1
+	h1051_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1051_auto_test_armado:
+		return
+
+	h1051_auto_test_armado = true
+	h1051_auto_test_tick_evento = rollback_tick_logico - 1
+	h1051_auto_test_lado = lado
+	h1051_localizacion_espera_ticks = 0
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III EIGHTEENTH BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1051_auto_test_tick_evento,
+		h1051_auto_test_lado
+	])
+
+
+func _h1051_buscar_ventana_core3_eighteenth_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_eighteenth_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 20 and etapa_act == 21:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Restauramos un tick antes del cruce 20->21. Los 8 ticks siguientes
+		# diagnostican la entrega del beat 18 físico al beat 19 histórico.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+func _h1028_observar_eighth_beat_end_core3_post_snapshot() -> void:
+	if not versus_local_activo or replay_modo_activo or rollback_catchup_activo:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+
+	var etapa_j1 := int(kai.get("core3_secuencia_etapa"))
+	var etapa_j2 := int(rival.get("core3_secuencia_etapa"))
+
+	if not h1028_eighth_beat_observador_inicializado:
+		h1028_core3_etapa_prev_j1 = etapa_j1
+		h1028_core3_etapa_prev_j2 = etapa_j2
+		h1028_eighth_beat_observador_inicializado = true
+		return
+
+	var lado := ""
+	if h1028_core3_etapa_prev_j1 == 10 and etapa_j1 == 11 \
+	and int(kai.veces_fase_absoluta) >= 3 \
+	and bool(kai.en_secuencia_especial):
+		lado = "J1"
+	elif h1028_core3_etapa_prev_j2 == 10 and etapa_j2 == 11 \
+	and int(rival.veces_fase_absoluta) >= 3 \
+	and bool(rival.en_secuencia_especial):
+		lado = "J2"
+
+	h1028_core3_etapa_prev_j1 = etapa_j1
+	h1028_core3_etapa_prev_j2 = etapa_j2
+
+	if lado.is_empty() or h1028_auto_test_armado:
+		return
+
+	h1028_auto_test_armado = true
+	h1028_auto_test_tick_evento = rollback_tick_logico - 1
+	h1028_auto_test_lado = lado
+	h1029_localizacion_espera_ticks = 0
+	rollback_test_solicitado = true
+	print("[91.00.00-H10.88] CORE III EIGHTH BEAT END AUTO MARCADO — tick=%d %s — rollback próximo physics tick" % [
+		h1028_auto_test_tick_evento,
+		h1028_auto_test_lado
+	])
+
+
+func _h1028_buscar_ventana_core3_eighth_beat_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core3_eighth_beat_end_tick_ya_probado:
+			continue
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+		var lado := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+			if int(fprev.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if int(fact.get("veces_fase_absoluta", 0)) < 3:
+				continue
+			if not bool(fprev.get("en_secuencia_especial", false)):
+				continue
+			if not bool(fact.get("en_secuencia_especial", false)):
+				continue
+			var etapa_prev := int(fprev.get("core3_secuencia_etapa", 0))
+			var etapa_act := int(fact.get("core3_secuencia_etapa", 0))
+			if etapa_prev == 10 and etapa_act == 11:
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+		if lado.is_empty():
+			continue
+
+		# Restauramos un tick antes del cruce 10->11. Los 8 ticks siguientes
+		# prueban la entrega al noveno beat histórico sin modificar gameplay.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+		}
+	return {}
+
+
+func _h91_buscar_ventana_core2_recarga_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core2_recarga_end_tick_ya_probado:
+			continue
+
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+
+		var lado := ""
+		var clave := ""
+		for candidato in ["j1", "j2"]:
+			var fprev: Dictionary = previo.get(candidato, {})
+			var fact: Dictionary = actual.get(candidato, {})
+
+			var nivel_prev := int(fprev.get("veces_fase_absoluta", 0))
+			var nivel_act := int(fact.get("veces_fase_absoluta", 0))
+			var sec_prev := bool(fprev.get("en_secuencia_especial", false))
+			var sec_act := bool(fact.get("en_secuencia_especial", false))
+			var rec_prev := bool(fprev.get("en_pose_recarga", false))
+			var rec_act := bool(fact.get("en_pose_recarga", false))
+
+			if nivel_prev == 2 and nivel_act == 2 \
+			and sec_prev and sec_act \
+			and rec_prev and not rec_act:
+				clave = candidato
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+
+		if lado.is_empty():
+			continue
+
+		# Re-simular desde el tick inmediatamente anterior a la transición.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+			"clave": clave,
+		}
+
+	return {}
+
+
+func _h91_core2_recarga_termino_live() -> bool:
+	for personaje in [kai, rival]:
+		if not is_instance_valid(personaje):
+			continue
+		if int(personaje.veces_fase_absoluta) == 2 \
+		and bool(personaje.en_secuencia_especial) \
+		and not bool(personaje.en_pose_recarga):
+			return true
+	return false
+
+
+func _h101_core3_post_ticks_disponibles() -> int:
+	if rollback_ring == null or rollback_core3_event_tick_hint < 0:
+		return -1
+	var ultimo_tick := _h81_core1_ultimo_tick_ring()
+	return maxi(-1, ultimo_tick - rollback_core3_event_tick_hint)
+
+
+func _h10_buscar_ventana_core3_entry() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	if rollback_core3_event_serial <= rollback_core3_event_serial_ya_probado:
+		return {}
+	if rollback_core3_event_tick_hint < 0:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == rollback_core3_event_tick_hint:
+			idx_evento = i
+			break
+	if idx_evento < 0:
+		return {}
+
+	# H10.1 — la ventana NO puede desplazarse hacia atrás.
+	# Debe ser exactamente [evento-1 .. evento+6].
+	if idx_evento <= 0:
+		return {}
+	var post_disponibles: int = historial.size() - 1 - idx_evento
+	if post_disponibles < H101_CORE3_POST_TICKS_REQUERIDOS:
+		return {}
+
+	var inicio_idx := idx_evento - 1
+	if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+		return {}
+
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+
+	var contiene := false
+	for entrada in ventana:
+		if int(entrada.get("tick", -1)) == rollback_core3_event_tick_hint:
+			contiene = true
+			break
+	if not contiene:
+		return {}
+
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"serial": rollback_core3_event_serial,
+		"tick_evento": rollback_core3_event_tick_hint,
+		"lado": rollback_core3_event_lado,
+	}
+
+
+func _h9_buscar_ventana_core2_entry() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	if rollback_core2_event_serial <= rollback_core2_event_serial_ya_probado:
+		return {}
+	if rollback_core2_event_tick_hint < 0:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == rollback_core2_event_tick_hint:
+			idx_evento = i
+			break
+	if idx_evento < 0:
+		return {}
+
+	# Un tick antes para atravesar 1 -> 2 y el arranque de recarga.
+	var inicio_idx := maxi(0, idx_evento - 1)
+	if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+		inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+	if inicio_idx < 0:
+		return {}
+
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+
+	var contiene := false
+	for entrada in ventana:
+		if int(entrada.get("tick", -1)) == rollback_core2_event_tick_hint:
+			contiene = true
+			break
+	if not contiene:
+		return {}
+
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"serial": rollback_core2_event_serial,
+		"tick_evento": rollback_core2_event_tick_hint,
+		"lado": rollback_core2_event_lado,
+	}
+
+
+func _h86_core1_etapa(snapshot: Dictionary, lado: String) -> int:
+	var f: Dictionary = snapshot.get(lado, {})
+	return int(f.get("core1_secuencia_etapa", 0))
+
+
+func _h86_core1_en_secuencia(snapshot: Dictionary, lado: String) -> bool:
+	var f: Dictionary = snapshot.get(lado, {})
+	return bool(f.get("en_secuencia_especial", false))
+
+
+func _h86_core1_nivel(snapshot: Dictionary, lado: String) -> int:
+	var f: Dictionary = snapshot.get(lado, {})
+	return int(f.get("veces_fase_absoluta", 0))
+
+
+func _h86_buscar_ventana_core1_poster_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	# Buscar la transición histórica más reciente:
+	#   POSTER (2) + en_secuencia=true
+	#        ->
+	#   INACTIVO (0) + en_secuencia=false
+	for i in range(historial.size() - 1, 0, -1):
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= rollback_core1_poster_end_tick_ya_probado:
+			continue
+
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var actual: Dictionary = historial[i].get("snapshot", {})
+
+		var lado := ""
+		var clave := ""
+		for candidato in ["j1", "j2"]:
+			var nivel_prev := _h86_core1_nivel(previo, candidato)
+			var nivel_act := _h86_core1_nivel(actual, candidato)
+			var etapa_prev := _h86_core1_etapa(previo, candidato)
+			var etapa_act := _h86_core1_etapa(actual, candidato)
+			var sec_prev := _h86_core1_en_secuencia(previo, candidato)
+			var sec_act := _h86_core1_en_secuencia(actual, candidato)
+
+			if nivel_prev == 1 and nivel_act == 1 \
+			and etapa_prev == 2 and etapa_act == 0 \
+			and sec_prev and not sec_act:
+				clave = candidato
+				lado = "J1" if candidato == "j1" else "J2"
+				break
+
+		if lado.is_empty():
+			continue
+
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		if inicio_idx < 0:
+			return {}
+
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+
+		var contiene := false
+		for entrada in ventana:
+			if int(entrada.get("tick", -1)) == tick_evt:
+				contiene = true
+				break
+		if not contiene:
+			continue
+
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": tick_evt,
+			"lado": lado,
+			"clave": clave,
+		}
+
+	return {}
+
+
+func _h84_buscar_ventana_core1_target_end() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	if rollback_core1_target_end_serial <= rollback_core1_target_end_serial_ya_probado:
+		return {}
+	if rollback_core1_target_end_tick_hint < 0:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == rollback_core1_target_end_tick_hint:
+			idx_evento = i
+			break
+	if idx_evento < 0:
+		return {}
+
+	# El tick_hint es el snapshot del tick siguiente al emit de la señal:
+	# arrancamos un tick antes para cruzar exactamente activo -> finalizado.
+	var inicio_idx := maxi(0, idx_evento - 1)
+	if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+		inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+	if inicio_idx < 0:
+		return {}
+
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+
+	var contiene := false
+	for entrada in ventana:
+		if int(entrada.get("tick", -1)) == rollback_core1_target_end_tick_hint:
+			contiene = true
+			break
+	if not contiene:
+		return {}
+
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"serial": rollback_core1_target_end_serial,
+		"tick_evento": rollback_core1_target_end_tick_hint,
+		"lado": rollback_core1_target_end_lado,
+	}
+
+
+func _h81_core1_ultimo_tick_ring() -> int:
+	if rollback_ring == null or rollback_ring.entradas.is_empty():
+		return -1
+	return int((rollback_ring.entradas[-1] as Dictionary).get("tick", -1))
+
+
+func _h81_buscar_ventana_core1() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	if rollback_core1_event_serial <= rollback_core1_event_serial_ya_probado:
+		return {}
+	if rollback_core1_event_tick_hint < 0:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == rollback_core1_event_tick_hint:
+			idx_evento = i
+			break
+
+	if idx_evento < 0:
+		return {}
+
+	# Necesitamos una ventana de 8 ticks que atraviese la activación.
+	# Preferimos arrancar un tick antes; si el evento está muy cerca del presente,
+	# desplazamos la ventana hacia atrás sin perder el evento.
+	var inicio_idx := maxi(0, idx_evento - 1)
+	if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+		inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+	if inicio_idx < 0:
+		return {}
+
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+
+	var contiene_evento := false
+	for entrada in ventana:
+		if int(entrada.get("tick", -1)) == rollback_core1_event_tick_hint:
+			contiene_evento = true
+			break
+	if not contiene_evento:
+		return {}
+
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"serial": rollback_core1_event_serial,
+		"tick_evento": rollback_core1_event_tick_hint,
+		"lado": rollback_core1_event_lado,
+	}
+
+
+func _h6_tactico_live() -> Object:
+	return get_node_or_null("/root/PerfectBlock90_1")
+
+
+func _h6_launcher_serial_live() -> int:
+	var tactico := _h6_tactico_live()
+	return 0 if tactico == null else int(tactico.get("_rollback_launcher_event_serial"))
+
+
+func _h6_airhit_serial_live() -> int:
+	var tactico := _h6_tactico_live()
+	return 0 if tactico == null else int(tactico.get("_rollback_airhit_event_serial"))
+
+
+func _h6_launcher_serial(snapshot: Dictionary) -> int:
+	return int((snapshot.get("tactico", {}) as Dictionary).get("_rollback_launcher_event_serial", 0))
+
+
+func _h6_airhit_serial(snapshot: Dictionary) -> int:
+	return int((snapshot.get("tactico", {}) as Dictionary).get("_rollback_airhit_event_serial", 0))
+
+
+func _h6_launcher_serial_ultimo_ring() -> int:
+	if rollback_ring == null or rollback_ring.entradas.is_empty():
+		return 0
+	return _h6_launcher_serial((rollback_ring.entradas[-1] as Dictionary).get("snapshot", {}))
+
+
+func _h6_airhit_serial_ultimo_ring() -> int:
+	if rollback_ring == null or rollback_ring.entradas.is_empty():
+		return 0
+	return _h6_airhit_serial((rollback_ring.entradas[-1] as Dictionary).get("snapshot", {}))
+
+
+func _h6_lado_desde_id(id: int) -> String:
+	if is_instance_valid(kai) and id == kai.get_instance_id():
+		return "J1"
+	if is_instance_valid(rival) and id == rival.get_instance_id():
+		return "J2"
+	return "?"
+
+
+func _h6_ventana_evento_por_serial(clave_serial: String, tick_ya_probado: int) -> Dictionary:
+	if rollback_ring == null:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var prev_snap: Dictionary = historial[i - 1].get("snapshot", {})
+		var evt_snap: Dictionary = historial[i].get("snapshot", {})
+		var prev_t: Dictionary = prev_snap.get("tactico", {})
+		var evt_t: Dictionary = evt_snap.get("tactico", {})
+		var serial_prev := int(prev_t.get(clave_serial, 0))
+		var serial_evt := int(evt_t.get(clave_serial, 0))
+		if serial_evt <= serial_prev:
+			continue
+
+		# H6.1: el serial puede retroceder por rollback. El tick del ring es
+		# monotónico y permite reconocer eventos nuevos incluso si el serial
+		# histórico vuelve de 10 a 9, 8, etc.
+		var tick_evt := int(historial[i].get("tick", -1))
+		if tick_evt <= tick_ya_probado:
+			continue
+
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"serial": serial_evt,
+			"tick_evento": tick_evt,
+			"snapshot_evento": evt_snap,
+		}
+	return {}
+
+
+func _h6_buscar_launcher() -> Dictionary:
+	var r := _h6_ventana_evento_por_serial("_rollback_launcher_event_serial", rollback_launcher_tick_ya_probado)
+	if r.is_empty():
+		return r
+	var t: Dictionary = (r.get("snapshot_evento", {}) as Dictionary).get("tactico", {})
+	var aid := int(t.get("_rollback_launcher_event_attacker_id", -1))
+	var did := int(t.get("_rollback_launcher_event_defender_id", -1))
+	r["atacante_id"] = aid
+	r["defensor_id"] = did
+	r["lado"] = _h6_lado_desde_id(aid)
+	return r
+
+
+func _h6_buscar_airhit() -> Dictionary:
+	var r := _h6_ventana_evento_por_serial("_rollback_airhit_event_serial", rollback_airhit_tick_ya_probado)
+	if r.is_empty():
+		return r
+	var t: Dictionary = (r.get("snapshot_evento", {}) as Dictionary).get("tactico", {})
+	var aid := int(t.get("_rollback_airhit_event_attacker_id", -1))
+	var did := int(t.get("_rollback_airhit_event_defender_id", -1))
+	r["atacante_id"] = aid
+	r["defensor_id"] = did
+	r["lado"] = _h6_lado_desde_id(aid)
+	r["air_x"] = int(t.get("_rollback_airhit_event_count", 0))
+	return r
+
+
+func _h5_backdash_serial_live() -> int:
+	var tactico := get_node_or_null("/root/PerfectBlock90_1")
+	if tactico == null:
+		return 0
+	return int(tactico.get("_rollback_backdash_event_serial"))
+
+
+func _h5_backdash_serial(snapshot: Dictionary) -> int:
+	var tactico: Dictionary = snapshot.get("tactico", {})
+	return int(tactico.get("_rollback_backdash_event_serial", 0))
+
+
+func _h5_backdash_id(snapshot: Dictionary) -> int:
+	var tactico: Dictionary = snapshot.get("tactico", {})
+	return int(tactico.get("_rollback_backdash_event_fighter_id", -1))
+
+
+func _h5_backdash_dir(snapshot: Dictionary) -> float:
+	var tactico: Dictionary = snapshot.get("tactico", {})
+	return float(tactico.get("_rollback_backdash_event_direccion", 0.0))
+
+
+func _h5_backdash_serial_ultimo_ring() -> int:
+	if rollback_ring == null or rollback_ring.entradas.is_empty():
+		return 0
+	var ultimo: Dictionary = rollback_ring.entradas[rollback_ring.entradas.size() - 1]
+	return _h5_backdash_serial(ultimo.get("snapshot", {}))
+
+
+func _h5_buscar_ventana_backdash() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	for i in range(historial.size() - 1, 0, -1):
+		var previo: Dictionary = historial[i - 1].get("snapshot", {})
+		var evento: Dictionary = historial[i].get("snapshot", {})
+		var serial_previo := _h5_backdash_serial(previo)
+		var serial_evento := _h5_backdash_serial(evento)
+
+		if serial_evento <= serial_previo:
+			continue
+		if serial_evento <= rollback_backdash_serial_ya_probado:
+			continue
+
+		var fighter_id := _h5_backdash_id(evento)
+		var lado := "?"
+		if is_instance_valid(kai) and fighter_id == kai.get_instance_id():
+			lado = "J1"
+		elif is_instance_valid(rival) and fighter_id == rival.get_instance_id():
+			lado = "J2"
+
+		# Empezamos un tick antes del sello. Así la re-simulación debe volver a
+		# detectar el segundo toque, iniciar Back Dash y reproducir su movimiento.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"serial": serial_evento,
+			"fighter_id": fighter_id,
+			"lado": lado,
+			"direccion": _h5_backdash_dir(evento),
+			"tick_evento": int(historial[i].get("tick", -1)),
+		}
+
+	return {}
+
+
+func _h1072_counter_disponible_snapshot(snapshot: Dictionary, fighter_id: int) -> bool:
+	var tactico: Dictionary = snapshot.get("tactico", {})
+	var disp: Dictionary = tactico.get("_counter_disponible", {})
+	return bool(disp.get(fighter_id, false))
+
+
+func _h1072_observar_perfect_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(16, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	if not h1072_perfect_auto_armado:
+		var id_j1 := kai.get_instance_id()
+		var id_j2 := rival.get_instance_id()
+		var j1_abre := (not _h1072_counter_disponible_snapshot(prev_snap, id_j1)) and _h1072_counter_disponible_snapshot(evt_snap, id_j1)
+		var j2_abre := (not _h1072_counter_disponible_snapshot(prev_snap, id_j2)) and _h1072_counter_disponible_snapshot(evt_snap, id_j2)
+		if not j1_abre and not j2_abre:
+			return
+		if tick_evt <= rollback_perfect_tick_ya_probado:
+			return
+		h1072_perfect_auto_armado = true
+		h1072_perfect_tick_evento = tick_evt
+		h1072_perfect_lado = "J1" if j1_abre else "J2"
+		print("[91.00.00-H10.88] PERFECT BLOCK EVENT OBSERVADO — %s tick=%d; acumulando 7 snapshots post-evento" % [h1072_perfect_lado, tick_evt])
+		return
+
+	# Ventana: snapshot anterior al Perfect + 7 ticks posteriores; el snapshot
+	# tick_evento+7 sirve como presente historico esperado tras los 8 subticks.
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1072_perfect_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] PERFECT BLOCK AUTO MARCADO — %s tick=%d; rollback proximo physics tick" % [h1072_perfect_lado, h1072_perfect_tick_evento])
+
+
+func _h1072_buscar_ventana_perfect_block() -> Dictionary:
+	if rollback_ring == null or not h1072_perfect_auto_armado:
+		return {}
+	if h1072_perfect_tick_evento < 0 or h1072_perfect_tick_evento <= rollback_perfect_tick_ya_probado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS + 1:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	var idx_evento := -1
+	for i in range(historial.size()):
+		if int(historial[i].get("tick", -1)) == h1072_perfect_tick_evento:
+			idx_evento = i
+			break
+	if idx_evento <= 0:
+		return {}
+	var inicio_idx := idx_evento - 1
+	# 8 subticks: [evento-1 .. evento+6], y necesitamos evento+7 como esperado.
+	if inicio_idx + ROLLBACK_TEST_TICKS >= historial.size():
+		return {}
+	var ventana: Array[Dictionary] = []
+	for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+		ventana.append(historial[k])
+	return {
+		"encontrado": true,
+		"ventana": ventana,
+		"lado": h1072_perfect_lado,
+		"tick_evento": h1072_perfect_tick_evento,
+	}
+
+
+func _h1073_observar_launcher_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(16, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var serial_prev := _h6_launcher_serial(prev_snap)
+	var serial_evt := _h6_launcher_serial(evt_snap)
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	if not h1073_launcher_auto_armado:
+		if serial_evt <= serial_prev:
+			return
+		if tick_evt <= rollback_launcher_tick_ya_probado:
+			return
+		var tactico: Dictionary = evt_snap.get("tactico", {})
+		var atacante_id := int(tactico.get("_rollback_launcher_event_attacker_id", -1))
+		h1073_launcher_auto_armado = true
+		h1073_launcher_tick_evento = tick_evt
+		h1073_launcher_lado = _h6_lado_desde_id(atacante_id)
+		print("[91.00.00-H10.88] LAUNCHER EVENT OBSERVADO — serial=%d %s tick=%d; acumulando 7 snapshots post-evento" % [serial_evt, h1073_launcher_lado, tick_evt])
+		return
+
+	# Igual que Perfect: un snapshot anterior al evento + siete posteriores.
+	# Esperamos evento+7 para disponer también del presente histórico esperado.
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1073_launcher_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] LAUNCHER AUTO MARCADO — %s tick=%d; rollback próximo physics tick" % [h1073_launcher_lado, h1073_launcher_tick_evento])
+
+
+func _h1076_observar_airx3_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(16, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var serial_prev := _h6_airhit_serial(prev_snap)
+	var serial_evt := _h6_airhit_serial(evt_snap)
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	if not h1076_airx3_auto_armado:
+		if serial_evt <= serial_prev:
+			return
+		if tick_evt <= rollback_airhit_tick_ya_probado:
+			return
+		var tactico: Dictionary = evt_snap.get("tactico", {})
+		var air_x := int(tactico.get("_rollback_airhit_event_count", 0))
+		if air_x != 3:
+			return
+		var atacante_id := int(tactico.get("_rollback_airhit_event_attacker_id", -1))
+		h1076_airx3_auto_armado = true
+		h1076_airx3_tick_evento = tick_evt
+		h1076_airx3_lado = _h6_lado_desde_id(atacante_id)
+		print("[91.00.00-H10.88] AIR x3 EVENT OBSERVADO — serial=%d %s tick=%d; acumulando 7 snapshots post-evento" % [serial_evt, h1076_airx3_lado, tick_evt])
+		return
+
+	# Snapshot anterior al AIR x3 + siete posteriores; evento+7 es el presente
+	# histórico esperado al terminar los 8 subticks.
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1076_airx3_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] AIR x3 AUTO MARCADO — %s tick=%d; rollback próximo physics tick" % [h1076_airx3_lado, h1076_airx3_tick_evento])
+
+
+func _h1077_observar_backdash_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado:
+		return
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(16, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var serial_prev := _h5_backdash_serial(prev_snap)
+	var serial_evt := _h5_backdash_serial(evt_snap)
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	if not h1077_backdash_auto_armado:
+		if serial_evt <= serial_prev:
+			return
+		if serial_evt <= rollback_backdash_serial_ya_probado:
+			return
+		var fighter_id := _h5_backdash_id(evt_snap)
+		var lado := "?"
+		if fighter_id == kai.get_instance_id():
+			lado = "J1"
+		elif fighter_id == rival.get_instance_id():
+			lado = "J2"
+		h1077_backdash_auto_armado = true
+		h1077_backdash_tick_evento = tick_evt
+		h1077_backdash_lado = lado
+		h1077_backdash_serial_evento = serial_evt
+		h1077_backdash_direccion = _h5_backdash_dir(evt_snap)
+		var dir_txt := "IZQUIERDA" if h1077_backdash_direccion < 0.0 else "DERECHA"
+		print("[91.00.00-H10.88] BACKDASH EVENT OBSERVADO — serial=%d %s dir=%s tick=%d; acumulando 7 snapshots post-evento" % [serial_evt, lado, dir_txt, tick_evt])
+		return
+
+	# Un snapshot anterior al segundo toque + siete posteriores. evento+7 deja
+	# disponible el presente histórico esperado después de 8 subticks.
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1077_backdash_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] BACKDASH AUTO MARCADO — %s tick=%d; rollback próximo physics tick" % [h1077_backdash_lado, h1077_backdash_tick_evento])
+
+
+func _h1078_estado_lado(snapshot: Dictionary, lado: String) -> Dictionary:
+	return snapshot.get("j1" if lado == "J1" else "j2", {})
+
+
+func _h1078_otro_estado(snapshot: Dictionary, lado: String) -> Dictionary:
+	return snapshot.get("j2" if lado == "J1" else "j1", {})
+
+
+func _h1078_es_forward_dash(snapshot: Dictionary, lado: String) -> bool:
+	var yo: Dictionary = _h1078_estado_lado(snapshot, lado)
+	var otro: Dictionary = _h1078_otro_estado(snapshot, lado)
+	if yo.is_empty() or otro.is_empty():
+		return false
+	if not bool(yo.get("carrera_activa", false)):
+		return false
+	var dir := float(yo.get("carrera_direccion", 0.0))
+	if absf(dir) < 0.5:
+		return false
+	var pos_yo: Vector2 = yo.get("position", Vector2.ZERO)
+	var pos_otro: Vector2 = otro.get("position", Vector2.ZERO)
+	var hacia_rival := signf(pos_otro.x - pos_yo.x)
+	return hacia_rival != 0.0 and dir * hacia_rival > 0.0
+
+
+func _h1078_inicio_forward_dash(prev_snap: Dictionary, evt_snap: Dictionary, lado: String) -> bool:
+	var previo: Dictionary = _h1078_estado_lado(prev_snap, lado)
+	if previo.is_empty():
+		return false
+	return not bool(previo.get("carrera_activa", false)) and _h1078_es_forward_dash(evt_snap, lado)
+
+
+func _h1078_buscar_ventana_forward_dash() -> Dictionary:
+	if rollback_ring == null or not h1078_forward_dash_auto_armado:
+		return {}
+	if h1078_forward_dash_tick_evento < 0 or h1078_forward_dash_tick_evento <= rollback_forward_dash_tick_ya_probado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	for i in range(1, historial.size()):
+		if int(historial[i].get("tick", -1)) != h1078_forward_dash_tick_evento:
+			continue
+		var prev_snap: Dictionary = historial[i - 1].get("snapshot", {})
+		var evt_snap: Dictionary = historial[i].get("snapshot", {})
+		if not _h1078_inicio_forward_dash(prev_snap, evt_snap, h1078_forward_dash_lado):
+			return {}
+		var inicio_idx := i - 1
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": h1078_forward_dash_tick_evento,
+			"lado": h1078_forward_dash_lado,
+			"direccion": h1078_forward_dash_direccion,
+		}
+	return {}
+
+
+func _h1078_observar_forward_dash_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado or not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(16, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	if not h1078_forward_dash_auto_armado:
+		if tick_evt <= rollback_forward_dash_tick_ya_probado:
+			return
+		var j1_inicio := _h1078_inicio_forward_dash(prev_snap, evt_snap, "J1")
+		var j2_inicio := _h1078_inicio_forward_dash(prev_snap, evt_snap, "J2")
+		# Si los dos arrancaron carrera exactamente en el mismo tick, no usamos una
+		# ventana ambigua. Repetir el doble toque aislado produce un target limpio.
+		if j1_inicio == j2_inicio:
+			return
+		var lado := "J1" if j1_inicio else "J2"
+		var estado_evt: Dictionary = _h1078_estado_lado(evt_snap, lado)
+		h1078_forward_dash_auto_armado = true
+		h1078_forward_dash_tick_evento = tick_evt
+		h1078_forward_dash_lado = lado
+		h1078_forward_dash_direccion = float(estado_evt.get("carrera_direccion", 0.0))
+		var dir_txt := "IZQUIERDA" if h1078_forward_dash_direccion < 0.0 else "DERECHA"
+		print("[91.00.00-H10.88] FORWARD DASH EVENT OBSERVADO — %s dir=%s tick=%d; acumulando 7 snapshots post-evento" % [lado, dir_txt, tick_evt])
+		return
+
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1078_forward_dash_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] FORWARD DASH AUTO MARCADO — %s tick=%d; rollback próximo physics tick" % [h1078_forward_dash_lado, h1078_forward_dash_tick_evento])
+
+
+func _h1080_tactico(snapshot: Dictionary) -> Dictionary:
+	return snapshot.get("tactico", {})
+
+
+func _h1080_es_kick_impact(prev_snap: Dictionary, evt_snap: Dictionary, lado: String) -> bool:
+	var previo: Dictionary = _h1078_estado_lado(prev_snap, lado)
+	var evento: Dictionary = _h1078_estado_lado(evt_snap, lado)
+	var defensor_previo: Dictionary = _h1078_otro_estado(prev_snap, lado)
+	var defensor_evento: Dictionary = _h1078_otro_estado(evt_snap, lado)
+	if previo.is_empty() or evento.is_empty() or defensor_previo.is_empty() or defensor_evento.is_empty():
+		return false
+	if bool(previo.get("_atk_ya_conecto", false)) or not bool(evento.get("_atk_ya_conecto", false)):
+		return false
+	if str(evento.get("_atk_tipo", "")) != "patada":
+		return false
+	# Target limpio: golpe de suelo normal, sin carrera/backdash/aire/guardia.
+	if not bool(previo.get("__on_floor", false)) or not bool(evento.get("__on_floor", false)):
+		return false
+	if not bool(defensor_previo.get("__on_floor", false)) or not bool(defensor_evento.get("__on_floor", false)):
+		return false
+	if bool(previo.get("carrera_activa", false)) or bool(evento.get("carrera_activa", false)):
+		return false
+	if bool(previo.get("dash_aereo_activo", false)) or bool(evento.get("dash_aereo_activo", false)):
+		return false
+	if bool(defensor_previo.get("bloqueando", false)) or bool(defensor_evento.get("bloqueando", false)):
+		return false
+	# Excluir explícitamente Launcher/AIR: sus seriales tácticos no deben cambiar
+	# en la transición que estamos certificando.
+	var tp: Dictionary = _h1080_tactico(prev_snap)
+	var te: Dictionary = _h1080_tactico(evt_snap)
+	if int(tp.get("_rollback_launcher_event_serial", 0)) != int(te.get("_rollback_launcher_event_serial", 0)):
+		return false
+	if int(tp.get("_rollback_airhit_event_serial", 0)) != int(te.get("_rollback_airhit_event_serial", 0)):
+		return false
+	return true
+
+
+func _h1080_buscar_ventana_kick_impact() -> Dictionary:
+	if rollback_ring == null or not h1080_kick_impact_auto_armado:
+		return {}
+	if h1080_kick_impact_tick_evento < 0 or h1080_kick_impact_tick_evento <= rollback_kick_impact_tick_ya_probado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	for i in range(1, historial.size()):
+		if int(historial[i].get("tick", -1)) != h1080_kick_impact_tick_evento:
+			continue
+		var prev_snap: Dictionary = historial[i - 1].get("snapshot", {})
+		var evt_snap: Dictionary = historial[i].get("snapshot", {})
+		if not _h1080_es_kick_impact(prev_snap, evt_snap, h1080_kick_impact_lado):
+			return {}
+		var inicio_idx := i - 1
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": h1080_kick_impact_tick_evento,
+			"lado": h1080_kick_impact_lado,
+		}
+	return {}
+
+
+func _h1080_observar_kick_impact_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado or not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(16, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	if not h1080_kick_impact_auto_armado:
+		if tick_evt <= rollback_kick_impact_tick_ya_probado:
+			return
+		var j1_hit := _h1080_es_kick_impact(prev_snap, evt_snap, "J1")
+		var j2_hit := _h1080_es_kick_impact(prev_snap, evt_snap, "J2")
+		if j1_hit == j2_hit:
+			return
+		var lado := "J1" if j1_hit else "J2"
+		h1080_kick_impact_auto_armado = true
+		h1080_kick_impact_tick_evento = tick_evt
+		h1080_kick_impact_lado = lado
+		print("[91.00.00-H10.88] NORMAL KICK IMPACT EVENT OBSERVADO — %s tick=%d; acumulando 7 snapshots post-evento" % [lado, tick_evt])
+		return
+
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1080_kick_impact_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] NORMAL KICK IMPACT AUTO MARCADO — %s tick=%d; rollback próximo physics tick" % [h1080_kick_impact_lado, h1080_kick_impact_tick_evento])
+
+
+func _h1081_es_punch_block(prev_snap: Dictionary, evt_snap: Dictionary, atacante_lado: String) -> bool:
+	var atacante_previo: Dictionary = _h1078_estado_lado(prev_snap, atacante_lado)
+	var atacante_evento: Dictionary = _h1078_estado_lado(evt_snap, atacante_lado)
+	var defensor_previo: Dictionary = _h1078_otro_estado(prev_snap, atacante_lado)
+	var defensor_evento: Dictionary = _h1078_otro_estado(evt_snap, atacante_lado)
+	if atacante_previo.is_empty() or atacante_evento.is_empty() or defensor_previo.is_empty() or defensor_evento.is_empty():
+		return false
+	# Contacto único exactamente en esta transición.
+	if bool(atacante_previo.get("_atk_ya_conecto", false)) or not bool(atacante_evento.get("_atk_ya_conecto", false)):
+		return false
+	if str(atacante_evento.get("_atk_tipo", "")) != "patada":
+		return false
+	# Ambos cuerpos en suelo; sin dash ni persecución aérea.
+	if not bool(atacante_previo.get("__on_floor", false)) or not bool(atacante_evento.get("__on_floor", false)):
+		return false
+	if not bool(defensor_previo.get("__on_floor", false)) or not bool(defensor_evento.get("__on_floor", false)):
+		return false
+	if bool(atacante_previo.get("carrera_activa", false)) or bool(atacante_evento.get("carrera_activa", false)):
+		return false
+	if bool(atacante_previo.get("dash_aereo_activo", false)) or bool(atacante_evento.get("dash_aereo_activo", false)):
+		return false
+	# H10.83: detector reutilizado para PATADA. Guardia normal: el defensor ya venía bloqueando y sigue bloqueando al contacto.
+	# El hitstun reducido de guardia debe existir; Perfect Block lo limpia a 0.
+	if not bool(defensor_previo.get("bloqueando", false)) or not bool(defensor_evento.get("bloqueando", false)):
+		return false
+	if float(defensor_evento.get("hitstun_timer", 0.0)) <= 0.0:
+		return false
+	# Excluir Perfect de forma explícita. Si el impacto abrió Counter, esta frontera
+	# pertenece a H10.72 y no puede certificarse como bloqueo normal.
+	var defensor_id := -1
+	if atacante_lado == "J1" and is_instance_valid(rival):
+		defensor_id = rival.get_instance_id()
+	elif atacante_lado == "J2" and is_instance_valid(kai):
+		defensor_id = kai.get_instance_id()
+	if defensor_id < 0:
+		return false
+	if _h1072_counter_disponible_snapshot(evt_snap, defensor_id):
+		return false
+	# Launcher/AIR deben permanecer invariantes en esta transición.
+	var tp: Dictionary = _h1080_tactico(prev_snap)
+	var te: Dictionary = _h1080_tactico(evt_snap)
+	if int(tp.get("_rollback_launcher_event_serial", 0)) != int(te.get("_rollback_launcher_event_serial", 0)):
+		return false
+	if int(tp.get("_rollback_airhit_event_serial", 0)) != int(te.get("_rollback_airhit_event_serial", 0)):
+		return false
+	return true
+
+
+func _h1081_buscar_ventana_punch_block() -> Dictionary:
+	if rollback_ring == null or not h1081_punch_block_auto_armado:
+		return {}
+	if h1081_punch_block_tick_evento < 0 or h1081_punch_block_tick_evento <= rollback_punch_block_tick_ya_probado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS + 1:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	for i in range(1, historial.size()):
+		if int(historial[i].get("tick", -1)) != h1081_punch_block_tick_evento:
+			continue
+		var prev_snap: Dictionary = historial[i - 1].get("snapshot", {})
+		var evt_snap: Dictionary = historial[i].get("snapshot", {})
+		if not _h1081_es_punch_block(prev_snap, evt_snap, h1081_punch_block_atacante):
+			return {}
+		var inicio_idx := i - 1
+		# Igual que Perfect/impactos: 8 subticks desde un tick antes del evento.
+		if inicio_idx + ROLLBACK_TEST_TICKS >= historial.size():
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": h1081_punch_block_tick_evento,
+			"atacante": h1081_punch_block_atacante,
+			"defensor": h1081_punch_block_defensor,
+		}
+	return {}
+
+
+func _h1081_observar_punch_block_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado or not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(16, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	if not h1081_punch_block_auto_armado:
+		if tick_evt <= rollback_punch_block_tick_ya_probado:
+			return
+		var j1_ataca := _h1081_es_punch_block(prev_snap, evt_snap, "J1")
+		var j2_ataca := _h1081_es_punch_block(prev_snap, evt_snap, "J2")
+		if j1_ataca == j2_ataca:
+			return
+		h1081_punch_block_auto_armado = true
+		h1081_punch_block_tick_evento = tick_evt
+		h1081_punch_block_atacante = "J1" if j1_ataca else "J2"
+		h1081_punch_block_defensor = "J2" if j1_ataca else "J1"
+		print("[91.00.00-H10.88] NORMAL KICK BLOCK EVENT OBSERVADO — atacante=%s defensor=%s tick=%d; acumulando 7 snapshots post-evento" % [h1081_punch_block_atacante, h1081_punch_block_defensor, tick_evt])
+		return
+
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1081_punch_block_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] NORMAL KICK BLOCK AUTO MARCADO — atacante=%s defensor=%s tick=%d; rollback próximo physics tick" % [h1081_punch_block_atacante, h1081_punch_block_defensor, h1081_punch_block_tick_evento])
+
+
+
+func _h1084_input_bloqueo(snapshot: Dictionary, lado: String) -> bool:
+	var estado: Dictionary = _h1078_estado_lado(snapshot, lado)
+	if estado.is_empty():
+		return false
+	var frame: Dictionary = estado.get("input_frame_enrutado_actual", {})
+	return bool(frame.get("bloqueo", false))
+
+
+func _h1084_es_block_recovery(prev_snap: Dictionary, evt_snap: Dictionary, defensor_lado: String) -> bool:
+	var previo: Dictionary = _h1078_estado_lado(prev_snap, defensor_lado)
+	var evento: Dictionary = _h1078_estado_lado(evt_snap, defensor_lado)
+	if previo.is_empty() or evento.is_empty():
+		return false
+	# H10.85 — frontera semántica robusta: después de una patada bloqueada ya
+	# confirmada por h1084_block_watch_activo, certificamos el tick en que Fighter
+	# ejecuta _detener_bloqueo(). No dependemos de que el humano suelte el botón
+	# dentro del mismo tick exacto en que hitstun cruza por cero.
+	if not bool(previo.get("bloqueando", false)):
+		return false
+	if bool(evento.get("bloqueando", false)):
+		return false
+	if float(evento.get("hitstun_timer", 0.0)) > 0.0:
+		return false
+	if _h1084_input_bloqueo(evt_snap, defensor_lado):
+		return false
+	if float(evento.get("bloqueo_timer", 0.0)) > 0.0:
+		return false
+	if not bool(previo.get("__on_floor", false)) or not bool(evento.get("__on_floor", false)):
+		return false
+	if int(previo.get("fase_ataque", 0)) != 0 or int(evento.get("fase_ataque", 0)) != 0:
+		return false
+	if bool(evento.get("esta_derrotado", false)) or bool(evento.get("en_secuencia_especial", false)):
+		return false
+	return true
+
+
+func _h1084_buscar_ventana_block_recovery() -> Dictionary:
+	if rollback_ring == null or not h1084_block_recovery_auto_armado:
+		return {}
+	if h1084_block_recovery_tick_evento < 0 or h1084_block_recovery_tick_evento <= rollback_block_recovery_tick_ya_probado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS + 1:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	for i in range(1, historial.size()):
+		if int(historial[i].get("tick", -1)) != h1084_block_recovery_tick_evento:
+			continue
+		var prev_snap: Dictionary = historial[i - 1].get("snapshot", {})
+		var evt_snap: Dictionary = historial[i].get("snapshot", {})
+		if not _h1084_es_block_recovery(prev_snap, evt_snap, h1084_block_defensor):
+			return {}
+		var inicio_idx := i - 1
+		if inicio_idx + ROLLBACK_TEST_TICKS >= historial.size():
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": h1084_block_recovery_tick_evento,
+			"atacante": h1084_block_atacante,
+			"defensor": h1084_block_defensor,
+		}
+	return {}
+
+
+func _h1084_observar_block_recovery_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado or not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(32, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	# Preparación: detectar una PATADA bloqueada normal usando exactamente el
+	# detector que quedó certificado en H10.83. No hacemos rollback aquí.
+	if not h1084_block_watch_activo:
+		var j1_ataca := _h1081_es_punch_block(prev_snap, evt_snap, "J1")
+		var j2_ataca := _h1081_es_punch_block(prev_snap, evt_snap, "J2")
+		if j1_ataca == j2_ataca:
+			return
+		h1084_block_watch_activo = true
+		h1084_block_atacante = "J1" if j1_ataca else "J2"
+		h1084_block_defensor = "J2" if j1_ataca else "J1"
+		h1084_block_tick_impacto = tick_evt
+		print("[91.00.00-H10.88] NORMAL BLOCK RECOVERY PREPARADO — atacante=%s defensor=%s impacto_tick=%d; soltá bloqueo después del impacto y quedate neutral" % [h1084_block_atacante, h1084_block_defensor, tick_evt])
+		return
+
+	if not h1084_block_recovery_auto_armado:
+		if tick_evt <= rollback_block_recovery_tick_ya_probado:
+			return
+		if not _h1084_es_block_recovery(prev_snap, evt_snap, h1084_block_defensor):
+			return
+		h1084_block_recovery_auto_armado = true
+		h1084_block_recovery_tick_evento = tick_evt
+		print("[91.00.00-H10.88] NORMAL BLOCK RECOVERY EVENT OBSERVADO — defensor=%s bloqueando true->false con hitstun<=0 tick=%d; acumulando 7 snapshots post-evento" % [h1084_block_defensor, tick_evt])
+		return
+
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1084_block_recovery_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] NORMAL BLOCK RECOVERY AUTO MARCADO — defensor=%s tick=%d; rollback próximo physics tick" % [h1084_block_defensor, h1084_block_recovery_tick_evento])
+
+
+func _h1087_otro_lado(lado: String) -> String:
+	return "J2" if lado == "J1" else "J1"
+
+
+func _h1087_armar_forward_dash(prev_snap: Dictionary, evt_snap: Dictionary, tick_evt: int) -> bool:
+	var j1 := _h1078_inicio_forward_dash(prev_snap, evt_snap, "J1")
+	var j2 := _h1078_inicio_forward_dash(prev_snap, evt_snap, "J2")
+	if j1 == j2:
+		return false
+	var lado := "J1" if j1 else "J2"
+	h1087_integral_lado_usuario = lado
+	h1078_forward_dash_auto_armado = true
+	h1078_forward_dash_tick_evento = tick_evt
+	h1078_forward_dash_lado = lado
+	var estado_evt: Dictionary = _h1078_estado_lado(evt_snap, lado)
+	h1078_forward_dash_direccion = float(estado_evt.get("carrera_direccion", 0.0))
+	var dir_txt := "IZQUIERDA" if h1078_forward_dash_direccion < 0.0 else "DERECHA"
+	print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 1/6 OBSERVADO — %s FORWARD DASH %s tick=%d; acumulando 7 snapshots" % [lado, dir_txt, tick_evt])
+	return true
+
+
+func _h1087_armar_kick_impact(prev_snap: Dictionary, evt_snap: Dictionary, tick_evt: int) -> bool:
+	if h1087_integral_lado_usuario == "":
+		return false
+	if not _h1080_es_kick_impact(prev_snap, evt_snap, h1087_integral_lado_usuario):
+		return false
+	h1080_kick_impact_auto_armado = true
+	h1080_kick_impact_tick_evento = tick_evt
+	h1080_kick_impact_lado = h1087_integral_lado_usuario
+	# Preparar desde el mismo contacto el checkpoint 3, pero sin armar todavía su rollback.
+	h1086_attack_watch_activo = true
+	h1086_attack_lado = h1087_integral_lado_usuario
+	h1086_attack_tick_impacto = tick_evt
+	print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 2/6 OBSERVADO — %s PATADA LIMPIA tick=%d; acumulando 7 snapshots" % [h1087_integral_lado_usuario, tick_evt])
+	return true
+
+
+func _h1087_armar_attack_recovery(prev_snap: Dictionary, evt_snap: Dictionary, tick_evt: int) -> bool:
+	if h1087_integral_lado_usuario == "" or not h1086_attack_watch_activo:
+		return false
+	if not _h1086_es_attack_recovery(prev_snap, evt_snap, h1087_integral_lado_usuario):
+		return false
+	h1086_attack_recovery_auto_armado = true
+	h1086_attack_recovery_tick_evento = tick_evt
+	print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 3/6 OBSERVADO — %s ATTACK RECOVERY 3->0 tick=%d; acumulando 7 snapshots" % [h1087_integral_lado_usuario, tick_evt])
+	return true
+
+
+func _h1087_armar_backdash(prev_snap: Dictionary, evt_snap: Dictionary, tick_evt: int) -> bool:
+	if h1087_integral_lado_usuario == "":
+		return false
+	var serial_prev := _h5_backdash_serial(prev_snap)
+	var serial_evt := _h5_backdash_serial(evt_snap)
+	if serial_evt <= serial_prev or serial_evt <= rollback_backdash_serial_ya_probado:
+		return false
+	var fighter_id := _h5_backdash_id(evt_snap)
+	var lado := _h6_lado_desde_id(fighter_id)
+	if lado != h1087_integral_lado_usuario:
+		return false
+	h1077_backdash_auto_armado = true
+	h1077_backdash_tick_evento = tick_evt
+	h1077_backdash_lado = lado
+	h1077_backdash_serial_evento = serial_evt
+	h1077_backdash_direccion = _h5_backdash_dir(evt_snap)
+	var dir_txt := "IZQUIERDA" if h1077_backdash_direccion < 0.0 else "DERECHA"
+	print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 4/6 OBSERVADO — %s BACKDASH %s serial=%d tick=%d; acumulando 7 snapshots" % [lado, dir_txt, serial_evt, tick_evt])
+	return true
+
+
+func _h1087_armar_kick_block(prev_snap: Dictionary, evt_snap: Dictionary, tick_evt: int) -> bool:
+	if h1087_integral_lado_usuario == "":
+		return false
+	var atacante := _h1087_otro_lado(h1087_integral_lado_usuario)
+	if not _h1081_es_punch_block(prev_snap, evt_snap, atacante):
+		return false
+	h1081_punch_block_auto_armado = true
+	h1081_punch_block_tick_evento = tick_evt
+	h1081_punch_block_atacante = atacante
+	h1081_punch_block_defensor = h1087_integral_lado_usuario
+	# El mismo impacto prepara el checkpoint 6 de liberación de guardia.
+	h1084_block_watch_activo = true
+	h1084_block_atacante = atacante
+	h1084_block_defensor = h1087_integral_lado_usuario
+	h1084_block_tick_impacto = tick_evt
+	print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 5/6 OBSERVADO — atacante=%s PATADA BLOQUEADA / defensor=%s tick=%d; acumulando 7 snapshots" % [atacante, h1087_integral_lado_usuario, tick_evt])
+	return true
+
+
+func _h1087_armar_block_recovery(prev_snap: Dictionary, evt_snap: Dictionary, tick_evt: int) -> bool:
+	if h1087_integral_lado_usuario == "" or not h1084_block_watch_activo:
+		return false
+	if not _h1084_es_block_recovery(prev_snap, evt_snap, h1087_integral_lado_usuario):
+		return false
+	h1084_block_recovery_auto_armado = true
+	h1084_block_recovery_tick_evento = tick_evt
+	print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 6/6 OBSERVADO — %s BLOCK RECOVERY true->false tick=%d; acumulando 7 snapshots" % [h1087_integral_lado_usuario, tick_evt])
+	return true
+
+
+func _h1087_observar_regresion_integral_post_snapshot() -> void:
+	if h1087_integral_fallo or h1087_integral_completo:
+		return
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado or not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(32, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	match h1087_integral_fase:
+		0:
+			if not h1078_forward_dash_auto_armado:
+				_h1087_armar_forward_dash(prev_snap, evt_snap, tick_evt)
+			elif tick_evt >= h1078_forward_dash_tick_evento + 7:
+				rollback_test_solicitado = true
+				print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 1/6 AUTO MARCADO — rollback próximo physics tick")
+		1:
+			if not h1080_kick_impact_auto_armado:
+				_h1087_armar_kick_impact(prev_snap, evt_snap, tick_evt)
+			elif tick_evt >= h1080_kick_impact_tick_evento + 7:
+				rollback_test_solicitado = true
+				print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 2/6 AUTO MARCADO — rollback próximo physics tick")
+		2:
+			if not h1086_attack_recovery_auto_armado:
+				_h1087_armar_attack_recovery(prev_snap, evt_snap, tick_evt)
+			elif tick_evt >= h1086_attack_recovery_tick_evento + 7:
+				rollback_test_solicitado = true
+				print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 3/6 AUTO MARCADO — rollback próximo physics tick")
+		3:
+			if not h1077_backdash_auto_armado:
+				_h1087_armar_backdash(prev_snap, evt_snap, tick_evt)
+			elif tick_evt >= h1077_backdash_tick_evento + 7:
+				rollback_test_solicitado = true
+				print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 4/6 AUTO MARCADO — rollback próximo physics tick")
+		4:
+			if not h1081_punch_block_auto_armado:
+				_h1087_armar_kick_block(prev_snap, evt_snap, tick_evt)
+			elif tick_evt >= h1081_punch_block_tick_evento + 7:
+				rollback_test_solicitado = true
+				print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 5/6 AUTO MARCADO — rollback próximo physics tick")
+		5:
+			if not h1084_block_recovery_auto_armado:
+				_h1087_armar_block_recovery(prev_snap, evt_snap, tick_evt)
+			elif tick_evt >= h1084_block_recovery_tick_evento + 7:
+				rollback_test_solicitado = true
+				print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 6/6 AUTO MARCADO — rollback próximo physics tick")
+
+
+func _h1087_integral_resultado(ok: bool, clasificacion: String) -> void:
+	if h1087_integral_fallo or h1087_integral_completo:
+		return
+	var esperadas := ["FORWARD DASH", "NORMAL IMPACT", "NORMAL ATTACK RECOVERY", "BACK DASH", "NORMAL BLOCK", "NORMAL BLOCK RECOVERY"]
+	if h1087_integral_fase < 0 or h1087_integral_fase >= esperadas.size():
+		return
+	if clasificacion != str(esperadas[h1087_integral_fase]):
+		return
+	if not ok:
+		h1087_integral_fallo = true
+		print("[91.00.00-H10.88] NORMAL COMBAT INTEGRAL REGRESSION FAILED — checkpoint %d/6 (%s); detener y diagnosticar sólo esta frontera" % [h1087_integral_fase + 1, clasificacion])
+		return
+
+	h1087_integral_fase += 1
+	match h1087_integral_fase:
+		1:
+			print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 1/6 OK — ahora conectá UNA PATADA limpia, soltá el botón y quedate neutral")
+		2:
+			print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 2/6 OK — no hagas nada; esperando automáticamente RECOVERY->NEUTRAL")
+		3:
+			print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 3/6 OK — ahora hacé BACKDASH alejándote del rival")
+		4:
+			print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 4/6 OK — mantené BLOQUEO desde antes y recibí una PATADA normal del rival")
+		5:
+			print("[91.00.00-H10.88] INTEGRAL CHECKPOINT 5/6 OK — soltá BLOQUEO después del impacto y quedate completamente neutral")
+		6:
+			h1087_integral_completo = true
+			print("[91.00.00-H10.88] NORMAL COMBAT INTEGRAL REGRESSION OK — 6/6 checkpoints; movimiento + impacto + recovery + backdash + guardia + retorno neutral idénticos")
+
+
+func _h1086_input_patada(snapshot: Dictionary, lado: String) -> bool:
+	var estado: Dictionary = _h1078_estado_lado(snapshot, lado)
+	if estado.is_empty():
+		return false
+	var frame: Dictionary = estado.get("input_frame_enrutado_actual", {})
+	return bool(frame.get("patada", false))
+
+
+func _h1086_es_attack_recovery(prev_snap: Dictionary, evt_snap: Dictionary, atacante_lado: String) -> bool:
+	var previo: Dictionary = _h1078_estado_lado(prev_snap, atacante_lado)
+	var evento: Dictionary = _h1078_estado_lado(evt_snap, atacante_lado)
+	if previo.is_empty() or evento.is_empty():
+		return false
+	# Frontera semántica: RECOVERY(3) -> NINGUNA(0) después de la patada limpia
+	# previamente confirmada por h1086_attack_watch_activo.
+	if int(previo.get("fase_ataque", 0)) != 3:
+		return false
+	if int(evento.get("fase_ataque", 0)) != 0:
+		return false
+	if str(previo.get("_atk_tipo", "")) != "patada" or str(evento.get("_atk_tipo", "")) != "patada":
+		return false
+	if not bool(previo.get("_atk_ya_conecto", false)) or not bool(evento.get("_atk_ya_conecto", false)):
+		return false
+	if _h1086_input_patada(evt_snap, atacante_lado):
+		return false
+	if not bool(previo.get("__on_floor", false)) or not bool(evento.get("__on_floor", false)):
+		return false
+	if float(evento.get("hitstun_timer", 0.0)) > 0.0 or bool(evento.get("bloqueando", false)):
+		return false
+	if bool(evento.get("carrera_activa", false)) or bool(evento.get("dash_aereo_activo", false)):
+		return false
+	if bool(evento.get("esta_derrotado", false)) or bool(evento.get("en_secuencia_especial", false)):
+		return false
+	return true
+
+
+func _h1086_buscar_ventana_attack_recovery() -> Dictionary:
+	if rollback_ring == null or not h1086_attack_recovery_auto_armado:
+		return {}
+	if h1086_attack_recovery_tick_evento < 0 or h1086_attack_recovery_tick_evento <= rollback_attack_recovery_tick_ya_probado:
+		return {}
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS + 1:
+		return {}
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	for i in range(1, historial.size()):
+		if int(historial[i].get("tick", -1)) != h1086_attack_recovery_tick_evento:
+			continue
+		var prev_snap: Dictionary = historial[i - 1].get("snapshot", {})
+		var evt_snap: Dictionary = historial[i].get("snapshot", {})
+		if not _h1086_es_attack_recovery(prev_snap, evt_snap, h1086_attack_lado):
+			return {}
+		var inicio_idx := i - 1
+		if inicio_idx + ROLLBACK_TEST_TICKS >= historial.size():
+			return {}
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"tick_evento": h1086_attack_recovery_tick_evento,
+			"lado": h1086_attack_lado,
+		}
+	return {}
+
+
+func _h1086_observar_attack_recovery_post_snapshot() -> void:
+	if rollback_ring == null or rollback_catchup_activo or rollback_comparacion_pendiente:
+		return
+	if rollback_test_solicitado or not is_instance_valid(kai) or not is_instance_valid(rival):
+		return
+	if rollback_ring.total() < 2:
+		return
+	var hist: Array[Dictionary] = rollback_ring.ventana_desde_el_final(mini(40, rollback_ring.total()))
+	if hist.size() < 2:
+		return
+	var prev_entry: Dictionary = hist[hist.size() - 2]
+	var evt_entry: Dictionary = hist[hist.size() - 1]
+	var prev_snap: Dictionary = prev_entry.get("snapshot", {})
+	var evt_snap: Dictionary = evt_entry.get("snapshot", {})
+	var tick_evt := int(evt_entry.get("tick", -1))
+
+	# Preparación: una PATADA normal limpia ya certificada en H10.80. No rollback acá.
+	if not h1086_attack_watch_activo:
+		var j1_hit := _h1080_es_kick_impact(prev_snap, evt_snap, "J1")
+		var j2_hit := _h1080_es_kick_impact(prev_snap, evt_snap, "J2")
+		if j1_hit == j2_hit:
+			return
+		h1086_attack_watch_activo = true
+		h1086_attack_lado = "J1" if j1_hit else "J2"
+		h1086_attack_tick_impacto = tick_evt
+		print("[91.00.00-H10.88] NORMAL ATTACK RECOVERY PREPARADO — atacante=%s impacto_tick=%d; soltá PATADA y quedate neutral" % [h1086_attack_lado, tick_evt])
+		return
+
+	if not h1086_attack_recovery_auto_armado:
+		if tick_evt <= rollback_attack_recovery_tick_ya_probado:
+			return
+		if not _h1086_es_attack_recovery(prev_snap, evt_snap, h1086_attack_lado):
+			return
+		h1086_attack_recovery_auto_armado = true
+		h1086_attack_recovery_tick_evento = tick_evt
+		print("[91.00.00-H10.88] NORMAL ATTACK RECOVERY EVENT OBSERVADO — atacante=%s fase 3->0 tick=%d; acumulando 7 snapshots post-evento" % [h1086_attack_lado, tick_evt])
+		return
+
+	var ultimo_tick := int(evt_entry.get("tick", -1))
+	if ultimo_tick >= h1086_attack_recovery_tick_evento + 7:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] NORMAL ATTACK RECOVERY AUTO MARCADO — atacante=%s tick=%d; rollback próximo physics tick" % [h1086_attack_lado, h1086_attack_recovery_tick_evento])
+
+
+func _h33_counter_serial_live() -> int:
+	var tactico := get_node_or_null("/root/PerfectBlock90_1")
+	if tactico == null:
+		return 0
+	return int(tactico.get("_rollback_counter_event_serial"))
+
+
+func _h33_counter_serial_ultimo_ring() -> int:
+	if rollback_ring == null or rollback_ring.entradas.is_empty():
+		return 0
+	var ultimo: Dictionary = rollback_ring.entradas[rollback_ring.entradas.size() - 1]
+	return _h32_counter_serial(ultimo.get("snapshot", {}))
+
+
+func _h32_counter_serial(snapshot: Dictionary) -> int:
+	var tactico: Dictionary = snapshot.get("tactico", {})
+	return int(tactico.get("_rollback_counter_event_serial", 0))
+
+
+func _h32_counter_id(snapshot: Dictionary) -> int:
+	var tactico: Dictionary = snapshot.get("tactico", {})
+	return int(tactico.get("_rollback_counter_event_fighter_id", -1))
+
+
+func _h32_counter_tipo(snapshot: Dictionary) -> String:
+	var tactico: Dictionary = snapshot.get("tactico", {})
+	return str(tactico.get("_rollback_counter_event_tipo", ""))
+
+
+func _h32_buscar_ventana_counter_marcado() -> Dictionary:
+	if rollback_ring == null:
+		return {}
+
+	var total_busqueda := mini(ROLLBACK_COUNTER_LOOKBACK_TICKS, rollback_ring.total())
+	if total_busqueda < ROLLBACK_TEST_TICKS:
+		return {}
+
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(total_busqueda)
+	if historial.size() < 2:
+		return {}
+
+	# Buscar el evento NUEVO más reciente. Un serial ya probado nunca se reutiliza.
+	for i in range(historial.size() - 1, 0, -1):
+		var snap_prev: Dictionary = historial[i - 1].get("snapshot", {})
+		var snap_evt: Dictionary = historial[i].get("snapshot", {})
+		var serial_prev := _h32_counter_serial(snap_prev)
+		var serial_evt := _h32_counter_serial(snap_evt)
+
+		if serial_evt <= serial_prev:
+			continue
+		if serial_evt <= rollback_counter_serial_ya_probado:
+			continue
+
+		var fighter_id := _h32_counter_id(snap_evt)
+		var tipo := _h32_counter_tipo(snap_evt)
+		var lado := "?"
+		if is_instance_valid(kai) and fighter_id == kai.get_instance_id():
+			lado = "J1"
+		elif is_instance_valid(rival) and fighter_id == rival.get_instance_id():
+			lado = "J2"
+
+		# Snapshot i es el PRIMER snapshot que ya contiene el sello.
+		# Empezamos en i-1 para que la re-simulación atraviese el physics tick
+		# donde PerfectBlock90_1 vuelve a ejecutar el Counter.
+		var inicio_idx := maxi(0, i - 1)
+		if inicio_idx + ROLLBACK_TEST_TICKS > historial.size():
+			inicio_idx = historial.size() - ROLLBACK_TEST_TICKS
+
+		var ventana: Array[Dictionary] = []
+		for k in range(inicio_idx, inicio_idx + ROLLBACK_TEST_TICKS):
+			ventana.append(historial[k])
+
+		return {
+			"encontrado": true,
+			"ventana": ventana,
+			"atacante": lado,
+			"tipo": tipo,
+			"serial": serial_evt,
+			"tick_counter": int(historial[i].get("tick", -1)),
+		}
+
+	return {}
+
+
+func _h32_presente_historico_despues_de_ventana(ventana: Array[Dictionary]) -> Dictionary:
+	# Necesitamos el estado inmediatamente DESPUÉS del último tick de la ventana
+	# elegida, no necesariamente el presente real de F11.
+	if rollback_ring == null or ventana.is_empty():
+		return {}
+
+	var ultimo_tick := int(ventana[ventana.size() - 1].get("tick", -1))
+	for entrada in rollback_ring.entradas:
+		if int(entrada.get("tick", -1)) == ultimo_tick + 1:
+			return entrada.get("snapshot", {}).duplicate(true)
+
+	# Si la ventana termina en el tick más reciente, usamos el presente real.
+	return RollbackSnapshotScript.capturar_partida(self, kai, rival)
+
+
+
+# 91.02.59 — PASS 13B / localizador histórico de proyectiles.
+# El ring ya contiene snapshot + inputs por tick; 91.02.58 agregó proyectil_j1/j2.
+# Este arnés NO modifica simulación: sólo elige una ventana de 8 ticks para F11.
+func _h13b_proyectil_snapshot(snapshot: Dictionary, lado: String) -> Dictionary:
+	var clave := "proyectil_j1" if lado == "J1" else "proyectil_j2"
+	var valor = snapshot.get(clave, {})
+	return valor if typeof(valor) == TYPE_DICTIONARY else {}
+
+
+func _h13b_fighter_snapshot(snapshot: Dictionary, lado: String) -> Dictionary:
+	var clave := "j1" if lado == "J1" else "j2"
+	var valor = snapshot.get(clave, {})
+	return valor if typeof(valor) == TYPE_DICTIONARY else {}
+
+
+func _h13b_input_entrada(entrada: Dictionary, lado: String) -> Dictionary:
+	var clave := "j1" if lado == "J1" else "j2"
+	var valor = entrada.get(clave, {})
+	return valor if typeof(valor) == TYPE_DICTIONARY else {}
+
+
+func _h13b_ventana_8_alrededor(historial: Array[Dictionary], indice_evento: int) -> Array[Dictionary]:
+	var salida: Array[Dictionary] = []
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return salida
+
+	# Preferimos tres snapshots previos al evento; si F11 llegó enseguida,
+	# desplazamos la ventana hacia atrás sin salir del historial disponible.
+	var max_inicio := historial.size() - ROLLBACK_TEST_TICKS
+	var inicio := clampi(indice_evento - 3, 0, max_inicio)
+	for k in range(inicio, inicio + ROLLBACK_TEST_TICKS):
+		salida.append(historial[k].duplicate(true))
+	return salida
+
+
+func _h13b_buscar_ventana_proyectil() -> Dictionary:
+	if rollback_ring == null or rollback_ring.total() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	# ~0.60 s de búsqueda histórica. El rollback ejecutado sigue siendo 8 ticks;
+	# este lookback sólo hace practicable presionar F11 después del impacto.
+	var cantidad := mini(36, rollback_ring.total())
+	var historial: Array[Dictionary] = rollback_ring.ventana_desde_el_final(cantidad)
+	if historial.size() < ROLLBACK_TEST_TICKS:
+		return {}
+
+	# PRIORIDAD 1: transición PROYECTIL ACTIVO -> INACTIVO.
+	# Puede ser impacto limpio, bloqueo o simplemente fin de vida. Sólo aceptamos
+	# como impacto si hay evidencia lógica en el Fighter/inputs.
+	for i in range(historial.size() - 1, 0, -1):
+		var snap_prev: Dictionary = historial[i - 1].get("snapshot", {})
+		var snap_evt: Dictionary = historial[i].get("snapshot", {})
+		if snap_prev.is_empty() or snap_evt.is_empty():
+			continue
+
+		for lado in ["J1", "J2"]:
+			var defensor := "J2" if lado == "J1" else "J1"
+			var p_prev := _h13b_proyectil_snapshot(snap_prev, lado)
+			var p_evt := _h13b_proyectil_snapshot(snap_evt, lado)
+			var activo_prev := bool(p_prev.get("activo", false))
+			var activo_evt := bool(p_evt.get("activo", false))
+			if not activo_prev or activo_evt:
+				continue
+
+			var atk_prev := _h13b_fighter_snapshot(snap_prev, lado)
+			var atk_evt := _h13b_fighter_snapshot(snap_evt, lado)
+			var def_prev := _h13b_fighter_snapshot(snap_prev, defensor)
+			var def_evt := _h13b_fighter_snapshot(snap_evt, defensor)
+			var in_def_prev := _h13b_input_entrada(historial[i - 1], defensor)
+			var in_def_evt := _h13b_input_entrada(historial[i], defensor)
+
+			var bloqueado := (
+				bool(def_prev.get("bloqueando", false))
+				or bool(def_evt.get("bloqueando", false))
+				or bool(in_def_prev.get("bloqueo", false))
+				or bool(in_def_evt.get("bloqueo", false))
+			)
+
+			var poder_prev := float(atk_prev.get("poder", 0.0))
+			var poder_evt := float(atk_evt.get("poder", 0.0))
+			var core_subio := poder_evt > poder_prev + 0.0005
+
+			var hitstun_prev := float(def_prev.get("hitstun_timer", 0.0))
+			var hitstun_evt := float(def_evt.get("hitstun_timer", 0.0))
+			var hubo_reaccion := hitstun_evt > hitstun_prev + 0.0005 or hitstun_evt > 0.0
+
+			if not bloqueado and not core_subio and not hubo_reaccion:
+				# Probable timeout/salida de arena: no es el target PASS 13B.
+				continue
+
+			var ventana := _h13b_ventana_8_alrededor(historial, i)
+			if ventana.size() != ROLLBACK_TEST_TICKS:
+				continue
+
+			var clase := "PROYECTIL BLOQUEO" if bloqueado else "PROYECTIL IMPACTO CORE"
+			return {
+				"encontrado": true,
+				"ventana": ventana,
+				"clasificacion": clase,
+				"lado": lado,
+				"defensor": defensor,
+				"tick_evento": int(historial[i].get("tick", -1)),
+				"poder_antes": poder_prev,
+				"poder_despues": poder_evt,
+			}
+
+	# PRIORIDAD 2: proyectil actualmente en vuelo dentro de los últimos 8 ticks.
+	# Usamos exactamente la ventana final para comparar contra el presente real.
+	var ultimos8: Array[Dictionary] = rollback_ring.ventana_desde_el_final(ROLLBACK_TEST_TICKS)
+	var lado_vuelo := ""
+	for entrada in ultimos8:
+		var snap: Dictionary = entrada.get("snapshot", {})
+		if bool(_h13b_proyectil_snapshot(snap, "J1").get("activo", false)):
+			lado_vuelo = "J1"
+		if bool(_h13b_proyectil_snapshot(snap, "J2").get("activo", false)):
+			lado_vuelo = "J2" if lado_vuelo.is_empty() else lado_vuelo
+	if not lado_vuelo.is_empty():
+		return {
+			"encontrado": true,
+			"ventana": ultimos8,
+			"clasificacion": "PROYECTIL VUELO",
+			"lado": lado_vuelo,
+			"defensor": "J2" if lado_vuelo == "J1" else "J1",
+			"tick_evento": int(ultimos8[ultimos8.size() - 1].get("tick", -1)),
+		}
+
+	# PRIORIDAD 3: startup/spawn pendiente. Es útil si F11 cae justo antes
+	# de que aparezca el nodo de proyectil.
+	for i in range(historial.size() - 1, -1, -1):
+		var snap: Dictionary = historial[i].get("snapshot", {})
+		for lado in ["J1", "J2"]:
+			var estado := _h13b_fighter_snapshot(snap, lado)
+			if bool(estado.get("en_lanzamiento_proyectil", false)) or bool(estado.get("proyectil_disparo_pendiente", false)):
+				var ventana := _h13b_ventana_8_alrededor(historial, i)
+				if ventana.size() == ROLLBACK_TEST_TICKS:
+					return {
+						"encontrado": true,
+						"ventana": ventana,
+						"clasificacion": "PROYECTIL STARTUP",
+						"lado": lado,
+						"defensor": "J2" if lado == "J1" else "J1",
+						"tick_evento": int(historial[i].get("tick", -1)),
+					}
+
+	return {}
+
+
+
+func _iniciar_prueba_rollback_local() -> void:
+	if replay_modo_activo or not versus_local_activo or online_activo:
+		print("[91.00.00-H10.88] ROLLBACK TEST no disponible en este modo")
+		return
+	if rollback_catchup_activo or rollback_comparacion_pendiente:
+		print("[91.00.00-H10.88] ROLLBACK TEST ya está en ejecución")
+		return
+	if rollback_ring == null or rollback_ring.total() < ROLLBACK_TEST_TICKS:
+		print("[91.00.00-H10.88] ROLLBACK TEST — historial insuficiente")
+		return
+	var perfect_auto_evento := _h1072_buscar_ventana_perfect_block()
+	if h1072_perfect_auto_armado and not bool(perfect_auto_evento.get("encontrado", false)):
+		rollback_test_solicitado = true
+		return
+	var core3_absolute_match_reset_evento := _h1069_buscar_ventana_core3_absolute_match_reset_entry()
+	var core3_absolute_match_reset_pendiente := bool(core3_absolute_match_reset_evento.get("encontrado", false))
+	var core3_absolute_victory_hold_evento := _h1067_buscar_ventana_core3_absolute_victory_hold()
+	var core3_absolute_victory_hold_pendiente := bool(core3_absolute_victory_hold_evento.get("encontrado", false))
+	var core3_absolute_reveal_end_evento := _h1057_buscar_ventana_core3_absolute_finisher_entry()
+	var core3_absolute_reveal_end_pendiente := bool(core3_absolute_reveal_end_evento.get("encontrado", false))
+	var core3_nineteenth_beat_attack_start_evento := _h1053_buscar_ventana_core3_nineteenth_beat_attack_start()
+	var core3_nineteenth_beat_attack_start_pendiente := bool(core3_nineteenth_beat_attack_start_evento.get("encontrado", false))
+	var core3_eighteenth_beat_end_evento := _h1051_buscar_ventana_core3_eighteenth_beat_end()
+	var core3_eighteenth_beat_end_pendiente := bool(core3_eighteenth_beat_end_evento.get("encontrado", false))
+	var core3_eighth_beat_end_evento := _h1028_buscar_ventana_core3_eighth_beat_end()
+	var core3_eighth_beat_end_pendiente := bool(core3_eighth_beat_end_evento.get("encontrado", false))
+	var core3_seventh_beat_end_evento := _h1027_buscar_ventana_core3_seventh_beat_end()
+	var core3_seventh_beat_end_pendiente := bool(core3_seventh_beat_end_evento.get("encontrado", false))
+	var core3_sixth_beat_end_evento := _h1025_buscar_ventana_core3_sixth_beat_end()
+	var core3_sixth_beat_end_pendiente := bool(core3_sixth_beat_end_evento.get("encontrado", false))
+	var core3_fifth_beat_end_evento := _h1023_buscar_ventana_core3_fifth_beat_end()
+	var core3_fifth_beat_end_pendiente := bool(core3_fifth_beat_end_evento.get("encontrado", false))
+	var core3_fourth_beat_end_evento := _h1021_buscar_ventana_core3_fourth_beat_end()
+	var core3_fourth_beat_end_pendiente := bool(core3_fourth_beat_end_evento.get("encontrado", false))
+	var core3_third_beat_end_evento := _h1019_buscar_ventana_core3_third_beat_end()
+	var core3_third_beat_end_pendiente := bool(core3_third_beat_end_evento.get("encontrado", false))
+	var core3_second_beat_end_evento := _h1016_buscar_ventana_core3_second_beat_end()
+	var core3_second_beat_end_pendiente := bool(core3_second_beat_end_evento.get("encontrado", false))
+	var core3_first_beat_end_evento := _h1014_buscar_ventana_core3_first_beat_end()
+	var core3_first_beat_end_pendiente := bool(core3_first_beat_end_evento.get("encontrado", false))
+	var core3_approach_end_evento := _h1012_buscar_ventana_core3_approach_end()
+	var core3_approach_end_pendiente := bool(core3_approach_end_evento.get("encontrado", false))
+	var core3_recarga_end_evento := _h109_buscar_ventana_core3_recarga_end()
+	var core3_recarga_end_pendiente := bool(core3_recarga_end_evento.get("encontrado", false))
+	var core3_entry_evento := _h10_buscar_ventana_core3_entry()
+	var core3_entry_pendiente := bool(core3_entry_evento.get("encontrado", false))
+	var core2_sequence_end_evento := _h911_buscar_ventana_core2_sequence_end()
+	var core2_sequence_end_pendiente := bool(core2_sequence_end_evento.get("encontrado", false))
+	var core2_rematador_poster_end_evento := _h99_buscar_ventana_core2_rematador_poster_end()
+	var core2_rematador_poster_end_pendiente := bool(core2_rematador_poster_end_evento.get("encontrado", false))
+	var core2_rematador_entry_evento := _h98_buscar_ventana_core2_rematador_entry()
+	var core2_rematador_entry_pendiente := bool(core2_rematador_entry_evento.get("encontrado", false))
+	var core2_first_beat_end_evento := _h96_buscar_ventana_core2_first_beat_end()
+	var core2_first_beat_end_pendiente := bool(core2_first_beat_end_evento.get("encontrado", false))
+	var core2_combo_entry_evento := _h94_buscar_ventana_core2_combo_entry()
+	var core2_combo_entry_pendiente := bool(core2_combo_entry_evento.get("encontrado", false))
+	var core2_recarga_end_evento := _h91_buscar_ventana_core2_recarga_end()
+	var core2_recarga_end_pendiente := bool(core2_recarga_end_evento.get("encontrado", false))
+
+	if h1069_match_reset_auto_test_armado and rollback_test_solicitado and not core3_absolute_match_reset_pendiente:
+		h1069_match_reset_localizacion_espera_ticks += 1
+		if h1069_match_reset_localizacion_espera_ticks <= H1069_LOCALIZACION_MAX_TICKS:
+			rollback_test_solicitado = true
+			return
+		print("[91.00.00-H10.88] CORE III ABSOLUTE MATCH RESET ENTRY AUTO CANCELADO — transición no localizable tras %d ticks" % H1069_LOCALIZACION_MAX_TICKS)
+		h1069_match_reset_auto_test_armado = false
+		h1069_match_reset_lado = ""
+		h1069_match_reset_post_snapshots = 0
+		h1069_match_reset_localizacion_espera_ticks = 0
+		return
+
+	if h1067_victory_hold_auto_test_armado and not core3_absolute_victory_hold_pendiente:
+		h1067_victory_hold_localizacion_espera_ticks += 1
+		if h1067_victory_hold_localizacion_espera_ticks <= H1067_LOCALIZACION_MAX_TICKS:
+			rollback_test_solicitado = true
+			return
+		print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY HOLD AUTO CANCELADO — ventana estable no localizable tras %d ticks" % H1067_LOCALIZACION_MAX_TICKS)
+		h1067_victory_hold_auto_test_armado = false
+		h1067_victory_hold_lado = ""
+		h1067_victory_hold_snapshots_estables = 0
+		h1067_victory_hold_localizacion_espera_ticks = 0
+		return
+
+	if h1057_auto_test_armado and not core3_absolute_reveal_end_pendiente:
+		h1057_localizacion_espera_ticks += 1
+		if h1057_localizacion_espera_ticks <= H1057_LOCALIZACION_MAX_TICKS:
+			rollback_test_solicitado = true
+			return
+		print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY ENTRY AUTO CANCELADO — evento no localizable tras %d ticks" % H1057_LOCALIZACION_MAX_TICKS)
+		h1057_auto_test_armado = false
+		h1057_event_tick_hint = -1
+		h1057_event_lado = ""
+		h1057_localizacion_espera_ticks = 0
+		return
+
+	if h1053_auto_test_armado and not core3_nineteenth_beat_attack_start_pendiente:
+		h1053_localizacion_espera_ticks += 1
+		if h1053_localizacion_espera_ticks <= H1053_LOCALIZACION_MAX_TICKS:
+			rollback_test_solicitado = true
+			return
+		print("[91.00.00-H10.88] CORE III NINETEENTH BEAT ATTACK START AUTO CANCELADO — evento no localizable tras %d ticks; gameplay continúa intacto" % H1053_LOCALIZACION_MAX_TICKS)
+		h1053_auto_test_armado = false
+		h1053_auto_test_tick_evento = -1
+		h1053_auto_test_lado = ""
+		h1053_localizacion_espera_ticks = 0
+		return
+
+	if h1051_auto_test_armado and not core3_eighteenth_beat_end_pendiente:
+		h1051_localizacion_espera_ticks += 1
+		if h1051_localizacion_espera_ticks <= H1051_LOCALIZACION_MAX_TICKS:
+			rollback_test_solicitado = true
+			return
+		print("[91.00.00-H10.88] CORE III EIGHTEENTH BEAT END AUTO CANCELADO — evento no localizable tras %d ticks; gameplay continúa intacto" % H1051_LOCALIZACION_MAX_TICKS)
+		h1051_auto_test_armado = false
+		h1051_auto_test_tick_evento = -1
+		h1051_auto_test_lado = ""
+		h1051_localizacion_espera_ticks = 0
+		return
+
+	if h1028_auto_test_armado and not core3_eighth_beat_end_pendiente:
+		h1029_localizacion_espera_ticks += 1
+		if h1029_localizacion_espera_ticks <= H1029_LOCALIZACION_MAX_TICKS:
+			# Silencioso: no imprimir por physics tick. El snapshot post-transición puede
+			# necesitar un frame para entrar al ring, pero nunca debe degradar gameplay.
+			rollback_test_solicitado = true
+			return
+		print("[91.00.00-H10.88] CORE III EIGHTH BEAT END AUTO CANCELADO — evento no localizable tras %d ticks; gameplay continúa intacto" % H1029_LOCALIZACION_MAX_TICKS)
+		h1028_auto_test_armado = false
+		h1028_auto_test_tick_evento = -1
+		h1028_auto_test_lado = ""
+		h1029_localizacion_espera_ticks = 0
+		return
+
+	if h1027_auto_test_armado and not core3_seventh_beat_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III SEVENTH BEAT END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h1025_auto_test_armado and not core3_sixth_beat_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III SIXTH BEAT END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h1023_auto_test_armado and not core3_fifth_beat_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III FIFTH BEAT END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h1021_auto_test_armado and not core3_fourth_beat_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III FOURTH BEAT END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h1019_auto_test_armado and not core3_third_beat_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III THIRD BEAT END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h1016_auto_test_armado and not core3_second_beat_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III SECOND BEAT END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h1014_auto_test_armado and not core3_first_beat_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III FIRST BEAT END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h1012_auto_test_armado and not core3_approach_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III APPROACH END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h109_auto_test_armado and not core3_recarga_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE III RECARGA END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h10_core3_auto_armado and not core3_entry_pendiente:
+		var post_core3 := _h101_core3_post_ticks_disponibles()
+		if post_core3 < H101_CORE3_POST_TICKS_REQUERIDOS:
+			rollback_test_solicitado = true
+			print("[91.00.00-H10.88] CORE III EXACT ENTRY AUTO — historial post-evento %d/%d ticks" % [
+				maxi(post_core3, 0),
+				H101_CORE3_POST_TICKS_REQUERIDOS
+			])
+			return
+
+	if h911_auto_test_armado and not core2_sequence_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE II SEQUENCE END AUTO — marcado pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h99_auto_test_armado and not core2_rematador_poster_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE II REMATADOR POSTER END AUTO — marcado pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h98_auto_test_armado and not core2_rematador_entry_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE II REMATADOR ENTRY AUTO — marcado pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h96_auto_test_armado and not core2_first_beat_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE II FIRST BEAT END AUTO — marcado pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h94_auto_test_armado and not core2_combo_entry_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE II COMBO ENTRY AUTO — marcado pero aún no localizable; esperando 1 physics tick")
+		return
+
+	if h92_auto_test_armado and not core2_recarga_end_pendiente:
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] CORE II RECARGA END AUTO — transición marcada pero aún no localizable; esperando 1 physics tick")
+		return
+	var core3_pendiente := rollback_core3_event_serial > rollback_core3_event_serial_ya_probado
+	var core2_pendiente := rollback_core2_event_serial > rollback_core2_event_serial_ya_probado
+
+	# H10.68 — VICTORY HOLD es deliberadamente un estado post-KO/no-ronda.
+	# El gate genérico debe seguir rechazando KO/cinemáticas, salvo cuando el
+	# localizador TARGET-ONLY ya encontró esta ventana histórica específica.
+	if not _snapshot_estado_rollback_h_seguro() 	and not core3_absolute_match_reset_pendiente 	and not core3_absolute_victory_hold_pendiente 	and not core3_pendiente 	and not core2_pendiente 	and not core2_recarga_end_pendiente 	and not core2_combo_entry_pendiente 	and not core2_first_beat_end_pendiente 	and not core2_rematador_entry_pendiente 	and not core2_rematador_poster_end_pendiente 	and not core2_sequence_end_pendiente 	and not core3_absolute_reveal_end_pendiente 	and not core3_nineteenth_beat_attack_start_pendiente 	and not core3_eighteenth_beat_end_pendiente 	and not core3_eighth_beat_end_pendiente 	and not core3_seventh_beat_end_pendiente 	and not core3_sixth_beat_end_pendiente 	and not core3_fifth_beat_end_pendiente 	and not core3_fourth_beat_end_pendiente 	and not core3_third_beat_end_pendiente 	and not core3_second_beat_end_pendiente 	and not core3_first_beat_end_pendiente 	and not core3_approach_end_pendiente 	and not core3_entry_pendiente 	and not core3_recarga_end_pendiente:
+		# Si visualmente acaba de terminar la recarga pero el snapshot de Main
+		# todavía no capturó la transición, rearmar F11 un physics tick.
+		if _h91_core2_recarga_termino_live():
+			rollback_test_solicitado = true
+			print("[91.00.00-H10.88] CORE II RECARGA END LIVE — esperando 1 physics tick de captura")
+			return
+		print("[91.00.00-H10.88] TACTICAL TEST CANCELADO — no usar CORE/derribo/KO/cinemáticas")
+		return
+
+	# H10 — fase_activada CORE III también ocurre después del snapshot de Main.
+	if core3_pendiente:
+		var post_core3_pending := _h101_core3_post_ticks_disponibles()
+		if post_core3_pending < H101_CORE3_POST_TICKS_REQUERIDOS:
+			rollback_test_solicitado = true
+			print("[91.00.00-H10.88] CORE III EXACT ENTRY — acumulando post-evento %d/%d ticks" % [
+				maxi(post_core3_pending, 0),
+				H101_CORE3_POST_TICKS_REQUERIDOS
+			])
+			return
+
+	# H9 — CORE II puede estar en recarga/cinemática, que el gate genérico
+	# rechaza correctamente. Sólo permitimos continuar si existe un evento
+	# CORE II Main-only pendiente y localizable.
+	if core2_pendiente:
+		var core2_ultimo_tick := _h81_core1_ultimo_tick_ring()
+		if core2_ultimo_tick <= rollback_core2_event_tick_hint:
+			rollback_test_solicitado = true
+			print("[91.00.00-H10.88] CORE II RECIÉN MARCADO — esperando 1 physics tick de captura")
+			return
+
+	# H8.1 — fase_activada ocurre después del snapshot de inicio de Main.
+	# Si F11 llega antes de que el ring haya capturado el tick_hint, esperar
+	# exactamente un physics tick. No altera gameplay.
+	if rollback_core1_event_serial > rollback_core1_event_serial_ya_probado:
+		var core_ultimo_tick := _h81_core1_ultimo_tick_ring()
+		if core_ultimo_tick <= rollback_core1_event_tick_hint:
+			rollback_test_solicitado = true
+			print("[91.00.00-H10.88] CORE I RECIÉN MARCADO — esperando 1 physics tick de captura")
+			return
+
+	# H6 — Launcher/Air Hit pueden ocurrir después del snapshot más reciente de Main.
+	# Si el sello LIVE todavía no está dentro del ring, esperar exactamente un physics tick.
+	var air_live := _h6_airhit_serial_live()
+	var air_ring := _h6_airhit_serial_ultimo_ring()
+	if air_live > air_ring:
+		rollback_airhit_serial_defer = air_live
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] AIR HIT RECIÉN MARCADO — serial=%d fuera del ring; capturando 1 physics tick" % air_live)
+		return
+	rollback_airhit_serial_defer = -1
+
+	var launcher_live := _h6_launcher_serial_live()
+	var launcher_ring := _h6_launcher_serial_ultimo_ring()
+	if launcher_live > launcher_ring:
+		rollback_launcher_serial_defer = launcher_live
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] LAUNCHER RECIÉN MARCADO — serial=%d fuera del ring; capturando 1 physics tick" % launcher_live)
+		return
+	rollback_launcher_serial_defer = -1
+
+	# 91.00.00-H10.13 — frontera Main/PerfectBlock para BACK DASH.
+	# Igual que Counter, el sello puede ocurrir después del último snapshot de Main.
+	var bd_live := _h5_backdash_serial_live()
+	var bd_ring := _h5_backdash_serial_ultimo_ring()
+	if bd_live > bd_ring and bd_live > rollback_backdash_serial_ya_probado:
+		rollback_backdash_serial_defer = bd_live
+		rollback_test_solicitado = true
+		print("[91.00.00-H10.88] BACKDASH RECIÉN MARCADO — serial=%d todavía fuera del ring; capturando 1 physics tick" % bd_live)
+		return
+	rollback_backdash_serial_defer = -1
+
+	# 91.00.00-H10.13 — frontera Main/PerfectBlock:
+	# el Counter puede haber ocurrido DESPUÉS del snapshot más reciente del ring.
+	# En ese caso rearmamos F11 una sola vez y dejamos que este physics tick
+	# registre el sello. En el tick siguiente ya existe la transición histórica.
+	var serial_live := _h33_counter_serial_live()
+	var serial_ring := _h33_counter_serial_ultimo_ring()
+	if serial_live > serial_ring and serial_live > rollback_counter_serial_ya_probado:
+		if not rollback_counter_defer_activo or rollback_counter_serial_defer != serial_live:
+			rollback_counter_defer_activo = true
+			rollback_counter_serial_defer = serial_live
+			rollback_test_solicitado = true
+			print("[91.00.00-H10.88] COUNTER RECIÉN MARCADO — serial=%d todavía fuera del ring; capturando 1 physics tick" % serial_live)
+			return
+
+	rollback_counter_defer_activo = false
+	rollback_counter_serial_defer = -1
+
+	# H6: Air Hit y Launcher tienen prioridad. Back Dash/Counter quedan como regresión.
+	var core2_entry_evento := _h9_buscar_ventana_core2_entry()
+	var core1_poster_end_evento := _h86_buscar_ventana_core1_poster_end()
+	var core1_target_end_evento := _h84_buscar_ventana_core1_target_end()
+	var core1_evento := _h81_buscar_ventana_core1()
+	var air_evento := _h6_buscar_airhit()
+	var launcher_evento := _h6_buscar_launcher()
+	var backdash_evento := _h5_buscar_ventana_backdash()
+	var forward_dash_evento := _h1078_buscar_ventana_forward_dash()
+	var normal_kick_impact_evento := _h1080_buscar_ventana_kick_impact()
+	var normal_punch_block_evento := _h1081_buscar_ventana_punch_block()
+	var normal_block_recovery_evento := _h1084_buscar_ventana_block_recovery()
+	var normal_attack_recovery_evento := _h1086_buscar_ventana_attack_recovery()
+	var perfect_evento := _h1072_buscar_ventana_perfect_block()
+	var counter_evento := _h32_buscar_ventana_counter_marcado()
+	# 91.02.59 — F11 ya puede seleccionar una ventana de proyectil sin
+	# depender del analizador histórico de ataques normales.
+	var proyectil_evento := _h13b_buscar_ventana_proyectil()
+
+	var ventana: Array[Dictionary] = []
+	var analisis: Dictionary = {}
+
+	if bool(core3_absolute_match_reset_evento.get("encontrado", false)):
+		ventana = core3_absolute_match_reset_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III ABSOLUTE MATCH RESET ENTRY",
+			"atacante": "%s CORE III ABSOLUTE MATCH RESET ENTRY" % str(core3_absolute_match_reset_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III ABSOLUTE MATCH RESET ENTRY LOCALIZADO — SceneTreeTimer 9.20 s / victoria->partida nueva — tick %d -> %d %s" % [
+			int(core3_absolute_match_reset_evento.get("tick_inicio", -1)),
+			int(core3_absolute_match_reset_evento.get("tick_final", -1)),
+			str(core3_absolute_match_reset_evento.get("lado", "?"))
+		])
+		rollback_core3_absolute_match_reset_tick_ya_probado = int(core3_absolute_match_reset_evento.get("tick_evento", rollback_core3_absolute_match_reset_tick_ya_probado))
+		h1069_match_reset_auto_test_armado = false
+		h1069_match_reset_lado = ""
+		h1069_match_reset_post_snapshots = 0
+		h1069_match_reset_localizacion_espera_ticks = 0
+	elif bool(core3_absolute_victory_hold_evento.get("encontrado", false)):
+		ventana = core3_absolute_victory_hold_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III ABSOLUTE VICTORY HOLD",
+			"atacante": "%s CORE III ABSOLUTE VICTORY HOLD" % str(core3_absolute_victory_hold_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY HOLD LOCALIZADO — 8 ticks estables; tick %d -> %d %s" % [
+			int(core3_absolute_victory_hold_evento.get("tick_inicio", -1)),
+			int(core3_absolute_victory_hold_evento.get("tick_final", -1)),
+			str(core3_absolute_victory_hold_evento.get("lado", "?"))
+		])
+		rollback_core3_absolute_victory_hold_tick_ya_probado = int(core3_absolute_victory_hold_evento.get("tick_final", rollback_core3_absolute_victory_hold_tick_ya_probado))
+		h1067_victory_hold_auto_test_armado = false
+		h1067_victory_hold_lado = ""
+		h1067_victory_hold_snapshots_estables = 0
+		h1067_victory_hold_localizacion_espera_ticks = 0
+	elif bool(core3_absolute_reveal_end_evento.get("encontrado", false)):
+		ventana = core3_absolute_reveal_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III ABSOLUTE VICTORY ENTRY",
+			"atacante": "%s CORE III ABSOLUTE VICTORY ENTRY" % str(core3_absolute_reveal_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III ABSOLUTE VICTORY ENTRY LOCALIZADO — ronda=false / time_scale 0.42->1.0 / ganador pose_victoria false->true — tick=%d %s" % [
+			int(core3_absolute_reveal_end_evento.get("tick_evento", -1)),
+			str(core3_absolute_reveal_end_evento.get("lado", "?"))
+		])
+		rollback_core3_absolute_victory_entry_tick_ya_probado = int(core3_absolute_reveal_end_evento.get(
+			"tick_evento", rollback_core3_absolute_victory_entry_tick_ya_probado
+		))
+		h1057_auto_test_armado = false
+		h1057_localizacion_espera_ticks = 0
+	elif bool(core3_nineteenth_beat_attack_start_evento.get("encontrado", false)):
+		ventana = core3_nineteenth_beat_attack_start_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III NINETEENTH BEAT ATTACK START",
+			"atacante": "%s CORE III NINETEENTH BEAT ATTACK START" % str(core3_nineteenth_beat_attack_start_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III NINETEENTH BEAT ATTACK START LOCALIZADO — stage 21 / entrada-activa o fase 0->ataque — tick=%d %s" % [
+			int(core3_nineteenth_beat_attack_start_evento.get("tick_evento", -1)),
+			str(core3_nineteenth_beat_attack_start_evento.get("lado", "?"))
+		])
+		rollback_core3_nineteenth_beat_attack_start_tick_ya_probado = int(core3_nineteenth_beat_attack_start_evento.get(
+			"tick_evento", rollback_core3_nineteenth_beat_attack_start_tick_ya_probado
+		))
+		h1053_auto_test_armado = false
+		h1053_localizacion_espera_ticks = 0
+	elif bool(core3_eighteenth_beat_end_evento.get("encontrado", false)):
+		ventana = core3_eighteenth_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III EIGHTEENTH BEAT END",
+			"atacante": "%s CORE III EIGHTEENTH BEAT END" % str(core3_eighteenth_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III EIGHTEENTH BEAT END LOCALIZADO — stage 20->21 — tick=%d %s" % [
+			int(core3_eighteenth_beat_end_evento.get("tick_evento", -1)),
+			str(core3_eighteenth_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_eighteenth_beat_end_tick_ya_probado = int(core3_eighteenth_beat_end_evento.get(
+			"tick_evento", rollback_core3_eighteenth_beat_end_tick_ya_probado
+		))
+		h1051_auto_test_armado = false
+		h1051_localizacion_espera_ticks = 0
+	elif bool(core3_eighth_beat_end_evento.get("encontrado", false)):
+		ventana = core3_eighth_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III EIGHTH BEAT END",
+			"atacante": "%s CORE III EIGHTH BEAT END" % str(core3_eighth_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III EIGHTH BEAT END LOCALIZADO — stage 10->11 — tick=%d %s" % [
+			int(core3_eighth_beat_end_evento.get("tick_evento", -1)),
+			str(core3_eighth_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_eighth_beat_end_tick_ya_probado = int(core3_eighth_beat_end_evento.get(
+			"tick_evento", rollback_core3_eighth_beat_end_tick_ya_probado
+		))
+		h1028_auto_test_armado = false
+		h1029_localizacion_espera_ticks = 0
+	elif bool(core3_seventh_beat_end_evento.get("encontrado", false)):
+		ventana = core3_seventh_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III SEVENTH BEAT END",
+			"atacante": "%s CORE III SEVENTH BEAT END" % str(core3_seventh_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III SEVENTH BEAT END LOCALIZADO — stage 9->10 — tick=%d %s" % [
+			int(core3_seventh_beat_end_evento.get("tick_evento", -1)),
+			str(core3_seventh_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_seventh_beat_end_tick_ya_probado = int(core3_seventh_beat_end_evento.get(
+			"tick_evento", rollback_core3_seventh_beat_end_tick_ya_probado
+		))
+		h1027_auto_test_armado = false
+	elif bool(core3_sixth_beat_end_evento.get("encontrado", false)):
+		ventana = core3_sixth_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III SIXTH BEAT END",
+			"atacante": "%s CORE III SIXTH BEAT END" % str(core3_sixth_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III SIXTH BEAT END LOCALIZADO — stage 8->9 — tick=%d %s" % [
+			int(core3_sixth_beat_end_evento.get("tick_evento", -1)),
+			str(core3_sixth_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_sixth_beat_end_tick_ya_probado = int(core3_sixth_beat_end_evento.get(
+			"tick_evento", rollback_core3_sixth_beat_end_tick_ya_probado
+		))
+		h1025_auto_test_armado = false
+	elif bool(core3_fifth_beat_end_evento.get("encontrado", false)):
+		ventana = core3_fifth_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III FIFTH BEAT END",
+			"atacante": "%s CORE III FIFTH BEAT END" % str(core3_fifth_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III FIFTH BEAT END LOCALIZADO — stage 7->8 — tick=%d %s" % [
+			int(core3_fifth_beat_end_evento.get("tick_evento", -1)),
+			str(core3_fifth_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_fifth_beat_end_tick_ya_probado = int(core3_fifth_beat_end_evento.get(
+			"tick_evento", rollback_core3_fifth_beat_end_tick_ya_probado
+		))
+		h1023_auto_test_armado = false
+	elif bool(core3_fourth_beat_end_evento.get("encontrado", false)):
+		ventana = core3_fourth_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III FOURTH BEAT END",
+			"atacante": "%s CORE III FOURTH BEAT END" % str(core3_fourth_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III FOURTH BEAT END LOCALIZADO — stage 6->7 — tick=%d %s" % [
+			int(core3_fourth_beat_end_evento.get("tick_evento", -1)),
+			str(core3_fourth_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_fourth_beat_end_tick_ya_probado = int(core3_fourth_beat_end_evento.get(
+			"tick_evento", rollback_core3_fourth_beat_end_tick_ya_probado
+		))
+		h1021_auto_test_armado = false
+	elif bool(core3_third_beat_end_evento.get("encontrado", false)):
+		ventana = core3_third_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III THIRD BEAT END",
+			"atacante": "%s CORE III THIRD BEAT END" % str(core3_third_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III THIRD BEAT END LOCALIZADO — stage 5->6 — tick=%d %s" % [
+			int(core3_third_beat_end_evento.get("tick_evento", -1)),
+			str(core3_third_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_third_beat_end_tick_ya_probado = int(core3_third_beat_end_evento.get(
+			"tick_evento", rollback_core3_third_beat_end_tick_ya_probado
+		))
+		h1019_auto_test_armado = false
+	elif bool(core3_second_beat_end_evento.get("encontrado", false)):
+		ventana = core3_second_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III SECOND BEAT END",
+			"atacante": "%s CORE III SECOND BEAT END" % str(core3_second_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III SECOND BEAT END LOCALIZADO — stage 4->5 — tick=%d %s" % [
+			int(core3_second_beat_end_evento.get("tick_evento", -1)),
+			str(core3_second_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_second_beat_end_tick_ya_probado = int(core3_second_beat_end_evento.get(
+			"tick_evento", rollback_core3_second_beat_end_tick_ya_probado
+		))
+		h1016_auto_test_armado = false
+	elif bool(core3_first_beat_end_evento.get("encontrado", false)):
+		ventana = core3_first_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III FIRST BEAT END",
+			"atacante": "%s CORE III FIRST BEAT END" % str(core3_first_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III FIRST BEAT END LOCALIZADO — stage 3->4 — tick=%d %s" % [
+			int(core3_first_beat_end_evento.get("tick_evento", -1)),
+			str(core3_first_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core3_first_beat_end_tick_ya_probado = int(core3_first_beat_end_evento.get(
+			"tick_evento", rollback_core3_first_beat_end_tick_ya_probado
+		))
+		h1014_auto_test_armado = false
+	elif bool(core3_approach_end_evento.get("encontrado", false)):
+		ventana = core3_approach_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III APPROACH END",
+			"atacante": "%s CORE III APPROACH END" % str(core3_approach_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III APPROACH END LOCALIZADO — stage 2->3 — tick=%d %s" % [
+			int(core3_approach_end_evento.get("tick_evento", -1)),
+			str(core3_approach_end_evento.get("lado", "?"))
+		])
+		rollback_core3_approach_end_tick_ya_probado = int(core3_approach_end_evento.get(
+			"tick_evento", rollback_core3_approach_end_tick_ya_probado
+		))
+		h1012_auto_test_armado = false
+	elif bool(core3_recarga_end_evento.get("encontrado", false)):
+		ventana = core3_recarga_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III RECARGA END",
+			"atacante": "%s CORE III RECARGA END" % str(core3_recarga_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III RECARGA END LOCALIZADO — ventana=[evento-7..evento] — tick=%d %s" % [
+			int(core3_recarga_end_evento.get("tick_evento", -1)),
+			str(core3_recarga_end_evento.get("lado", "?"))
+		])
+		rollback_core3_recarga_end_tick_ya_probado = int(core3_recarga_end_evento.get(
+			"tick_evento", rollback_core3_recarga_end_tick_ya_probado
+		))
+		h109_auto_test_armado = false
+	elif bool(core3_entry_evento.get("encontrado", false)):
+		ventana = core3_entry_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE III ENTRY",
+			"atacante": "%s CORE III ENTRY" % str(core3_entry_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE III EXACT ENTRY LOCALIZADO — ventana=[evento-1..evento+6] — serial=%d tick=%d %s" % [
+			int(core3_entry_evento.get("serial", -1)),
+			int(core3_entry_evento.get("tick_evento", -1)),
+			str(core3_entry_evento.get("lado", "?"))
+		])
+		rollback_core3_event_serial_ya_probado = int(core3_entry_evento.get(
+			"serial", rollback_core3_event_serial_ya_probado
+		))
+		h10_core3_auto_armado = false
+	elif bool(core2_sequence_end_evento.get("encontrado", false)):
+		ventana = core2_sequence_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE II SEQUENCE END",
+			"atacante": "%s CORE II SEQUENCE END" % str(core2_sequence_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE II SEQUENCE END LOCALIZADO — tick=%d %s" % [
+			int(core2_sequence_end_evento.get("tick_evento", -1)),
+			str(core2_sequence_end_evento.get("lado", "?"))
+		])
+		rollback_core2_sequence_end_tick_ya_probado = int(core2_sequence_end_evento.get(
+			"tick_evento", rollback_core2_sequence_end_tick_ya_probado
+		))
+		h911_auto_test_armado = false
+	elif bool(core2_rematador_poster_end_evento.get("encontrado", false)):
+		ventana = core2_rematador_poster_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE II REMATADOR POSTER END",
+			"atacante": "%s CORE II REMATADOR POSTER END" % str(core2_rematador_poster_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE II REMATADOR POSTER END LOCALIZADO — serial=%d tick=%d %s" % [
+			int(core2_rematador_poster_end_evento.get("serial", -1)),
+			int(core2_rematador_poster_end_evento.get("tick_evento", -1)),
+			str(core2_rematador_poster_end_evento.get("lado", "?"))
+		])
+		rollback_core2_rematador_poster_serial_ya_probado = int(
+			core2_rematador_poster_end_evento.get(
+				"serial", rollback_core2_rematador_poster_serial_ya_probado
+			)
+		)
+		h99_auto_test_armado = false
+	elif bool(core2_rematador_entry_evento.get("encontrado", false)):
+		ventana = core2_rematador_entry_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE II REMATADOR ENTRY",
+			"atacante": "%s CORE II REMATADOR ENTRY" % str(core2_rematador_entry_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE II REMATADOR ENTRY LOCALIZADO — tick=%d %s" % [
+			int(core2_rematador_entry_evento.get("tick_evento", -1)),
+			str(core2_rematador_entry_evento.get("lado", "?"))
+		])
+		rollback_core2_rematador_entry_tick_ya_probado = int(core2_rematador_entry_evento.get(
+			"tick_evento", rollback_core2_rematador_entry_tick_ya_probado
+		))
+		h98_auto_test_armado = false
+	elif bool(core2_first_beat_end_evento.get("encontrado", false)):
+		ventana = core2_first_beat_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE II FIRST BEAT END",
+			"atacante": "%s CORE II FIRST BEAT END" % str(core2_first_beat_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE II FIRST BEAT END LOCALIZADO — tick=%d %s" % [
+			int(core2_first_beat_end_evento.get("tick_evento", -1)),
+			str(core2_first_beat_end_evento.get("lado", "?"))
+		])
+		rollback_core2_first_beat_end_tick_ya_probado = int(core2_first_beat_end_evento.get(
+			"tick_evento", rollback_core2_first_beat_end_tick_ya_probado
+		))
+		h96_auto_test_armado = false
+	elif bool(core2_combo_entry_evento.get("encontrado", false)):
+		ventana = core2_combo_entry_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE II COMBO ENTRY",
+			"atacante": "%s CORE II COMBO ENTRY" % str(core2_combo_entry_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE II COMBO ENTRY LOCALIZADO — tick=%d %s" % [
+			int(core2_combo_entry_evento.get("tick_evento", -1)),
+			str(core2_combo_entry_evento.get("lado", "?"))
+		])
+		rollback_core2_combo_entry_tick_ya_probado = int(core2_combo_entry_evento.get(
+			"tick_evento", rollback_core2_combo_entry_tick_ya_probado
+		))
+		h94_auto_test_armado = false
+	elif bool(core2_recarga_end_evento.get("encontrado", false)):
+		ventana = core2_recarga_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE II RECARGA END",
+			"atacante": "%s CORE II RECARGA END" % str(core2_recarga_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE II RECARGA END LOCALIZADO — tick=%d %s" % [
+			int(core2_recarga_end_evento.get("tick_evento", -1)),
+			str(core2_recarga_end_evento.get("lado", "?"))
+		])
+		rollback_core2_recarga_end_tick_ya_probado = int(core2_recarga_end_evento.get(
+			"tick_evento", rollback_core2_recarga_end_tick_ya_probado
+		))
+		h92_auto_test_armado = false
+	elif bool(core2_entry_evento.get("encontrado", false)):
+		ventana = core2_entry_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE II ENTRY",
+			"atacante": "%s CORE II ENTRY" % str(core2_entry_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE II EVENT LOCALIZADO — serial=%d tick=%d %s" % [
+			int(core2_entry_evento.get("serial", -1)),
+			int(core2_entry_evento.get("tick_evento", -1)),
+			str(core2_entry_evento.get("lado", "?"))
+		])
+		rollback_core2_event_serial_ya_probado = int(core2_entry_evento.get(
+			"serial", rollback_core2_event_serial_ya_probado
+		))
+	elif bool(core1_poster_end_evento.get("encontrado", false)):
+		ventana = core1_poster_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE I POSTER END",
+			"atacante": "%s CORE I POSTER END" % str(core1_poster_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE I POSTER END LOCALIZADO — tick=%d %s" % [
+			int(core1_poster_end_evento.get("tick_evento", -1)),
+			str(core1_poster_end_evento.get("lado", "?"))
+		])
+		rollback_core1_poster_end_tick_ya_probado = int(core1_poster_end_evento.get(
+			"tick_evento", rollback_core1_poster_end_tick_ya_probado
+		))
+	elif bool(core1_target_end_evento.get("encontrado", false)):
+		ventana = core1_target_end_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE I TARGET END",
+			"atacante": "%s CORE I TARGET END" % str(core1_target_end_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE I TARGET END LOCALIZADO — serial=%d tick=%d %s" % [
+			int(core1_target_end_evento.get("serial", -1)),
+			int(core1_target_end_evento.get("tick_evento", -1)),
+			str(core1_target_end_evento.get("lado", "?"))
+		])
+		rollback_core1_target_end_serial_ya_probado = int(core1_target_end_evento.get(
+			"serial", rollback_core1_target_end_serial_ya_probado
+		))
+	elif bool(core1_evento.get("encontrado", false)):
+		ventana = core1_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "CORE I ENTRY",
+			"atacante": "%s CORE I" % str(core1_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] CORE I EVENT LOCALIZADO — serial=%d tick=%d %s" % [
+			int(core1_evento.get("serial", -1)),
+			int(core1_evento.get("tick_evento", -1)),
+			str(core1_evento.get("lado", "?"))
+		])
+		rollback_core1_event_serial_ya_probado = int(core1_evento.get(
+			"serial", rollback_core1_event_serial_ya_probado
+		))
+	elif h1086_attack_recovery_auto_armado and bool(normal_attack_recovery_evento.get("encontrado", false)):
+		ventana = normal_attack_recovery_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "NORMAL ATTACK RECOVERY",
+			"atacante": "%s PATADA LIMPIA / recuperación ofensiva" % str(normal_attack_recovery_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] NORMAL ATTACK RECOVERY EVENT LOCALIZADO — tick=%d atacante=%s" % [
+			int(normal_attack_recovery_evento.get("tick_evento", -1)), str(normal_attack_recovery_evento.get("lado", "?"))
+		])
+		rollback_attack_recovery_tick_ya_probado = int(normal_attack_recovery_evento.get("tick_evento", rollback_attack_recovery_tick_ya_probado))
+		h1086_attack_watch_activo = false
+		h1086_attack_lado = ""
+		h1086_attack_tick_impacto = -1
+		h1086_attack_recovery_auto_armado = false
+		h1086_attack_recovery_tick_evento = -1
+	elif h1084_block_recovery_auto_armado and bool(normal_block_recovery_evento.get("encontrado", false)):
+		ventana = normal_block_recovery_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "NORMAL BLOCK RECOVERY",
+			"atacante": "%s PATADA BLOQUEADA / recuperación defensor %s" % [str(normal_block_recovery_evento.get("atacante", "?")), str(normal_block_recovery_evento.get("defensor", "?"))],
+		}
+		print("[91.00.00-H10.88] NORMAL BLOCK RECOVERY EVENT LOCALIZADO — tick=%d atacante=%s defensor=%s" % [
+			int(normal_block_recovery_evento.get("tick_evento", -1)), str(normal_block_recovery_evento.get("atacante", "?")), str(normal_block_recovery_evento.get("defensor", "?"))
+		])
+		rollback_block_recovery_tick_ya_probado = int(normal_block_recovery_evento.get("tick_evento", rollback_block_recovery_tick_ya_probado))
+		h1084_block_watch_activo = false
+		h1084_block_atacante = ""
+		h1084_block_defensor = ""
+		h1084_block_tick_impacto = -1
+		h1084_block_recovery_auto_armado = false
+		h1084_block_recovery_tick_evento = -1
+	elif h1081_punch_block_auto_armado and bool(normal_punch_block_evento.get("encontrado", false)):
+		ventana = normal_punch_block_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "NORMAL BLOCK",
+			"atacante": "%s PATADA BLOQUEADA / defensor %s" % [str(normal_punch_block_evento.get("atacante", "?")), str(normal_punch_block_evento.get("defensor", "?"))],
+		}
+		print("[91.00.00-H10.88] NORMAL KICK BLOCK EVENT LOCALIZADO — tick=%d atacante=%s defensor=%s" % [
+			int(normal_punch_block_evento.get("tick_evento", -1)), str(normal_punch_block_evento.get("atacante", "?")), str(normal_punch_block_evento.get("defensor", "?"))
+		])
+		rollback_punch_block_tick_ya_probado = int(normal_punch_block_evento.get("tick_evento", rollback_punch_block_tick_ya_probado))
+		h1081_punch_block_auto_armado = false
+		h1081_punch_block_tick_evento = -1
+		h1081_punch_block_atacante = ""
+		h1081_punch_block_defensor = ""
+	elif h1080_kick_impact_auto_armado and bool(normal_kick_impact_evento.get("encontrado", false)):
+		ventana = normal_kick_impact_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "NORMAL IMPACT",
+			"atacante": "%s PATADA LIMPIA" % str(normal_kick_impact_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] NORMAL KICK IMPACT EVENT LOCALIZADO — tick=%d %s" % [
+			int(normal_kick_impact_evento.get("tick_evento", -1)), str(normal_kick_impact_evento.get("lado", "?"))
+		])
+		rollback_kick_impact_tick_ya_probado = int(normal_kick_impact_evento.get("tick_evento", rollback_kick_impact_tick_ya_probado))
+		h1080_kick_impact_auto_armado = false
+		h1080_kick_impact_tick_evento = -1
+		h1080_kick_impact_lado = ""
+	elif h1078_forward_dash_auto_armado and bool(forward_dash_evento.get("encontrado", false)):
+		ventana = forward_dash_evento.get("ventana", [])
+		var fd_dir := float(forward_dash_evento.get("direccion", 0.0))
+		var fd_dir_txt := "IZQUIERDA" if fd_dir < 0.0 else "DERECHA"
+		analisis = {
+			"valida": true,
+			"clasificacion": "FORWARD DASH",
+			"atacante": "%s FORWARD DASH %s" % [str(forward_dash_evento.get("lado", "?")), fd_dir_txt],
+		}
+		print("[91.00.00-H10.88] FORWARD DASH EVENT LOCALIZADO — tick=%d %s dir=%s" % [
+			int(forward_dash_evento.get("tick_evento", -1)), str(forward_dash_evento.get("lado", "?")), fd_dir_txt
+		])
+		rollback_forward_dash_tick_ya_probado = int(forward_dash_evento.get("tick_evento", rollback_forward_dash_tick_ya_probado))
+		h1078_forward_dash_auto_armado = false
+		h1078_forward_dash_tick_evento = -1
+		h1078_forward_dash_lado = ""
+		h1078_forward_dash_direccion = 0.0
+	elif h1077_backdash_auto_armado and bool(backdash_evento.get("encontrado", false)):
+		# H10.78 target-only: el sello exacto que armó la autocaptura tiene
+		# prioridad sobre localizadores históricos de AIR/Launcher.
+		var bd_serial := int(backdash_evento.get("serial", -1))
+		if bd_serial != h1077_backdash_serial_evento:
+			rollback_test_solicitado = false
+			return
+		ventana = backdash_evento.get("ventana", [])
+		var bd_dir_target := float(backdash_evento.get("direccion", 0.0))
+		var bd_dir_txt_target := "IZQUIERDA" if bd_dir_target < 0.0 else "DERECHA"
+		analisis = {
+			"valida": true,
+			"clasificacion": "BACK DASH",
+			"atacante": "%s BACK DASH %s" % [str(backdash_evento.get("lado", "?")), bd_dir_txt_target],
+		}
+		print("[91.00.00-H10.88] BACKDASH EVENT LOCALIZADO — serial=%d tick=%d %s dir=%s" % [
+			bd_serial, int(backdash_evento.get("tick_evento", -1)), str(backdash_evento.get("lado", "?")), bd_dir_txt_target
+		])
+		rollback_backdash_serial_ya_probado = bd_serial
+		h1077_backdash_auto_armado = false
+		h1077_backdash_tick_evento = -1
+		h1077_backdash_lado = ""
+		h1077_backdash_serial_evento = -1
+		h1077_backdash_direccion = 0.0
+	elif bool(air_evento.get("encontrado", false)):
+		var air_x_localizado := int(air_evento.get("air_x", 0))
+		# H10.76 target-only: si el arnés automático está armado, sólo puede
+		# consumir el AIR x3 exacto que lo armó.
+		if h1076_airx3_auto_armado and air_x_localizado != 3:
+			rollback_test_solicitado = false
+			return
+		ventana = air_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "AIR HIT",
+			"atacante": "%s AIR x%d" % [str(air_evento.get("lado", "?")), air_x_localizado],
+		}
+		print("[91.00.00-H10.88] AIR HIT EVENT LOCALIZADO — serial=%d tick=%d %s AIR x%d" % [
+			int(air_evento.get("serial", -1)), int(air_evento.get("tick_evento", -1)),
+			str(air_evento.get("lado", "?")), air_x_localizado
+		])
+		rollback_airhit_serial_ya_probado = int(air_evento.get("serial", rollback_airhit_serial_ya_probado))
+		rollback_airhit_tick_ya_probado = int(air_evento.get("tick_evento", rollback_airhit_tick_ya_probado))
+		if h1076_airx3_auto_armado:
+			h1076_airx3_auto_armado = false
+			h1076_airx3_tick_evento = -1
+			h1076_airx3_lado = ""
+	elif bool(launcher_evento.get("encontrado", false)):
+		ventana = launcher_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "LAUNCHER",
+			"atacante": "%s LAUNCHER" % str(launcher_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] LAUNCHER EVENT LOCALIZADO — serial=%d tick=%d %s" % [
+			int(launcher_evento.get("serial", -1)), int(launcher_evento.get("tick_evento", -1)), str(launcher_evento.get("lado", "?"))
+		])
+		rollback_launcher_serial_ya_probado = int(launcher_evento.get("serial", rollback_launcher_serial_ya_probado))
+		rollback_launcher_tick_ya_probado = int(launcher_evento.get("tick_evento", rollback_launcher_tick_ya_probado))
+		if h1073_launcher_auto_armado:
+			h1073_launcher_auto_armado = false
+			h1073_launcher_tick_evento = -1
+			h1073_launcher_lado = ""
+	elif bool(backdash_evento.get("encontrado", false)):
+		ventana = backdash_evento.get("ventana", [])
+		var dir := float(backdash_evento.get("direccion", 0.0))
+		var dir_txt := "IZQUIERDA" if dir < 0.0 else "DERECHA"
+		analisis = {
+			"valida": true,
+			"clasificacion": "BACK DASH",
+			"atacante": "%s BACK DASH %s" % [str(backdash_evento.get("lado", "?")), dir_txt],
+		}
+		print("[91.00.00-H10.88] BACKDASH EVENT LOCALIZADO — serial=%d tick=%d %s dir=%s" % [
+			int(backdash_evento.get("serial", -1)), int(backdash_evento.get("tick_evento", -1)), str(backdash_evento.get("lado", "?")), dir_txt
+		])
+		rollback_backdash_serial_ya_probado = int(backdash_evento.get("serial", rollback_backdash_serial_ya_probado))
+	elif bool(perfect_evento.get("encontrado", false)):
+		ventana = perfect_evento.get("ventana", [])
+		analisis = {
+			"valida": true,
+			"clasificacion": "PERFECT BLOCK",
+			"atacante": "%s PERFECT BLOCK" % str(perfect_evento.get("lado", "?")),
+		}
+		print("[91.00.00-H10.88] PERFECT BLOCK EVENT LOCALIZADO — tick=%d %s; 8 ticks" % [
+			int(perfect_evento.get("tick_evento", -1)), str(perfect_evento.get("lado", "?"))
+		])
+		rollback_perfect_tick_ya_probado = int(perfect_evento.get("tick_evento", rollback_perfect_tick_ya_probado))
+		h1072_perfect_auto_armado = false
+		h1072_perfect_tick_evento = -1
+		h1072_perfect_lado = ""
+	elif bool(counter_evento.get("encontrado", false)):
+		ventana = counter_evento.get("ventana", [])
+		var tipo_legible := "PUÑO" if str(counter_evento.get("tipo", "")) == "punetazo" else "PATADA"
+		analisis = {
+			"valida": true,
+			"clasificacion": "COUNTER",
+			"atacante": "%s COUNTER %s" % [str(counter_evento.get("atacante", "?")), tipo_legible],
+		}
+		print("[91.00.00-H10.88] COUNTER EVENT LOCALIZADO — serial=%d tick=%d %s %s" % [
+			int(counter_evento.get("serial", -1)), int(counter_evento.get("tick_counter", -1)), str(counter_evento.get("atacante", "?")), tipo_legible
+		])
+		rollback_counter_serial_ya_probado = int(counter_evento.get("serial", rollback_counter_serial_ya_probado))
+	elif bool(proyectil_evento.get("encontrado", false)):
+		ventana = proyectil_evento.get("ventana", [])
+		var clase_proy := str(proyectil_evento.get("clasificacion", "PROYECTIL"))
+		var lado_proy := str(proyectil_evento.get("lado", "?"))
+		analisis = {
+			"valida": true,
+			"clasificacion": clase_proy,
+			"atacante": "%s %s" % [lado_proy, clase_proy],
+		}
+		print("[91.02.59-P13B] %s LOCALIZADO — tick=%d atacante=%s defensor=%s CORE %.3f -> %.3f" % [
+			clase_proy,
+			int(proyectil_evento.get("tick_evento", -1)),
+			lado_proy,
+			str(proyectil_evento.get("defensor", "?")),
+			float(proyectil_evento.get("poder_antes", 0.0)),
+			float(proyectil_evento.get("poder_despues", 0.0))
+		])
+	else:
+		ventana = rollback_ring.ventana_desde_el_final(ROLLBACK_TEST_TICKS)
+		analisis = _analizar_ventana_ataque_normal_h(ventana)
+
+	if not bool(analisis.get("valida", false)):
+		print("[91.00.00-H10.88] TACTICAL TEST — %s" % str(analisis.get(
+			"motivo",
+			"hacé PERFECT!, soltá bloqueo, X/C, verificá COUNTER! y después F11"
+		)))
+		return
+
+	if str(analisis.get("clasificacion", "")) not in ["PERFECT BLOCK", "CORE I ENTRY", "CORE I TARGET END", "CORE I POSTER END", "CORE II ENTRY", "CORE II RECARGA END", "CORE II COMBO ENTRY", "CORE II FIRST BEAT END", "CORE II REMATADOR ENTRY", "CORE II REMATADOR POSTER END", "CORE II SEQUENCE END", "CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"] and not rollback_ring.ventana_es_segura(ventana):
+		print("[91.00.00-H10.88] TACTICAL TEST — la ventana localizada contiene un estado fuera del alcance H3.2")
+		return
+
+	rollback_h_clasificacion = str(analisis.get("clasificacion", "TACTICAL"))
+	rollback_h_atacante = str(analisis.get("atacante", "?"))
+
+	if rollback_h_clasificacion in ["PERFECT BLOCK", "COUNTER", "BACK DASH", "NORMAL IMPACT", "NORMAL BLOCK", "NORMAL BLOCK RECOVERY", "NORMAL ATTACK RECOVERY", "FORWARD DASH", "LAUNCHER", "AIR HIT", "PROYECTIL STARTUP", "PROYECTIL VUELO", "PROYECTIL IMPACTO CORE", "PROYECTIL BLOQUEO", "CORE I ENTRY", "CORE I TARGET END", "CORE I POSTER END", "CORE II ENTRY", "CORE II RECARGA END", "CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"]:
+		rollback_estado_presente_esperado = _h32_presente_historico_despues_de_ventana(ventana)
+	else:
+		rollback_estado_presente_esperado = RollbackSnapshotScript.capturar_partida(self, kai, rival)
+
+	if rollback_estado_presente_esperado.is_empty():
+		print("[91.00.00-H10.88] TACTICAL TEST — no pude resolver el snapshot final histórico")
+		return
+
+	rollback_catchup_ventana = ventana
+	rollback_catchup_indice = 0
+	rollback_tick_origen = int(ventana[0].get("tick", -1))
+	rollback_subtrace_primer_error = -1
+	rollback_subtrace_diferencias.clear()
+
+	if rollback_motion_guard != null:
+		if rollback_h_clasificacion in ["BACK DASH", "NORMAL IMPACT", "NORMAL BLOCK", "NORMAL BLOCK RECOVERY", "NORMAL ATTACK RECOVERY", "FORWARD DASH", "LAUNCHER", "AIR HIT", "CORE I ENTRY", "CORE I TARGET END", "CORE I POSTER END", "CORE II ENTRY", "CORE II RECARGA END", "CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"]:
+			# H6: estas mecánicas cambian posición/velocidad de forma causal.
+			# No permitimos que Historical-X Guard esconda una divergencia aérea.
+			rollback_motion_guard.cancelar()
+		else:
+			rollback_motion_guard.preparar_rollback(ventana, rollback_estado_presente_esperado)
+
+	var inicio: Dictionary = ventana[0].get("snapshot", {})
+
+	# H8.5 — durante re-simulación CORE I se reconstruye lógica, no se duplican
+	# pósters/Tweens/VFX de presentación.
+	if is_instance_valid(kai):
+		kai.set("rollback_suprimir_presentacion_core1", true)
+		kai.set("rollback_suprimir_presentacion_core2", true)
+	if is_instance_valid(rival):
+		rival.set("rollback_suprimir_presentacion_core1", true)
+		rival.set("rollback_suprimir_presentacion_core2", true)
+		rival.set("rollback_reloj_seguridad_delta_override", -1.0)
+
+	RollbackSnapshotScript.restaurar_partida(self, kai, rival, inicio)
+
+	if rollback_h_clasificacion in ["CORE III ENTRY", "CORE III RECARGA END", "CORE III APPROACH END", "CORE III FIRST BEAT END", "CORE III SECOND BEAT END", "CORE III THIRD BEAT END", "CORE III FOURTH BEAT END", "CORE III FIFTH BEAT END", "CORE III SIXTH BEAT END", "CORE III SEVENTH BEAT END", "CORE III EIGHTH BEAT END", "CORE III EIGHTEENTH BEAT END", "CORE III NINETEENTH BEAT ATTACK START", "CORE III ABSOLUTE FINISHER ENTRY", "CORE III ABSOLUTE REVEAL END", "CORE III ABSOLUTE KO ENTRY", "CORE III ABSOLUTE VICTORY ENTRY", "CORE III ABSOLUTE VICTORY HOLD", "CORE III ABSOLUTE MATCH RESET ENTRY"]:
+		# H10.17 — no pausamos/reagendamos nodos. Las fronteras CORE III hasta SECOND BEAT END usan
+		# delta histórico explícito desde el primer subtick.
+		# puede entregar deltas distintos al reactivar callbacks dentro de una
+		# transición de time_scale. En su lugar, cada subtick recibe explícitamente
+		# el delta histórico que usó LIVE.
+		rollback_catchup_inicio_timescale = {}
+		rollback_catchup_preparando_timescale = false
+		rollback_catchup_reactivar_tactico_next_tick = false
+		rollback_catchup_reactivacion_deferred_pendiente = false
+		rollback_catchup_barrier_frames_restantes = 0
+		rollback_catchup_commit_restore_pendiente = false
+		rollback_catchup_activo = true
+		if is_instance_valid(kai):
+			kai.set_physics_process(true)
+		if is_instance_valid(rival):
+			rival.set_physics_process(true)
+		if is_instance_valid(PerfectBlock90_1):
+			PerfectBlock90_1.set_physics_process(true)
+		print("[91.00.00-H10.88] CORE III HISTORICAL DELTA ARMADO — restore exacto; catch-up inicia sin barreras de scheduler")
+	else:
+		rollback_catchup_activo = true
+
+	print("[91.00.00-H10.88] TACTICAL ROLLBACK — %s — %s — tick %d -> histórico; %d ticks" % [
+		rollback_h_clasificacion,
+		rollback_h_atacante,
+		rollback_tick_origen,
+		rollback_catchup_ventana.size()
+	])
+
+
+func _finalizar_prueba_rollback_local() -> void:
+	rollback_comparacion_pendiente = false
+	if rollback_estado_presente_esperado.is_empty():
+		return
+
+	var actual: Dictionary = RollbackSnapshotScript.capturar_partida(self, kai, rival)
+	var diferencias: Array[String] = RollbackSnapshotScript.comparar_snapshots(
+		rollback_estado_presente_esperado, actual
+	)
+
+	if diferencias.is_empty() and rollback_subtrace_primer_error < 0:
+		print("[91.00.00-H10.88] TACTICAL ROLLBACK OK — %s — %d ticks; estado presente idéntico" % [
+			rollback_h_clasificacion, ROLLBACK_TEST_TICKS
+		])
+	elif diferencias.is_empty() and rollback_subtrace_primer_error >= 0:
+		print("[91.00.00-H10.88] TACTICAL TEMPORAL DESYNC — %s — subtick %d aunque el presente volvió a coincidir" % [
+			rollback_h_clasificacion, rollback_subtrace_primer_error
+		])
+	else:
+		print("[91.00.00-H10.88] TACTICAL ROLLBACK DESYNC — %s — %d diferencia(s) tras %d ticks" % [
+			rollback_h_clasificacion, diferencias.size(), ROLLBACK_TEST_TICKS
+		])
+		for i in range(mini(diferencias.size(), 20)):
+			print("  • " + diferencias[i])
+
+	var h1087_ok := diferencias.is_empty() and rollback_subtrace_primer_error < 0
+	_h1087_integral_resultado(h1087_ok, rollback_h_clasificacion)
+
+	rollback_estado_presente_esperado = {}
+	rollback_catchup_ventana.clear()
+	rollback_catchup_indice = 0
+	rollback_catchup_preparando_timescale = false
+	rollback_catchup_inicio_timescale = {}
+	rollback_catchup_reactivar_tactico_next_tick = false
+	rollback_catchup_reactivacion_deferred_pendiente = false
+	rollback_catchup_barrier_frames_restantes = 0
+	rollback_catchup_commit_restore_pendiente = false
+	rollback_tick_origen = -1
+
+	if is_instance_valid(kai):
+		kai.set_physics_process(true)
+		kai.set("rollback_delta_override", -1.0)
+	if is_instance_valid(rival):
+		rival.set_physics_process(true)
+		rival.set("rollback_delta_override", -1.0)
+		rival.set("rollback_reloj_seguridad_delta_override", -1.0)
+	if is_instance_valid(PerfectBlock90_1):
+		PerfectBlock90_1.set_physics_process(true)
+		PerfectBlock90_1.set("rollback_delta_override", -1.0)
+	rollback_subtrace_primer_error = -1
+	rollback_subtrace_diferencias.clear()
+	rollback_h_clasificacion = ""
+	rollback_h_atacante = ""
+
+	# Volver a habilitar presentación sólo después de comparar el catch-up.
+	if is_instance_valid(kai):
+		kai.set("rollback_suprimir_presentacion_core1", false)
+		kai.set("rollback_suprimir_presentacion_core2", false)
+	if is_instance_valid(rival):
+		rival.set("rollback_suprimir_presentacion_core1", false)
+		rival.set("rollback_suprimir_presentacion_core2", false)
+
+	if rollback_motion_guard != null:
+		rollback_motion_guard.cancelar()
+
+
+func _snapshot_estado_rollback_h_seguro() -> bool:
+	# 91.00.00-H10.13 — alcance táctico controlado.
+	# Permitimos:
+	# - ataque normal
+	# - bloqueo normal
+	# - Perfect Block
+	# - Counter posterior a Perfect
+	# - Launcher + persecución aérea + Air Combo
+	# - hitstop / hitstun / empuje / contacto post-golpe
+	#
+	# Todavía NO permitimos CORE, combos automáticos, derribos, KO ni cinemáticas.
+	if not versus_local_activo or replay_modo_activo:
+		return false
+	if not ronda_activa or congelando_ko or absf(Engine.time_scale - 1.0) > 0.001:
+		return false
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return false
+
+	for personaje in [kai, rival]:
+		if personaje.esta_derrotado or personaje.en_pose_victoria:
+			return false
+		if personaje.en_secuencia_especial or personaje.bloqueo_cinematico:
+			return false
+		if personaje.congelado_por_rival or personaje.en_combo_auto_visual:
+			return false
+		if personaje.en_fase_absoluta or personaje.en_pose_recarga:
+			return false
+		if personaje.derribo_especial_activo:
+			return false
+	return true
+
+func _analizar_ventana_ataque_normal_h(ventana: Array[Dictionary]) -> Dictionary:
+	var j1_ataco := false
+	var j2_ataco := false
+	var j1_bloqueo := false
+	var j2_bloqueo := false
+	var hubo_impacto := false
+	var hubo_counter_j1 := false
+	var hubo_counter_j2 := false
+	var tipo_j1 := ""
+	var tipo_j2 := ""
+
+	var id_j1: int = kai.get_instance_id() if is_instance_valid(kai) else -1
+	var id_j2: int = rival.get_instance_id() if is_instance_valid(rival) else -1
+
+	for entrada in ventana:
+		var in1: Dictionary = entrada.get("j1", {})
+		var in2: Dictionary = entrada.get("j2", {})
+
+		# H3 sigue excluyendo CORE/especial.
+		if bool(in1.get("especial", false)) or bool(in2.get("especial", false)):
+			return {
+				"valida": false,
+				"motivo": "CORE/especial detectado; H3 prueba solamente contacto táctico normal"
+			}
+
+		j1_bloqueo = j1_bloqueo or bool(in1.get("bloqueo", false))
+		j2_bloqueo = j2_bloqueo or bool(in2.get("bloqueo", false))
+
+		if bool(in1.get("puno", false)):
+			j1_ataco = true
+			tipo_j1 = "PUÑO"
+		if bool(in1.get("patada", false)):
+			j1_ataco = true
+			tipo_j1 = "PATADA"
+		if bool(in2.get("puno", false)):
+			j2_ataco = true
+			tipo_j2 = "PUÑO"
+		if bool(in2.get("patada", false)):
+			j2_ataco = true
+			tipo_j2 = "PATADA"
+
+		var snap: Dictionary = entrada.get("snapshot", {})
+		var s1: Dictionary = snap.get("j1", {})
+		var s2: Dictionary = snap.get("j2", {})
+		var tactico: Dictionary = snap.get("tactico", {})
+
+		# Estado de ataque también identifica un botón que comenzó justo antes
+		# del borde de los últimos 8 ticks.
+		var atk1: String = str(s1.get("_atk_tipo", ""))
+		var atk2: String = str(s2.get("_atk_tipo", ""))
+		if int(s1.get("fase_ataque", 0)) != 0 and atk1 in ["punetazo", "patada"]:
+			j1_ataco = true
+			if tipo_j1.is_empty():
+				tipo_j1 = "PUÑO" if atk1 == "punetazo" else "PATADA"
+		if int(s2.get("fase_ataque", 0)) != 0 and atk2 in ["punetazo", "patada"]:
+			j2_ataco = true
+			if tipo_j2.is_empty():
+				tipo_j2 = "PUÑO" if atk2 == "punetazo" else "PATADA"
+
+		# Un Perfect Block confirmado abre _counter_disponible para el defensor.
+		var counter_disp: Dictionary = tactico.get("_counter_disponible", {})
+		if bool(counter_disp.get(id_j1, false)):
+			hubo_counter_j1 = true
+		if bool(counter_disp.get(id_j2, false)):
+			hubo_counter_j2 = true
+
+		# Señales de contacto real.
+		if bool(s1.get("_atk_ya_conecto", false)) or bool(s2.get("_atk_ya_conecto", false)):
+			hubo_impacto = true
+		if float(s1.get("hitstun_timer", 0.0)) > 0.0 or float(s2.get("hitstun_timer", 0.0)) > 0.0:
+			hubo_impacto = true
+		if float(s1.get("hitstop_timer", 0.0)) > 0.0 or float(s2.get("hitstop_timer", 0.0)) > 0.0:
+			hubo_impacto = true
+		if float(s1.get("contacto_post_golpe_timer", 0.0)) > 0.0 or float(s2.get("contacto_post_golpe_timer", 0.0)) > 0.0:
+			hubo_impacto = true
+
+	# COUNTER: ambos llegaron a atacar dentro de la ventana y uno de ellos tuvo
+	# la oportunidad de Counter abierta por Perfect Block.
+	if j1_ataco and j2_ataco:
+		if hubo_counter_j1:
+			return {
+				"valida": true,
+				"atacante": "J1 COUNTER %s" % (tipo_j1 if not tipo_j1.is_empty() else "ATAQUE"),
+				"clasificacion": "COUNTER"
+			}
+		if hubo_counter_j2:
+			return {
+				"valida": true,
+				"atacante": "J2 COUNTER %s" % (tipo_j2 if not tipo_j2.is_empty() else "ATAQUE"),
+				"clasificacion": "COUNTER"
+			}
+		return {
+			"valida": false,
+			"motivo": "ataque simultáneo sin ventana Counter; H3 necesita una secuencia Perfect→Counter"
+		}
+
+	if not j1_ataco and not j2_ataco:
+		return {
+			"valida": false,
+			"motivo": "no hay ataque normal dentro de los últimos 8 ticks"
+		}
+
+	var atacante := "J1 %s" % tipo_j1 if j1_ataco else "J2 %s" % tipo_j2
+
+	# Perfect Block confirmado: la oportunidad Counter del defensor se abrió.
+	if (j1_ataco and hubo_counter_j2) or (j2_ataco and hubo_counter_j1):
+		return {
+			"valida": true,
+			"atacante": atacante,
+			"clasificacion": "PERFECT BLOCK"
+		}
+
+	# Bloqueo normal sin ventana Perfect.
+	if (j1_ataco and j2_bloqueo) or (j2_ataco and j1_bloqueo):
+		return {
+			"valida": true,
+			"atacante": atacante,
+			"clasificacion": "BLOQUEO"
+		}
+
+	return {
+		"valida": true,
+		"atacante": atacante,
+		"clasificacion": "IMPACTO" if hubo_impacto else "WHIFF/FASE"
+	}
+
+
+func _snapshot_estado_seguro() -> bool:
+	if not versus_local_activo or replay_modo_activo:
+		return false
+	if not ronda_activa or congelando_ko or absf(Engine.time_scale - 1.0) > 0.001:
+		return false
+	if not is_instance_valid(kai) or not is_instance_valid(rival):
+		return false
+	for personaje in [kai, rival]:
+		if personaje.en_secuencia_especial or personaje.bloqueo_cinematico:
+			return false
+		if personaje.fase_ataque != Fighter.FaseAtaque.NINGUNA:
+			return false
+		if personaje.hitstun_timer > 0.0 or personaje.hitstop_timer > 0.0:
+			return false
+		if personaje.derribo_especial_activo or personaje.en_pose_victoria:
+			return false
+	return true
+
+func _guardar_snapshot_manual() -> void:
+	if not _snapshot_estado_seguro():
+		print("[91.00.00-H10.88] SNAPSHOT NO GUARDADO — esperá un instante neutral de la ronda")
+		return
+	rollback_snapshot_manual = RollbackSnapshotScript.capturar_partida(self, kai, rival)
+	rollback_snapshot_disponible = not rollback_snapshot_manual.is_empty()
+	if not rollback_snapshot_disponible:
+		print("[91.00.00-H10.88] SNAPSHOT ERROR — no se pudo capturar estado")
+		return
+	var bytes_aprox := var_to_bytes(rollback_snapshot_manual).size()
+	print("[91.00.00-H10.88] SNAPSHOT GUARDADO — J1=(%.2f, %.2f) J2=(%.2f, %.2f) — %d bytes" % [
+		kai.position.x, kai.position.y, rival.position.x, rival.position.y, bytes_aprox
+	])
+
+func _restaurar_snapshot_manual() -> void:
+	if not rollback_snapshot_disponible or rollback_snapshot_manual.is_empty():
+		print("[91.00.00-H10.88] RESTORE CANCELADO — primero presioná F9")
+		return
+	if not _snapshot_estado_seguro():
+		print("[91.00.00-H10.88] RESTORE EN ESPERA — soltá controles y esperá un estado neutral")
+		return
+	RollbackSnapshotScript.restaurar_partida(self, kai, rival, rollback_snapshot_manual)
+	var recapturado: Dictionary = RollbackSnapshotScript.capturar_partida(self, kai, rival)
+	var diferencias: Array[String] = RollbackSnapshotScript.comparar_snapshots(rollback_snapshot_manual, recapturado)
+	if diferencias.is_empty():
+		print("[91.00.00-H10.88] SNAPSHOT RESTORE OK — estado lógico restaurado exactamente")
+	else:
+		print("[91.00.00-H10.88] SNAPSHOT RESTORE DESYNC — %d diferencia(s)" % diferencias.size())
+		for i in range(mini(diferencias.size(), 12)):
+			print("  • " + diferencias[i])
+
 func _unhandled_input(event: InputEvent) -> void:
-	# 90.10.78: Versus local ya no necesita el puente F10; el modo llega
-	# oficialmente desde GameState y los dos lados se configuran al crear Fighter.
+	# 91.00.00-H: F9/F10 son diagnóstico de snapshot incluso cuando el combate
+	# fue abierto desde el flujo normal de menú.
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode == KEY_F9:
+			_guardar_snapshot_manual()
+			get_viewport().set_input_as_handled()
+			return
+		if event.physical_keycode == KEY_F10:
+			_restaurar_snapshot_manual()
+			get_viewport().set_input_as_handled()
+			return
+		if event.physical_keycode == KEY_F11:
+			if not rollback_test_solicitado and not rollback_catchup_activo and not rollback_comparacion_pendiente:
+				rollback_test_solicitado = true
+				print("[91.00.00-H10.88] ROLLBACK SOLICITADO — próximo physics tick")
+			get_viewport().set_input_as_handled()
+			return
+
+	# 90.10.78: fuera del diagnóstico se conserva exactamente el manejo previo.
 	var estado_input = get_node_or_null("/root/GameState")
 	if estado_input and estado_input.flujo_menu_activo:
 		return
@@ -2838,12 +10825,14 @@ func _objetivo_camara_combate(separacion_filtrada: float = -1.0) -> Dictionary:
 
 func _process(delta: float) -> void:
 	escenario_tiempo += delta
-	_actualizar_escenario_parallax(delta)
-	_actualizar_escenario_pulso(delta)
-	_actualizar_ambiente_87(delta)
-	_actualizar_piso_vivo(delta)
-	_actualizar_iluminacion_luchadores(delta)
-	_actualizar_vineta_tension(delta)
+	_perf1_log_fps(delta)
+	if not modo_bajo_visual:
+		_actualizar_escenario_parallax(delta)
+		_actualizar_escenario_pulso(delta)
+		_actualizar_ambiente_87(delta)
+		_actualizar_piso_vivo(delta)
+		_actualizar_iluminacion_luchadores(delta)
+		_actualizar_vineta_tension(delta)
 	if is_instance_valid(kai):
 		barra_poder_kai.size.x = ANCHO_BARRA * clampf(kai.poder / PODER_MAXIMO, 0.0, 1.0)
 		etiqueta_cargas_kai.text = "CORE %d/3" % mini(kai.veces_fase_absoluta, 3)
@@ -2911,6 +10900,189 @@ func _process(delta: float) -> void:
 		if shake_tiempo <= 0.0:
 			camara.offset = Vector2.ZERO
 
+	_h910205_actualizar_dash_visual_presentacion()
+
+
+# 91.02.05/91.02.06/91.02.07 — GUARD VISUAL DE DASH / BACK DASH.
+# Presentación aislada de la simulación: NO escribe texture/scale/position en el
+# Sprite2D real de Fighter porque ese nodo participa indirectamente en cálculos
+# de volumen visual del pushbox. En su lugar usa un Sprite2D gemelo sólo para
+# render y oculta temporalmente el sprite base. Así no altera Fighter, snapshots,
+# timers, pose_timer, colisión, movimiento ni la frontera rollback certificada.
+const H910205_DASH_OVERLAY_NAME := "DashVisualOverlay_910205"
+const H910205_OFFSET_LINEA_COMBATE_Y := 28.0 # espejo del valor congelado de Fighter
+const H910205_CORE_ETAPA_ACERCAMIENTO := 2
+
+func _h910205_obtener_overlay_dash(f: Fighter) -> Sprite2D:
+	if not is_instance_valid(f) or not is_instance_valid(f.sprite):
+		return null
+	var existente := f.get_node_or_null(H910205_DASH_OVERLAY_NAME) as Sprite2D
+	if existente:
+		return existente
+	var overlay := Sprite2D.new()
+	overlay.name = H910205_DASH_OVERLAY_NAME
+	overlay.centered = true
+	overlay.visible = false
+	# Es hermano del sprite real dentro del Fighter; se crea después y queda por
+	# encima cuando ambos comparten z. El sprite real se oculta durante el guard.
+	f.add_child(overlay)
+	return overlay
+
+func _h910205_textura_dash_adelante(f: Fighter) -> Texture2D:
+	if not is_instance_valid(f):
+		return null
+	# CORE II/III siempre avanzan hacia el rival. No usamos _tex_carrera() aquí
+	# porque carrera_direccion puede contener un valor histórico de back dash.
+	if f.en_fase_absoluta and f.textura_furia_carrera:
+		return f.textura_furia_carrera
+	if f.textura_carrera:
+		return f.textura_carrera
+
+	# 91.02.07 — algunos luchadores históricos (Fang es el caso confirmado)
+	# poseen el PNG de aceleración en assets pero su script nunca lo asignó a
+	# textura_carrera. En vez de tocar Fighter o la física certificada, el guard
+	# visual recupera de forma pasiva un asset de dash existente. Esta ruta sólo
+	# decide qué Texture2D renderizar durante el impulso.
+	if f.textura_parado:
+		var base_assets: String = f.textura_parado.resource_path.get_base_dir()
+		var candidatos: Array[String]
+		if f.en_fase_absoluta:
+			candidatos = [
+				"aceleracion_furia.png", "aceleración_furia.png",
+				"furia_carrera.png", "furia_dash.png", "dash_furia.png"
+			]
+		else:
+			candidatos = [
+				"aceleracion_normal.png", "aceleración_normal.png",
+				"aceleracion.png", "aceleración.png",
+				"carrera.png", "dash.png", "dash_adelante.png", "avance.png"
+			]
+		for nombre_asset in candidatos:
+			var ruta: String = base_assets + "/" + nombre_asset
+			if ResourceLoader.exists(ruta):
+				var tex: Texture2D = load(ruta)
+				if tex:
+					return tex
+	return null
+
+func _h910205_es_acercamiento_core23(f: Fighter) -> bool:
+	if not is_instance_valid(f) or not f.en_secuencia_especial:
+		return false
+	return (
+		f.core2_secuencia_etapa == H910205_CORE_ETAPA_ACERCAMIENTO
+		or f.core3_secuencia_etapa == H910205_CORE_ETAPA_ACERCAMIENTO
+	)
+
+# 91.02.06 — el Back Dash táctico de suelo NO usa carrera_activa.
+# PerfectBlock90_1 cancela la carrera normal al aceptar el doble toque hacia
+# atrás y gobierna el desplazamiento con su propio _backdash_timer. Por eso
+# 91.02.05 nunca entraba al guard visual en suelo aunque el movimiento sí se
+# ejecutara. Leemos ese timer sólo para presentación; no escribimos gameplay.
+func _h910206_backdash_tactico_suelo_activo(f: Fighter) -> bool:
+	if not is_instance_valid(f) or not f.is_on_floor():
+		return false
+	if f.en_secuencia_especial or f.esta_derrotado or f.derribo_especial_activo:
+		return false
+	if f.hitstun_timer > 0.0 or f.bloqueando:
+		return false
+	if f.fase_ataque != Fighter.FaseAtaque.NINGUNA:
+		return false
+	var tactico := get_node_or_null("/root/PerfectBlock90_1")
+	if tactico == null:
+		return false
+	var timers: Dictionary = tactico.get("_backdash_timer")
+	return float(timers.get(f.get_instance_id(), 0.0)) > 0.0
+
+func _h910205_dash_normal_debe_mostrarse(f: Fighter) -> bool:
+	if not is_instance_valid(f) or not f.carrera_activa:
+		return false
+	if f.en_secuencia_especial or f.esta_derrotado or f.derribo_especial_activo:
+		return false
+	if f.hitstun_timer > 0.0 or f.bloqueando or not f.is_on_floor():
+		return false
+	# Un golpe iniciado durante la carrera tiene prioridad visual sobre el dash.
+	return f.fase_ataque == Fighter.FaseAtaque.NINGUNA
+
+func _h910205_apagar_overlay_dash(f: Fighter) -> void:
+	if not is_instance_valid(f):
+		return
+	var overlay := f.get_node_or_null(H910205_DASH_OVERLAY_NAME) as Sprite2D
+	if overlay:
+		overlay.visible = false
+	if is_instance_valid(f.sprite):
+		f.sprite.visible = true
+
+func _h910205_mostrar_overlay_dash(f: Fighter, tex: Texture2D) -> void:
+	if not is_instance_valid(f) or not is_instance_valid(f.sprite) or not tex:
+		_h910205_apagar_overlay_dash(f)
+		return
+	var overlay := _h910205_obtener_overlay_dash(f)
+	if not overlay:
+		return
+
+	# Normalización idéntica a la visual de Fighter, pero aplicada sólo al gemelo.
+	# Llamar estos helpers sólo lee configuración; el único side effect posible es
+	# poblar el cache de rects alfa, que no forma parte del estado de gameplay.
+	var rect: Rect2 = f._obtener_rect_visual(tex)
+	var escala: float = f._escala_normalizada_por_pose(tex, rect)
+	var bottom_visible: float = rect.position.y + rect.size.y
+	var half_h: float = float(tex.get_height()) * 0.5
+
+	overlay.texture = tex
+	overlay.scale = Vector2(escala, escala)
+	overlay.position = Vector2(f._sprite_ancla_x(), H910205_OFFSET_LINEA_COMBATE_Y + (half_h - bottom_visible) * escala)
+	overlay.rotation = f.sprite.rotation
+	overlay.flip_h = f.sprite.flip_h
+	overlay.flip_v = f.sprite.flip_v
+	overlay.modulate = f.sprite.modulate
+	overlay.self_modulate = f.sprite.self_modulate
+	overlay.texture_filter = f.sprite.texture_filter
+	overlay.z_index = f.sprite.z_index
+	overlay.z_as_relative = f.sprite.z_as_relative
+	overlay.visible = true
+	f.sprite.visible = false
+
+func _h910205_actualizar_dash_visual_fighter(f: Fighter) -> void:
+	if not is_instance_valid(f) or not is_instance_valid(f.sprite):
+		return
+	# 91.02.06 — prioridad explícita al Back Dash táctico de SUELO.
+	# Fighter.texture_evasion ya fue cargada desde el PNG oficial del personaje.
+	# Si un roster viejo no posee evasión dedicada, usamos carrera sólo como
+	# fallback visual sin alterar el movimiento ni el timer táctico.
+	if _h910206_backdash_tactico_suelo_activo(f):
+		var tex_evasion: Texture2D = f._tex_evasion()
+		_h910205_mostrar_overlay_dash(f, tex_evasion if tex_evasion else f.textura_carrera)
+		return
+	if _h910205_es_acercamiento_core23(f):
+		_h910205_mostrar_overlay_dash(f, _h910205_textura_dash_adelante(f))
+		return
+	if _h910205_dash_normal_debe_mostrarse(f):
+		# _tex_carrera() selecciona EVASIÓN cuando el impulso se aleja del rival
+		# y CARRERA cuando entra hacia él. 91.02.07 agrega un fallback visual para
+		# rosters históricos que sí tienen aceleración.png pero no textura_carrera.
+		var tex_dash: Texture2D = f._tex_carrera()
+		if tex_dash == null and not f._es_backdash_activo():
+			tex_dash = _h910205_textura_dash_adelante(f)
+		_h910205_mostrar_overlay_dash(f, tex_dash)
+		return
+	_h910205_apagar_overlay_dash(f)
+
+func _h910205_actualizar_dash_visual_presentacion() -> void:
+	# El guard corre en _process después de la simulación física de ambos Fighter.
+	# No se ejecuta durante catch-up de rollback: la re-simulación no necesita
+	# presentación y evitamos cualquier ruido visual durante el diagnóstico.
+	if (
+		rollback_catchup_activo
+		or rollback_catchup_preparando_timescale
+		or rollback_catchup_barrier_frames_restantes > 0
+		or rollback_catchup_commit_restore_pendiente
+	):
+		_h910205_apagar_overlay_dash(kai)
+		_h910205_apagar_overlay_dash(rival)
+		return
+	_h910205_actualizar_dash_visual_fighter(kai)
+	_h910205_actualizar_dash_visual_fighter(rival)
+
 
 func _actualizar_escenario_parallax(delta: float) -> void:
 	if not camara or not escenario_far or not escenario_mid or not escenario_front:
@@ -2951,6 +11123,8 @@ func _actualizar_piso_vivo(delta: float) -> void:
 		luz_impacto.energy = move_toward(luz_impacto.energy, 0.0, 6.0 * delta)
 
 func _respuesta_piso_al_impacto() -> void:
+	if modo_bajo_visual:
+		return
 	if not piso_overlay or not is_instance_valid(kai) or not is_instance_valid(rival):
 		return
 	var centro: Vector2 = (kai.global_position + rival.global_position) * 0.5

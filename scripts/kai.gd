@@ -121,6 +121,24 @@ func _init() -> void:
     textura_furia_bloqueo = load(KAI_NEW + "bloqueo.png")
     textura_furia_carrera = load(KAI_NEW + "furia_carrera.png")
 
+    # 91.02.50 — PASS 12G / PROYECTIL TANDA 1 — KAI.
+    # Misma arquitectura certificada con Helena: ↓ → + PUÑO.
+    proyectil_especial_habilitado = true
+    textura_proyectil_pose = load(KAI_NEW + "poder_proyectil.png")
+    textura_proyectil_nucleo = load(KAI_NEW + "proyectil_oficial.png")
+    proyectil_pose_escala_mult = 1.06
+    color_proyectil_primario = Color(0.46, 0.08, 0.92, 1.0)
+    color_proyectil_secundario = Color(0.92, 0.74, 1.0, 1.0)
+    proyectil_velocidad = 805.0
+    proyectil_dano_mult = 0.86
+    proyectil_empuje = 148.0
+    proyectil_hitstun = 0.22
+    proyectil_startup = 0.16
+    proyectil_recovery = 0.30
+    proyectil_cooldown = 0.62
+    # Reutiliza el sonido de salida aprobado con Helena.
+    sonido_proyectil_impacto = load("res://assets/helena/proyectil_impacto.wav")
+
 
 func _procesar_entrada(_delta: float, vel_actual: float) -> void:
     if controlado_por_jugador:

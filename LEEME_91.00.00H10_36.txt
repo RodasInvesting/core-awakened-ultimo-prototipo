@@ -1,0 +1,25 @@
+CORE AWAKENED 91.00.00-H10.36
+CORE III — ELEVENTH BEAT PHYSICS / TENTH BEAT END REVALIDATION
+
+Objetivo único:
+- Revalidar rollback de 8 ticks en CORE III TENTH BEAT END.
+- Frontera exacta: stage 12 -> stage 13.
+- stage 12 = décimo beat físico snapshotable.
+- stage 13 = undécimo beat físico snapshotable (nuevo H10.36).
+- stage 14 = continuación histórica desde el duodécimo beat.
+
+Cambio determinista único:
+- El beat 11 deja de usar la ruta async/Tween/coroutine histórica.
+- Reutiliza la misma FSM física snapshotable de los beats 1-10.
+- Snapshot, PerfectBlock, GameState, Input Recorder/Replay, Ring Buffer, Motion Guard y Resultado sin cambios.
+
+Prueba:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar la pelea.
+5. Repetir CORE III completo con J2 y dejar terminar la pelea.
+6. Enviar el runtime completo.
+
+Resultado objetivo en ambos lados:
+TACTICAL ROLLBACK OK — CORE III TENTH BEAT END — 8 ticks; estado presente idéntico

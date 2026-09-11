@@ -1,0 +1,95 @@
+CORE AWAKENED 91.00.00-H7 — RNG AUDIT
+
+ESTADO CERTIFICADO ANTERIOR
+---------------------------
+H6.1:
+- Air Hit J1: múltiples pruebas OK, incluyendo AIR x1 y AIR x3.
+- Air Hit J2: pruebas OK, incluyendo AIR x1 y AIR x2.
+- Launcher J2: OK limpio.
+- H6 previo ya tenía Launcher J1/J2 y Air Hit J2.
+- 0 DESYNC en la batería H6.1.
+
+OBJETIVO H7
+-----------
+Antes de ampliar rollback a CORE I/II/III, localizar TODA fuente de RNG
+existente en los scripts reales del proyecto.
+
+H7 NO intenta corregir RNG todavía.
+Primero hace inventario exacto.
+
+POR QUÉ
+-------
+Rollback requiere que el mismo input y el mismo estado produzcan exactamente
+el mismo resultado.
+
+Una llamada global como:
+  randf()
+  randf_range()
+  randi()
+  randi_range()
+
+puede divergir si un efecto visual consume RNG en distinto momento.
+
+La solución final será separar:
+1) RNG DE GAMEPLAY determinista y snapshotable.
+2) RNG VISUAL/presentación que no participe del estado lógico.
+
+QUÉ HACE ESTA BUILD
+-------------------
+Al iniciar la pelea, main.gd escanea todos los archivos .gd bajo res://
+(excepto .godot y addons) y busca:
+
+GLOBAL:
+- randf
+- randf_range
+- randi
+- randi_range
+- randomize
+- rand_from_seed
+
+DEDICADO:
+- RandomNumberGenerator
+- llamadas .randf/.randi de una instancia
+
+SEED_STATE:
+- seed(...)
+- .seed
+- .state
+
+Imprime:
+  RNG AUDIT — total=...
+  RNG SITE 001 — GLOBAL — res://...:línea — código
+  ...
+  RNG AUDIT — FIN
+
+NO CAMBIA
+---------
+- fighter.gd NO se incluye ni modifica.
+- no cambia daño.
+- no cambia movimiento.
+- no cambia Launcher/Air Combo.
+- no cambia Back Dash.
+- no cambia Perfect/Counter.
+- no consume números aleatorios.
+- no cambia seed ni state.
+
+PRUEBA
+------
+1. Reemplazar los archivos de H7.
+2. Abrir Godot y ejecutar Versus Local.
+3. Entrar a UNA pelea.
+4. No hace falta F11.
+5. Apenas aparezca la pelea, esperar 1 segundo.
+6. Copiar desde:
+     [91.00.00-H7] RNG AUDIT — inicio
+   hasta:
+     [91.00.00-H7] RNG AUDIT — FIN
+7. Pasar ese bloque completo.
+
+SIGUIENTE
+---------
+Con ese inventario preparo H7.1:
+- clasificación gameplay vs visual,
+- RNG determinista dedicado,
+- snapshot/restore del state cuando corresponda,
+sin alterar el Combat Feel.

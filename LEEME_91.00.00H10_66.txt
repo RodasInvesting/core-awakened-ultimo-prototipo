@@ -1,0 +1,41 @@
+CORE AWAKENED 91.00.00-H10.66
+CORE III — ABSOLUTE VICTORY ENTRY J1 DELTA REVALIDATION
+
+Objetivo único:
+- Cerrar la única diferencia residual de H10.65 en Kai/J1.
+- H10.65 ya reconstruyó correctamente ABSOLUTE VICTORY ENTRY: time_scale, marcador, pose, limpieza y separación 5.381 px coinciden.
+- Dax vs Kai / Kai-J2 ya dio TACTICAL ROLLBACK OK — 8 ticks idénticos.
+- En Kai/J1 quedó sólo J2._reaccion_impacto_timer con diferencia 0.009667 s.
+
+Causal probado por H10.65:
+- En la transición Main 0.42 -> 1.0, LIVE J2 todavía consume delta pre-transición 0.007000 en ese tick.
+- El catch-up H10.65 inyectaba a J2 0.016667.
+- 0.016667 - 0.007000 = 0.009667, exactamente la única divergencia observada.
+
+Cambio funcional respecto de H10.65:
+- scripts/main.gd solamente: para ABSOLUTE VICTORY ENTRY activado por J1, delta_j2 conserva base_delta * escala_inicio (0.007000) durante el tick 0.42 -> 1.0.
+- La regla es simétrica al orden histórico ya certificado de otras transiciones Main.
+- No se toca la FSM de victoria, snapshot/restore, gameplay ni presentación.
+
+Congelado / NO tocado:
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- scripts/rollback_snapshot.gd
+- CORE I certificado
+- CORE II certificado
+- CORE III beats 1-18 certificados
+- ABSOLUTE FINISHER ENTRY H10.58
+- ABSOLUTE REVEAL END H10.60
+- ABSOLUTE KO ENTRY H10.62
+- restore visual H10.64
+- VICTORY WAIT PHYSICS H10.65
+
+Prueba:
+1) Kai vs Dax — Kai/J1: CORE I -> CORE II -> CORE III completo.
+2) Dax vs Kai — Kai/J2: CORE I -> CORE II -> CORE III completo.
+3) NO usar F11.
+4) Enviar runtime completo.
+
+Esperado:
+- TACTICAL ROLLBACK OK — CORE III ABSOLUTE VICTORY ENTRY — 8 ticks; estado presente idéntico
+  tanto J1 como J2.

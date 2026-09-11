@@ -1,0 +1,48 @@
+CORE AWAKENED 91.02.78 — PRE-RC HOTFIX HELENA / PROYECTIL RESTAURADO
+=============================================================================
+
+CAUSA AISLADA
+91.02.77 se construyó desde una copia de helena.gd que no contenía todavía
+el bloque de proyectil agregado en PASS 12A–12E. Al reemplazar helena.gd,
+se eliminó accidentalmente la configuración de proyectil de Helena.
+
+91.02.78 corrige eso tomando como base la última helena.gd que sí contiene
+el proyectil certificado y quitando SOLAMENTE:
+    res://assets/helena/punetazo_9.png
+porque ese recurso no existe.
+
+SE RESTAURA / CONSERVA
+- proyectil_especial_habilitado = true
+- pose poder_proyectil.png
+- núcleo proyectil_oficial.png
+- velocidad 805
+- daño/empuje/hitstun
+- startup/recovery/cooldown
+- sonido de impacto
+
+ARCHIVO ÚNICO
+- scripts/helena.gd
+
+NO TOCADO
+- main.gd
+- network_manager.gd
+- online_flow_manager.gd
+- pause_manager_online.gd
+- rollback_snapshot.gd
+- Fighter / PerfectBlock / CORE
+- ningún PNG ni WAV
+
+PRUEBA RÁPIDA
+1. Instalar este ZIP ROOT SOBRE 91.02.77.
+2. Abrir una pelea LOCAL Helena vs cualquier rival.
+3. Probar ↓ + PUÑO varias veces: Helena debe lanzar nuevamente el proyectil.
+4. Confirmar que no aparece error por punetazo_9.png.
+5. Hacer una pelea ONLINE corta con Helena.
+6. Lanzar al menos 3 proyectiles; uno limpio y uno bloqueado si es posible.
+7. Verificar que el ring sigue alineado=true.
+8. Pasar log HOST.
+
+CRITERIO
+- Helena vuelve a lanzar proyectil.
+- punetazo_9.png ya no genera error.
+- No hay regresión online.

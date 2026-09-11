@@ -1,0 +1,25 @@
+CORE AWAKENED — 91.00.00-H10.24
+
+OBJETIVO
+Revalidar CORE III FIFTH BEAT END (stage 7->8) después de convertir únicamente el sexto beat a FSM física snapshotable.
+
+CAMBIO DETERMINISTA ÚNICO
+- Beats 1-5 permanecen congelados.
+- stage 8 ahora ejecuta el SEXTO beat físico (coreografia[5]).
+- El sexto beat reutiliza beatSub/origen/destino/duración/tiempo ya incluidos en snapshot.
+- Sin Tween, SceneTreeTimer ni coroutine durante el sexto beat.
+- La continuación histórica pasa a stage 9 y comienza desde coreografia[6] (séptimo beat).
+- No se convierte todavía el séptimo beat ni el rematador absoluto.
+
+PRUEBA
+1. No usar F11.
+2. Completar CORE I y CORE II normalmente.
+3. Ejecutar CORE III completo con J1.
+4. Repetir CORE III completo con J2.
+5. Enviar el log completo.
+
+RESULTADO OBJETIVO
+TACTICAL ROLLBACK OK — CORE III FIFTH BEAT END — 8 ticks; estado presente idéntico
+para J1 y J2.
+
+Si pasa, FIFTH BEAT END queda certificado y el siguiente build será diagnóstico puro de SIXTH BEAT END (stage 8->9).

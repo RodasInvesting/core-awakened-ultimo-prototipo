@@ -12,20 +12,40 @@ const PAGINAS := [
 		"titulo": "MOVIMIENTO Y DEFENSA",
 		"subtitulo": "DOMINÁ EL ESPACIO ANTES DE ATACAR",
 		"items": [
-			["MOVERSE", "STICK / D-PAD  ←  →", "TECLADO  ←  →", "Acercate, medí distancia y reposicionate frente al rival."],
-			["DASH / EVASIÓN", "DOBLE  ←  /  →", "DOBLE  ←  /  →", "Doble toque hacia delante = entrada rápida. Hacia atrás = evasión."],
-			["SALTO / DOBLE SALTO", "A  /  D-PAD ↑", "FLECHA ↑", "Pulsá otra vez en el aire para ganar altura y cruzar sobre el rival."],
-			["BLOQUEO", "B  /  LT  /  ↓", "FLECHA ↓", "Defendé el contacto. Podés seguir mirando al rival mientras bloqueás."],
+			["MOVERSE", "STICK / D-PAD  ←  →", "J1  ← →   /   J2  A D", "Acercate, medí distancia y reposicionate frente al rival."],
+			["DASH / BACK DASH", "DOBLE  ←  /  →", "DOBLE  ←  /  →", "Doble toque hacia el rival = entrada rápida. Alejándote = evasión."],
+			["AIR DASH", "DOBLE  ←  /  → EN AIRE", "DOBLE  ←  /  → EN AIRE", "Durante salto o doble salto podés hacer un dash horizontal por permanencia en el aire."],
+			["BLOQUEO", "B / LT / D-PAD ↓", "J1 ↓   /   J2 S", "Defendé el contacto. En la esquina, mantener bloqueo durante presión puede abrir la Guardia de Escape."],
 		]
 	},
 	{
 		"titulo": "COMBATE",
-		"subtitulo": "CADA GOLPE CAMBIA DE POSE Y DISTANCIA",
+		"subtitulo": "CADA GOLPE CAMBIA DE POSE, ALCANCE Y RITMO",
 		"items": [
-			["PUÑO", "X", "TECLA X", "Ataque rápido. Las variantes del personaje rotan automáticamente."],
-			["PATADA", "Y", "TECLA C", "Más alcance y presencia. Ideal para cortar el avance del rival."],
-			["ATAQUE AÉREO", "A + X / Y", "↑ + X / C", "Atacá durante salto o doble salto: el luchador se orienta al rival."],
+			["PUÑO", "X", "J1 X   /   J2 F", "Ataque rápido. Las variantes del personaje rotan automáticamente."],
+			["PATADA", "Y", "J1 C   /   J2 G", "Más alcance y presencia. Ideal para cortar el avance del rival."],
+			["SALTO / DOBLE SALTO", "A / D-PAD ↑", "J1 ↑   /   J2 W", "Pulsá otra vez en el aire para ganar altura y cruzar sobre el rival."],
 			["ENTRADA OFENSIVA", "DASH + X / Y", "DOBLE → + X / C", "Cancelá el dash con ataque para entrar rápido sin deslizarte de más."],
+		]
+	},
+	{
+		"titulo": "DEFENSA AVANZADA",
+		"subtitulo": "LEÉ EL IMPACTO Y RECUPERÁ TU TURNO",
+		"items": [
+			["PERFECT BLOCK", "B / ↓ JUSTO ANTES", "↓ JUSTO ANTES", "Empezá a bloquear instantes antes del impacto para activar PERFECT."],
+			["COUNTER", "X / Y TRAS PERFECT", "X / C TRAS PERFECT", "Después de un Perfect Block soltá la guardia y respondé rápido para contraatacar."],
+			["QUICK RECOVERY", "A / ↑ TRAS RECIBIR", "↑ TRAS RECIBIR", "Durante la ventana de recuperación, pulsá salto para cortar antes un hitstun recuperable."],
+			["GUARDIA DE ESCAPE", "MANTENER BLOQUEO EN ESQUINA", "MANTENER ↓ / S", "En Versus Local, si te acorralan durante hitstun, la siguiente presión normal puede entrar bloqueada y separar la pelea."],
+		]
+	},
+	{
+		"titulo": "COMBOS AVANZADOS",
+		"subtitulo": "ENCADENÁ SIN REGALAR EL TURNO",
+		"items": [
+			["COMBO CANCEL", "X / Y TRAS IMPACTO", "X / C TRAS IMPACTO", "Un golpe normal limpio abre una ventana corta para encadenar. Máximo 3 golpes por cadena."],
+			["LAUNCHER", "↑ + X", "↑ + X", "Desde suelo, arriba + puño arma un golpe lanzador y habilita persecución aérea."],
+			["AIR COMBO", "X / Y EN PERSECUCIÓN", "X / C EN PERSECUCIÓN", "Después del Launcher podés continuar la secuencia en el aire hasta 3 impactos."],
+			["PRESIÓN DE ESQUINA", "VARIÁ PUÑO / PATADA", "VARIÁ X / C", "La pared potencia cadenas rápidas, pero el defensor conserva una salida si anticipa la guardia."],
 		]
 	},
 	{
@@ -33,9 +53,9 @@ const PAGINAS := [
 		"subtitulo": "LA PELEA ESCALA HASTA EL GOLPE ABSOLUTO",
 		"items": [
 			["CARGAR CORE", "CONECTÁ GOLPES", "CONECTÁ GOLPES", "La barra CORE aumenta al golpear. Un golpe bloqueado carga mucho menos."],
-			["CORE I", "RB / RT", "TECLA Z", "Primera carga completa: ejecuta el poder especial del personaje."],
-			["CORE II", "RB / RT", "TECLA Z", "Segunda carga: especial + Furia + combo automático + remate."],
-			["CORE III — ABSOLUTO", "RB / RT", "TECLA Z", "Tercera carga: combo final + Golpe Absoluto. Si conecta, termina la partida."],
+			["CORE I", "RB / RT", "J1 Z   /   J2 H", "Primera carga completa: ejecuta el poder especial del personaje."],
+			["CORE II", "RB / RT", "J1 Z   /   J2 H", "Segunda carga: especial + combo automático trifásico + remate."],
+			["CORE III — ABSOLUTO", "RB / RT", "J1 Z   /   J2 H", "Tercera carga: Furia + combo final + Golpe Absoluto. Si conecta, termina la partida."],
 		]
 	}
 ]

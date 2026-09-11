@@ -1,0 +1,30 @@
+CORE AWAKENED 91.02.10 — AUDIO COMPLETION + XENOID RECHARGE SCALE
+
+CAMBIOS
+1) Xenoid recarga: agregado a RECARGA_REDRAW_MULT con 1.12.
+   La ruta del PNG ya era correcta; faltaba la compensación visual y por eso se veía más chico.
+2) Música de escenario:
+   - Krovan -> res://assets/sonidos/escenarios/krovan.mp3
+   - Nekhar -> res://assets/sonidos/escenarios/nekhar.mp3
+   Ambas quedan en loop mediante el sistema de ambiente de Main.
+3) Voces de recarga:
+   - Kai queda explícitamente cubierto en CORE II y CORE III.
+   - Krovan, Nekhar y Varkhos reciben el pool de voz masculina ya usado por Kai, con pitch propio.
+   - Jester, Xenoid, Kali, Fang, Aethel, Magnus y Dax conservan su cobertura existente.
+   - Cibor-X conserva capa robótica/electrica.
+   - Helena NO reutiliza un grito de ataque como recarga: queda pendiente el grito femenino dedicado.
+4) Reacción al recibir golpes:
+   - Pool masculino ampliado a Jester, Xenoid, Krovan, Nekhar y Varkhos usando las voces existentes de Kai/roster.
+   - Cibor-X conserva dolor robótico.
+   - Helena y Kali reutilizan temporalmente su propia voz existente a pitch/volumen de reacción, nunca voz masculina.
+5) Auditoría CORE:
+   - CORE listo: universal.
+   - CORE I/II/III activación: SFX universal + elemento/fallback.
+   - Recarga CORE II/III: carga + aura universal + voz según personaje.
+   - Rematador/Absoluto: impacto y gigantografía mantienen sus capas existentes.
+
+PENDIENTE ÚNICO DE AUDIO DE VOZ
+- Helena: grito femenino dedicado de RECARGA.
+
+NO TOCADO
+- Daño, hitboxes, física, timers, rollback, input, IA, CORE lógico, estados de combate.

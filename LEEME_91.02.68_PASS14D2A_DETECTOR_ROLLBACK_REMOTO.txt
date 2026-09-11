@@ -1,0 +1,49 @@
+CORE AWAKENED 91.02.68 — PASS 14D2A / DETECTOR DE ROLLBACK REMOTO
+=======================================================================
+
+OBJETIVO
+Medir, con 2 PCs reales, cuántos REMOTE INPUT LATE requieren realmente
+rollback. Un frame tardío sólo exige rebobinado si el input REAL recibido
+es distinto del input que se predijo y ya se simuló.
+
+IMPORTANTE
+Este sub-pass NO ejecuta rollback automático todavía. Es diagnóstico puro
+para definir la ventana real y evitar tocar a ciegas el rollback certificado.
+
+ARCHIVO MODIFICADO
+- scripts/main.gd
+
+NO MODIFICADO
+- rollback_snapshot.gd (91.02.60 congelado)
+- rollback_ring_buffer.gd
+- Fighter / personajes
+- PerfectBlock
+- NetworkManager / ENet
+- físicas, hitboxes, daño, CORE, proyectiles
+- PERF-1 91.02.67 se conserva
+
+NUEVOS LOGS
+[91.02.68-P14D2A] LATE SIN ROLLBACK — ...
+  El paquete llegó tarde, pero coincide con la predicción: no hay que rebobinar.
+
+[91.02.68-P14D2A] ROLLBACK NECESARIO — tick=... edad=... pred=... real=...
+  El paquete tardío sí cambia la historia: éste será el caso que 14D2B corregirá.
+
+[91.02.68-P14D2A] ROLLBACK DIAG — ...
+  Resumen cada 60 ticks con late_eval / iguales / necesarios / max_edad.
+
+PRUEBA
+1. Instalar ZIP ROOT sobre 91.02.67.
+2. Reexportar 91.02.68 y copiar la MISMA build a PC1 y PC2.
+3. ONLINE LAN real. NO usar PAUSE.
+4. Jugar 2-3 minutos con bastante movimiento, dash, saltos, puños, patadas,
+   bloqueo y al menos CORE I si sale naturalmente.
+5. Pasar log HOST y log CLIENTE.
+
+CRITERIO
+Con esos logs medimos:
+- cuántos late fueron inocuos;
+- cuántos necesitaron rollback;
+- edad máxima real del paquete tardío.
+Después 14D2B implementará el rebobinado sólo dentro de la ventana que los
+datos demuestren necesaria.

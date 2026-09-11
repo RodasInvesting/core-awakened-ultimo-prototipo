@@ -1,0 +1,14 @@
+CORE AWAKENED 91.02.02 — NEKHAR PARADO IMPORT FIX
+
+Corrección mínima sobre 91.02.01.
+
+CAUSA CONFIRMADA DEL "POSTE":
+- Fighter crea un Polygon2D rectangular de fallback cuando textura_parado == null.
+- El video muestra exactamente ese fallback (también recibe el flash de impacto).
+- El primer asset de pose de Nekhar había sido un JPEG con extensión .png; aunque 91.02.01 convirtió el archivo, una caché de importación anterior puede mantener ResourceLoader sin textura.
+
+FIX:
+- Se agrega assets/nekhar/parado_v2.png como PNG RGBA real, con ruta NUEVA.
+- nekhar.gd usa preload() de esa ruta nueva, forzando una importación limpia y evitando la caché corrupta de parado.png.
+- No se toca Fighter, PerfectBlock ni RollbackSnapshot.
+- Selector/roster definitivo de 91.02.01 permanece igual.

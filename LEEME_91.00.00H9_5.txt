@@ -1,0 +1,100 @@
+CORE AWAKENED 91.00.00-H9.5 — CORE II COMBO APPROACH PHYSICS
+
+RESULTADO H9.4
+--------------
+RECARGA END:
+- J1 OK
+- J2 OK
+- J1 OK
+- J2 OK
+
+COMBO ENTRY:
+DESYNC simétrico J1/J2.
+
+Ejemplo:
+  esperado desplazamiento = 38.6589
+  actual                 = 145.8024
+
+La diferencia final quedó pequeña porque ambos movimientos terminan cerca
+del mismo target, pero el DESYNC causal en el primer subtick demuestra que
+el catch-up recibió movimiento extra.
+
+CAUSA
+-----
+Al entrar en _racha_combo_auto(), cada beat llama:
+
+  await _acercar_para_combo_auto()
+
+y esa función todavía crea:
+
+  var tween := create_tween()
+  tween.tween_property(self, "global_position", destino, duracion)
+  await tween.finished
+
+Cuando restauramos a un tick ANTERIOR al COMBO ENTRY:
+- el Tween del futuro LIVE sigue existiendo;
+- el replay vuelve a cruzar COMBO ENTRY;
+- el personaje recibe movimiento del futuro + movimiento re-simulado.
+
+H9.5
+----
+CORE III se deja intacto.
+
+Para CORE II solamente:
+- se usa una copia dedicada de la ráfaga;
+- el acercamiento de cada beat ya NO usa Tween;
+- interpola QUAD EASE OUT en physics_frame;
+- mantiene target adaptativo, /900 y clamp 0.08..0.30;
+- se agrega rollback_core2_async_epoch transitorio.
+
+Al comenzar el rollback CORE II COMBO ENTRY:
+Main incrementa el epoch.
+La coroutine del timeline LIVE comprueba ese epoch antes de volver a mover
+o atacar y sale sin actuar.
+
+IMPORTANTE
+----------
+H9.5 NO convierte todavía:
+- SceneTreeTimer POLL_COMBO_CORE_CONTINUO;
+- progreso/índice de la coroutine a snapshot;
+- rematador;
+- poster CORE II.
+
+Por eso H9.5 sólo debe certificar el BORDE COMBO ENTRY.
+El siguiente test entrará dentro del primer beat.
+
+PRUEBA
+------
+Igual que H9.4.
+
+NO usar F11.
+
+J1:
+1. CORE I.
+2. Llenar CORE II.
+3. Alejarse >350 px.
+4. Activar CORE II.
+5. No tocar nada.
+6. Dejar correr las auto-pruebas RECARGA END y COMBO ENTRY.
+7. Repetir 2 veces.
+
+J2:
+Igual, 2 veces.
+
+BUSCAMOS
+--------
+CORE II RECARGA END -> OK
+
+CORE II COMBO ENTRY:
+  CORE II ASYNC EPOCH INVALIDADO
+  ...
+  TACTICAL ROLLBACK OK — CORE II COMBO ENTRY — 8 ticks
+
+Ya NO debe aparecer el salto:
+  esperado ~38 px / actual ~145 px
+
+Si H9.5 pasa:
+H9.6 localizará el primer beat/primer golpe DENTRO de la ráfaga para exponer
+si los SceneTreeTimer/await internos necesitan convertirse a FSM explícita.
+
+NO usar CORE III.

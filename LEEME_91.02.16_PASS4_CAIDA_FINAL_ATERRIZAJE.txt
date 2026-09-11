@@ -1,0 +1,34 @@
+CORE AWAKENED 91.02.16 — PASS 4 CAÍDA FINAL + ATERRIZAJE CONTUNDENTE
+
+OBJETIVO
+- Dar más peso al último tramo de la caída sin alterar la altura/impulso inicial.
+- Hacer que el contacto con el piso se sienta más firme y la recuperación visual sea más rápida.
+
+CAMBIOS
+1) Se mantiene PASS 1: caída libre x1.35.
+2) Se mantiene PASS 2: doble salto x1.25.
+3) Se mantiene PASS 3: vértice compacto en banda |Vy| <= 120.
+4) PASS 4 añade sólo para saltos reales, al caer con Vy >= 360:
+   - multiplicador adicional x1.12 sobre la gravedad de caída.
+   - gravedad efectiva del tramo final ~= x1.512 respecto a la base.
+5) Aterrizaje visual:
+   - microimpacto un poco más fuerte.
+   - asentamiento/rotación algo más marcado.
+   - recuperación del asentamiento más rápida (7.5 vs 5.0).
+   - NO cambia la escala del Fighter.
+
+EXCLUSIONES / NO TOCADO
+- Dash / Backdash.
+- Ataques / hitboxes / recovery de golpes.
+- Launcher / Air Hit / knockback.
+- Derribos especiales.
+- CORE I / II / III.
+- Escalas y sprites.
+
+PRUEBA SUGERIDA
+- Kai vs Aethel.
+- 3 saltos simples.
+- 3 dobles saltos.
+- 2 cruces aéreos.
+- 1 launcher/Air Hit para confirmar que no cambió esa física.
+- Comparar especialmente los últimos 25-30% de la caída y el primer instante de contacto con el suelo.
