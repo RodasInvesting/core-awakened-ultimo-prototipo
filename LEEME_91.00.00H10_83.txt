@@ -1,0 +1,26 @@
+CORE AWAKENED 91.00.00-H10.83 — NORMAL KICK BLOCK AUTO REVALIDATION
+
+Estado previo certificado
+- BLOQUEO NORMAL contra PUÑO: H10.82 J1/J2, 8 ticks idénticos.
+- H10.81 queda como fallo de arnés histórico, no de gameplay.
+
+Objetivo
+- Revalidar BLOQUEO NORMAL contra PATADA, J1 y J2, 8 ticks.
+- NO modifica gameplay.
+- Reutiliza el mismo arnés corregido y validado en H10.82.
+
+Alcance H10.83
+- scripts/main.gd: cambia únicamente el filtro target-only del detector de bloqueo normal de _atk_tipo="punetazo" a _atk_tipo="patada" y los rótulos diagnósticos.
+- NORMAL BLOCK conserva expected histórico post-ventana.
+- Historical-X Guard sigue OFF para NORMAL BLOCK para no ocultar recoil/empuje físico causal.
+- Perfect Block queda excluido: el defensor debe venir bloqueando antes del impacto y _counter_disponible debe permanecer false.
+
+Archivos funcionalmente congelados
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- scripts/rollback_snapshot.gd
+
+Prueba
+1) Kai vs Dax: Kai/J1 mantener bloqueo con anticipación y recibir una PATADA normal. No F11.
+2) Dax vs Kai: Kai/J2 mantener bloqueo con anticipación y recibir una PATADA normal. No F11.
+Esperado: TACTICAL ROLLBACK OK — NORMAL BLOCK — 8 ticks; estado presente idéntico

@@ -1,0 +1,48 @@
+CORE AWAKENED 91.02.25 — PASS 9.3A RECOVERY / TRANSICIONES NORMALES
+===================================================================
+
+INSTALACION
+1. Abrir este ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar VS LOCAL.
+
+OBJETIVO
+Acercar el ritmo de combate a las referencias dinamicas sin simplemente subir
+la velocidad general del juego.
+
+CAMBIO UNICO
+- Startup normal: SIN CAMBIOS (0.90).
+- Recovery logico de puño: 0.78 -> 0.64.
+- Recovery logico de patada: 0.72 -> 0.60.
+- La pose visible y la ventana ACTIVA quedan exactamente iguales.
+- El buffer de ataque existente puede disparar el siguiente golpe en el primer
+  frame legal, por eso la transicion se siente mas inmediata.
+
+NO TOCA
+- PASS 9.2C: neutral 78 / precontacto 80 / torso 84
+- alcance, hitbox/hurtbox o lunge
+- daño, hitstun, hitstop o knockback
+- gravedad, salto, dash/backdash
+- bloqueo
+- CORE I / II / III, posters, rematador o Absoluto
+- KO final
+- rollback / netcode / snapshots / RPC / serializacion
+
+PRUEBA PRINCIPAL
+A) Puño -> puño varias veces.
+B) Puño -> patada.
+C) Patada -> puño.
+D) Golpe -> caminar inmediatamente.
+E) Golpe -> dash adelante / back dash.
+F) Bloquear -> contraatacar.
+G) Salto/aterrizaje -> golpe.
+H) Pelea libre 30-60 s para evaluar ritmo general.
+I) Acercarse mucho y pelear para confirmar que PASS 9.2C sigue igual.
+J) CORE II rapido al final para confirmar que PASS 9.1 sigue intacto.
+
+QUE BUSCAMOS
+- Menos pausa muerta despues del golpe.
+- El ataque debe conservar peso.
+- La patada debe seguir sintiendose mas comprometida que el puño.
+- NO queremos spam sin lectura ni animaciones cortadas.

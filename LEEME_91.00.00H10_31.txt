@@ -1,0 +1,33 @@
+CORE AWAKENED 91.00.00-H10.31 — CORE III EIGHTH BEAT END DIAGNOSTIC
+
+Objetivo único:
+- Diagnosticar CORE III EIGHTH BEAT END.
+- Frontera exacta: stage 10 -> stage 11.
+- Stage 10 = octavo beat físico snapshotable (H10.30).
+- Stage 11 = continuación histórica desde el noveno beat.
+
+Estado certificado:
+- ENTRY, RECARGA END, APPROACH END.
+- FIRST/SECOND/THIRD/FOURTH/FIFTH/SIXTH BEAT END.
+- SEVENTH BEAT END 9->10 revalidado J1/J2 en H10.30.
+
+Cambios H10.31:
+- Sólo instrumentación en scripts/main.gd.
+- fighter.gd idéntico a H10.30.
+- No se convierte el noveno beat.
+- No se modifica snapshot, PerfectBlock, GameState ni gameplay.
+- El observador detecta directamente stage 10->11; sin observación de fases internas.
+- Protección silenciosa de localización: no puede inundar el log por tick.
+
+Prueba:
+1. NO presionar F11.
+2. Ejecutar CORE I y CORE II normalmente.
+3. Ejecutar CORE III completo con J1.
+4. Ejecutar CORE III completo con J2.
+5. Dejar terminar las secuencias naturalmente.
+6. Enviar el runtime completo.
+
+Objetivo ideal J1/J2:
+TACTICAL ROLLBACK OK — CORE III EIGHTH BEAT END — 8 ticks; estado presente idéntico
+
+Si falla, el runtime decidirá si el noveno beat histórico debe convertirse a FSM física.

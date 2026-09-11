@@ -1,0 +1,52 @@
+CORE AWAKENED — 91.00.00-H10.17
+CORE III THIRD BEAT PHYSICS + HISTORICAL CLOCK DELTA
+
+EVIDENCIA H10.16
+- CORE III SECOND BEAT END falla en J1 y J2 por desplazamiento externo en el primer subtick.
+- Causa: el Tween/coroutine del tercer beat histórico sobrevive/no renace tras restore.
+- Además H10.16 reveló una regresión real de APPROACH END en J1 cuando la ventana de 8 ticks
+  solapa RECARGA END 0.32 -> 1.0 y el primer acercamiento es muy corto.
+- El log demuestra un physics tick residual de delta 0.005333 aunque time_scale ya figure 1.0.
+
+OBJETIVO H10.17
+1. Revalidar ENTRY, RECARGA END y especialmente APPROACH END con el delta histórico exacto.
+2. Convertir SOLO el tercer beat CORE III a FSM física snapshotable.
+3. Repetir SECOND BEAT END stage 4 -> 5, ahora entrando al tercer beat físico.
+
+CAMBIOS FUNCIONALES
+- scripts/main.gd:
+  * En subticks CORE III sin cambio de time_scale, J1/J2/PB toman el delta histórico real de
+    relojes snapshotables. El tick exacto de transición conserva la semántica H10.11.
+  * Nueva traza CORE III HISTORICAL CLOCK DELTA cuando el delta observado difiere de la fórmula.
+  * SECOND BEAT END sigue observando stage 4 -> 5, pero stage 5 ahora es tercer beat físico.
+- scripts/fighter.gd:
+  * stage 5 = TERCER_BEAT_FSM.
+  * tercer acercamiento + tercer golpe sin Tween/coroutine.
+  * la continuación histórica recién empieza desde el cuarto beat en stage 6.
+- scripts/rollback_snapshot.gd: SIN cambios; se reutilizan los mismos campos snapshotables.
+
+NO TOCADO
+- CORE I completo.
+- CORE II completo.
+- Fórmula H10.11 del tick exacto de transición time_scale.
+- Gameplay, daño y coreografía de los beats 1/2.
+
+PRUEBA
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Activar CORE III con J1 y dejar correr.
+5. Repetir con J2.
+6. Enviar el log completo.
+
+BUSCAR
+TACTICAL ROLLBACK OK — CORE III ENTRY
+TACTICAL ROLLBACK OK — CORE III RECARGA END
+TACTICAL ROLLBACK OK — CORE III APPROACH END
+TACTICAL ROLLBACK OK — CORE III FIRST BEAT END
+CORE III SECOND BEAT END LOCALIZADO — stage 4->5
+TACTICAL ROLLBACK OK — CORE III SECOND BEAT END
+
+Si APPROACH END vuelve a DESYNC, no se certifica H10.17. Si APPROACH END y SECOND BEAT END
+pasan en J1/J2, se vuelve a congelar APPROACH END para la ventana corta y se certifica
+SECOND BEAT END. El siguiente blanco será THIRD BEAT END stage 5 -> 6.

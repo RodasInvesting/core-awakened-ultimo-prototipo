@@ -1,0 +1,42 @@
+CORE AWAKENED 91.02.43 — PASS 11E / IA DIFÍCIL RÁFAGAS FINALES
+================================================================
+
+BASE APROBADA
+- Movimiento/aceleración/persecución de 91.02.42: CONGELADO.
+- Saltos/doble salto de 91.02.42: CONGELADO.
+- Bloqueo/backdash/castigo táctico de 91.02.42: CONGELADO.
+- Uso prioritario de CORE al llenarse: CONSERVADO.
+- MEDIO 91.02.40: CERTIFICADO y sin cambios.
+
+ÚNICO OBJETIVO DE ESTE PASS
+Que DIFÍCIL reparta más golpes normales de seguido.
+
+CAMBIO
+- Al entrar en presión corta, DIFÍCIL arma tandas de 3 a 5 ataques.
+- Mezcla puños y patadas, evitando repetir demasiado la misma acción.
+- Mientras una tanda sigue activa, no la corta para ponerse a bloquear o retroceder.
+- Si el primer impacto empuja un poco al rival, puede iniciar el siguiente golpe
+  desde una franja ligeramente más amplia para que el lunge normal vuelva a cerrar.
+- Entre golpes de una misma tanda no existe cooldown artificial de IA.
+- IMPORTANTE: NO se cancela ni se acorta el recovery del golpe. El siguiente ataque
+  sólo puede salir cuando Fighter lo permita legalmente.
+- Entre una tanda y la siguiente queda un micro-respiro de 0.035–0.065 s.
+
+NO SE TOCA
+- PerfectBlock / IA táctica 91.02.42.
+- movimiento, dash, salto, doble salto, backdash.
+- daño, hitstun, knockback, recovery, hit-stop.
+- hitbox, rango y velocidad máxima.
+- CORE I / II / III.
+- pushbox.
+- Versus Local.
+- rollback / snapshots / RPC / serialización.
+
+PRUEBA FINAL
+1. Dejá que DIFÍCIL entre en corto: debe soltar secuencias visibles de varios
+   puños/patadas, no golpes aislados.
+2. Tras un golpe que te empuje un poco, debe intentar seguir la ráfaga.
+3. Debe conservar exactamente el movimiento aprobado de 91.02.42.
+4. Probar CORE y COMBO x2/x3 para confirmar ausencia de regresiones.
+
+Si pasa, PASS 11 — IA DIFÍCIL queda CERRADO.

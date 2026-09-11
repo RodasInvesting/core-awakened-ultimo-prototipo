@@ -1,0 +1,54 @@
+CORE AWAKENED 91.02.48 — PASS 12E / FIX PARSE + AUDIO HELENA
+===============================================================
+
+CORRECCIÓN CRÍTICA
+91.02.47 empaquetó por error fighter.gd desde la base 91.02.43 en vez de la
+base 12A que ya contenía las declaraciones del sistema de proyectiles.
+Por eso helena.gd mostraba:
+- proyectil_especial_habilitado not declared
+- textura_proyectil_pose not declared
+- textura_proyectil_nucleo not declared
+- proyectil_velocidad / daño / hitstun / startup / recovery / cooldown not declared
+
+91.02.48 restaura fighter.gd desde la base CORRECTA 12A y vuelve a incorporar
+encima únicamente PNG oficial + audio.
+
+AUDIO
+El archivo suministrado dura ~10.0 s y contiene una explosión con cola/eco larga.
+Para combate se procesó una versión específica de impacto:
+- se conserva el ataque inicial;
+- recorte a ~0.78 s;
+- leve aceleración tonal/temporal;
+- filtrado de subgrave y agudos extremos;
+- fade-out corto;
+- volumen en juego -4.5 dB.
+Se reproduce AL IMPACTAR el proyectil, no durante todo el vuelo.
+
+PROYECTIL
+- PNG oficial Helena integrado.
+- Aura/anillos procedurales alrededor.
+- Velocidad 805 px/s.
+- Evasión aérea 91.02.46 conservada.
+- Hitbox X/Y conservada.
+- Daño, empuje, hitstun, startup/recovery/cooldown conservados.
+
+NO TOCADO
+- IA 91.02.43
+- PerfectBlock / Combo Cancel
+- CORE I / II / III
+- pushbox
+- main.gd / game_state.gd / project.godot
+- rollback / snapshots / RPC / serialización
+
+INSTALACIÓN
+Abrir ZIP -> arrastrar TODO a la raíz -> aceptar reemplazar.
+
+PRUEBA
+1. Abrir Godot: NO debe haber errores de parse en helena.gd.
+2. Iniciar pelea Helena.
+3. ↓ → + PUÑO.
+4. Confirmar PNG oficial + aura.
+5. Confirmar velocidad levemente mayor.
+6. Confirmar sonido corto al IMPACTAR.
+7. Confirmar doble salto evade a distancia.
+8. Confirmar bloqueo y golpes/CORE normales.

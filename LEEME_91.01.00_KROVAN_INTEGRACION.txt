@@ -1,0 +1,80 @@
+CORE AWAKENED 91.01.00 — KROVAN INTEGRACIÓN V1
+Base: 91.00.00-H10.88 ROLLBACK CERTIFIED CLEAN BASELINE
+Godot: 4.7.1 stable
+
+OBJETIVO
+- Integrar KROVAN — El Guardián de la Última Cosecha como luchador jugable.
+- Agregar su escenario: CAMPO DE LA ÚLTIMA COSECHA.
+- Integrar pose base, caminata, puños, patadas, bloqueo, dash/backdash,
+  salto/doble salto/descenso, recibidos, derrotado, recarga, victoria,
+  combo Furia, remates y gigantografías CORE I / II / III.
+- Agregar Krovan al selector, Versus, Arcade, Batalla Rápida y selector de escenarios.
+
+INSTALACIÓN
+1) Partir del proyecto que ya tiene aplicada H10.88.
+2) Copiar TODO el contenido de este ZIP sobre la RAÍZ del proyecto.
+3) Aceptar REEMPLAZAR los archivos cuando Windows pregunte.
+4) Abrir el proyecto con Godot 4.7.1 estable y esperar la importación de PNG.
+
+ARCHIVOS FUNCIONALES MODIFICADOS
+- scripts/main.gd
+  * fábrica de luchadores: Krovan.new()
+  * fondo/color/tipo de escenario Krovan
+  * calibración visual del escenario Krovan
+- scripts/game_state.gd
+  * Krovan agregado al roster jugable y escenarios Versus
+- scripts/resultado.gd
+  * fondo de resultado Krovan
+- scripts/selector_personajes.gd
+  * nueva tarjeta Krovan; Varkhos sigue bloqueado
+- scripts/selector_escenarios.gd
+  * Campo de la Última Cosecha agregado
+- scripts/presentacion_vs.gd
+  * gigantografía VS de Krovan
+- scripts/krovan.gd
+  * configuración exclusiva del personaje
+
+FRONTERA ROLLBACK CONGELADA — SIN CAMBIOS
+- scripts/fighter.gd
+  SHA256 0707eafbf0c62f0841678dbc26049052cded474f08af0ba3740ff2fa043fb963
+- scripts/perfect_block_90_1.gd
+  SHA256 938010025551432465d0b578f2b627af58fb786522c662a861b171a92dd131b8
+- scripts/rollback_snapshot.gd
+  SHA256 8a3bcd53b4c692fa313c2ae5dba087746c35638bc6899ee387a79d4da25ed7ad
+
+NOTAS
+- Krovan hereda física, hitboxes/hurtboxes, CORE FSM y estado rollback genérico de Fighter.
+- No se agregaron timers asíncronos ni lógica rollback nueva.
+- Krovan no recibe una voz genérica: su concepto lo define como silencioso.
+- No se inventó audio de escenario. Se mantiene el sistema existente sin pista exclusiva para Krovan.
+- Los sprites de RECIBIR GOLPE se integran exactamente como fueron entregados.
+  Queda pendiente una limpieza visual menor de algunos bordes/residuos; NO afecta la lógica.
+- Perfect Block conserva intacto el módulo certificado. La mecánica funciona por herencia;
+  la tabla visual exclusiva de evasión de Perfect Block no se modifica en esta V1 para no
+  romper el hash congelado del módulo.
+
+PRIMER TEST RECOMENDADO
+A) VERSUS LOCAL: KROVAN vs KAI
+- selector muestra y permite elegir KROVAN
+- VS muestra gigantografía de Krovan
+- elegir CAMPO DE LA ÚLTIMA COSECHA
+- idle / caminar izquierda-derecha
+- puños / patadas / rodillazo
+- bloqueo
+- forward dash / backdash
+- salto / doble salto / descenso
+- recibir golpes / derrotado
+- recarga
+- CORE I
+- CORE II
+- CORE III
+- victoria
+
+B) ESPEJO: KAI vs KROVAN
+- Krovan como J2 / rival
+- revisar orientación, escala y golpes recibidos
+- repetir CORE I/II/III de Krovan si se controla como J2
+
+ESTADO
+- Integración estructural preparada.
+- La certificación final de Krovan depende del runtime real en Godot 4.7.1.

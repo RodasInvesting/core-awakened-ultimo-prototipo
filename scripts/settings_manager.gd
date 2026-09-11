@@ -6,6 +6,10 @@ extends Node
 # obligarnos a reescribir cada reproductor de audio existente.
 
 const CONFIG_PATH := "user://core_awakened_settings.cfg"
+# 90.12.00 — versión de preferencias. La migración 2 corrige instalaciones
+# de desarrollo que habían guardado fullscreen=false porque project.godot
+# arrancaba en ventana. Solo fuerza pantalla completa una vez.
+const CONFIG_SCHEMA_VERSION := 2
 const BUS_MUSICA := "Musica"
 const BUS_EFECTOS := "Efectos"
 const BUS_VOCES := "Voces"
@@ -80,15 +84,23 @@ func _cargar() -> void:
 	volumen_musica = clampf(float(cfg.get_value("audio", "musica", 100.0)), 0.0, 100.0)
 	volumen_efectos = clampf(float(cfg.get_value("audio", "efectos", 100.0)), 0.0, 100.0)
 	volumen_voces = clampf(float(cfg.get_value("audio", "voces", 100.0)), 0.0, 100.0)
-	pantalla_completa = bool(cfg.get_value("video", "fullscreen", false))
+	var schema_guardado := int(cfg.get_value("meta", "schema_version", 0))
+	pantalla_completa = bool(cfg.get_value("video", "fullscreen", true))
+	# Las builds anteriores podían crear el archivo de preferencias en modo ventana
+	# durante el primer import del proyecto. Migramos esa configuración una sola vez.
+	if schema_guardado < CONFIG_SCHEMA_VERSION:
+		pantalla_completa = true
 	var ancho_guardado := int(cfg.get_value("video", "window_width", 1280))
 	var alto_guardado := int(cfg.get_value("video", "window_height", 720))
 	resolucion_ventana = _normalizar_resolucion(Vector2i(ancho_guardado, alto_guardado))
 	vsync = bool(cfg.get_value("video", "vsync", true))
 	shake_camara = bool(cfg.get_value("accesibilidad", "shake_camara", true))
+	if schema_guardado < CONFIG_SCHEMA_VERSION:
+		_guardar()
 
 func _guardar() -> void:
 	var cfg := ConfigFile.new()
+	cfg.set_value("meta", "schema_version", CONFIG_SCHEMA_VERSION)
 	cfg.set_value("audio", "master", volumen_master)
 	cfg.set_value("audio", "musica", volumen_musica)
 	cfg.set_value("audio", "efectos", volumen_efectos)

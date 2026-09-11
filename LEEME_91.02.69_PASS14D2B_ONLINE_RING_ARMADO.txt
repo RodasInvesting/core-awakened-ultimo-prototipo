@@ -1,0 +1,44 @@
+CORE AWAKENED 91.02.69 — PASS 14D2B / ONLINE RING ARMADO
+================================================================
+
+POR QUÉ EXISTE ESTE SUB-PASS
+14D2A confirmó que durante juego normal los paquetes tardíos que realmente
+cambian la predicción llegaron con una edad máxima observada de 4 ticks.
+Sin embargo, el ring certificado se creaba/capturaba sólo en Versus Local.
+Antes de ejecutar rollback real, Online necesita su propia historia snapshotable.
+
+QUÉ HACE
+- Crea el mismo RollbackRingBuffer certificado también en modo ONLINE.
+- Captura un snapshot al inicio de cada physics tick ONLINE.
+- Asocia al snapshot los Input Frames J1/J2 que realmente se simularon.
+- Mantiene capacidad de 180 ticks.
+- Reinicia ring y reloj lógico exactamente en COMBATE GO.
+- Imprime alineación ring/sim cada 60 ticks.
+
+QUÉ NO HACE
+- NO ejecuta rollback remoto todavía.
+- NO restaura snapshots.
+- NO re-simula.
+- NO toca rollback_snapshot.gd 91.02.60.
+- NO toca Fighter, PerfectBlock, NetworkManager, CORE, proyectiles ni físicas.
+- El arnés F11/TARGET-ONLY sigue exclusivo de Versus Local.
+
+LOG NUEVO ESPERADO
+[91.02.69-P14D2B] ONLINE RING — peer=... sim=... total=... old=... new=... esperado=... alineado=true
+
+PRUEBA
+1. Instalar ZIP ROOT sobre 91.02.68.
+2. Reexportar 91.02.69 y copiar la MISMA build a PC1 y PC2.
+3. ONLINE LAN real. NO usar PAUSE.
+4. Jugar 60-90 segundos; no hace falta terminar la pelea.
+5. Verificar jugabilidad/FPS, especialmente PC2.
+6. Pasar log HOST y CLIENTE.
+
+CRITERIO
+- alineado=true sostenido en ambos peers.
+- total llega a 180 y se mantiene.
+- new = sim - 1.
+- PC2 sigue siendo jugable con el costo de capturar snapshots por tick.
+
+Si esto pasa, 14D2C puede usar una ventana real de hasta 8 ticks sobre este
+ring sin tocar el snapshot certificado.

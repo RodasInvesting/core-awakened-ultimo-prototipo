@@ -1,0 +1,80 @@
+CORE AWAKENED 91.00.00-H9.1 — CORE II RECARGA END
+
+RESULTADO H9
+------------
+4/4 CORE II ENTRY OK:
+- J1 OK
+- J2 OK
+- J1 OK
+- J2 OK
+
+La activación nivel 1 -> 2 y el comienzo de la recarga son deterministas
+en una ventana de rollback de 8 ticks.
+
+OBJETIVO H9.1
+-------------
+Cruzar el siguiente límite REAL de CORE II:
+
+  _mostrar_recarga_energia(false)
+      ->
+  en_pose_recarga=true
+      ->
+  SceneTreeTimer 1.05 s
+      ->
+  await timeout
+      ->
+  en_pose_recarga=false
+      ->
+  _acercar_para_combo_auto()
+
+H9.1 NO corrige nada todavía.
+Detecta directamente en snapshots:
+  CORE II + secuencia=true + recarga=true
+      ->
+  CORE II + secuencia=true + recarga=false
+
+RIESGO ESPERADO
+---------------
+El timer usa:
+  create_timer(1.05, true, false, true)
+
+y la secuencia espera:
+  await _mostrar_recarga_energia(false)
+
+Un snapshot puede restaurar en_pose_recarga/pose_timer, pero no la
+continuación suspendida de esa coroutine ni el SceneTreeTimer interno.
+
+PRUEBA
+------
+J1:
+1. Usar CORE I.
+2. Llenar CORE II.
+3. Activar CORE II.
+4. Esperar a que TERMINE la pose de recarga.
+5. Apenas el personaje salga de recarga y empiece a ir hacia el rival/combo,
+   presionar F11 UNA VEZ.
+6. Hacer 2 intentos.
+
+J2:
+Igual, 2 intentos.
+
+NO esperar al rematador. F11 debe hacerse inmediatamente después de recarga.
+
+Queremos:
+  CORE II RECARGA END LOCALIZADO — tick=... J1/J2
+  TACTICAL ROLLBACK — CORE II RECARGA END — ...
+y luego:
+  OK
+o el primer DESYNC causal.
+
+SI HAY DESYNC
+-------------
+Esperamos ver una de estas familias:
+- en_pose_recarga esperado=false / actual=true
+- pose_timer
+- posición/velocidad del acercamiento
+- estado de combo automático
+
+Ese bloque nos dirá exactamente qué convertir a physics ticks en H9.2.
+
+NO usar CORE III.

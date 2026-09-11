@@ -1,0 +1,21 @@
+CORE AWAKENED 91.00.00-H10.42 — CORE III FOURTEENTH BEAT PHYSICS
+
+Objetivo:
+- Revalidar CORE III THIRTEENTH BEAT END, stage 15->16.
+- H10.41 probó desplazamiento externo async en subtick 1/8 al entrar al beat 14 histórico.
+- H10.42 convierte SOLAMENTE el beat 14 a FSM physics/snapshotable.
+- Stage 16 = beat 14 físico.
+- Stage 17 = continuación histórica desde beat 15.
+
+PRUEBA:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Completar CORE III con J1 y dejar terminar toda la secuencia.
+5. Completar CORE III con J2 y dejar terminar toda la secuencia.
+6. Enviar el runtime completo.
+
+Objetivo en ambos lados:
+TACTICAL ROLLBACK OK — CORE III THIRTEENTH BEAT END — 8 ticks; estado presente idéntico
+
+No se modifican Snapshot, PerfectBlock ni los auxiliares deterministas.

@@ -1,0 +1,43 @@
+CORE AWAKENED 91.02.21 — PASS 9.1 CORE RECEIVER LOCK / VS LOCAL
+==================================================================
+
+FORMA DE ACTUALIZAR — MISMO SISTEMA DE SIEMPRE
+1. Abrí este ZIP.
+2. Arrastrá TODO su contenido a la carpeta raíz de CORE AWAKENED.
+3. Cuando Windows pregunte, aceptá REEMPLAZAR los archivos.
+4. Abrí Godot y probá el juego.
+
+CONTENIDO
+- scripts/fighter.gd
+
+CAMBIOS DEL PASS 9.1
+- CORE I: el receptor mantiene la última pose de golpe recibido mientras el atacante
+  todavía está dentro de la secuencia/póster. Ya no vuelve a reposo antes de tiempo.
+- CORE II/III: el receptor no puede iniciar salto, dash, puño, patada, bloqueo ni CORE
+  mientras está capturado por la secuencia automática.
+- Si el receptor tenía un ataque/dash iniciado justo antes de entrar al CORE, se cancela
+  al comenzar la captura para que no continúe pegando dentro de la coreografía.
+- Los botones sostenidos durante la captura se sincronizan al liberar VS Local para que
+  no salgan como una pulsación nueva en el primer frame libre.
+- CORE II: se elimina la liberación prematura entre el fin del póster y el derribo.
+- CORE III: se elimina la liberación prematura entre el Absoluto y el impacto/KO.
+
+NO SE TOCA
+- rollback online / snapshots / restore / serialización;
+- PerfectBlock;
+- gravedad;
+- daño global;
+- knockback global;
+- hitboxes / hurtboxes / pushbox;
+- velocidad global;
+- timings de la ráfaga CORE II/III;
+- posición final del K.O.
+
+PRUEBA PASS 9.1
+- VS Local J1 -> J2 y J2 -> J1.
+- Durante CORE II y CORE III, el receptor debe machacar salto + puño + patada +
+  bloqueo + CORE y no ejecutar ninguna acción.
+- CORE I: verificar golpe recibido -> mantiene reacción -> cierre del CORE -> reposo.
+- CORE II: verificar póster -> derribo, sin frame intermedio de reposo.
+- CORE III: verificar Absoluto -> impacto/KO, sin ventana de control.
+- Fuera de CORE, confirmar que salto, dash, bloqueo, golpes y Combo Cancel siguen normales.

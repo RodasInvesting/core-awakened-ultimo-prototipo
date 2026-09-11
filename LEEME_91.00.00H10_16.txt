@@ -1,0 +1,53 @@
+CORE AWAKENED — 91.00.00-H10.16
+CORE III SECOND BEAT END — DIAGNÓSTICO stage 4 -> 5
+
+CERTIFICADO POR H10.15
+- CORE III ENTRY: J1/J2 OK 8 ticks.
+- CORE III RECARGA END: J1/J2 OK 8 ticks.
+- CORE III APPROACH END: J1/J2 OK 8 ticks.
+- CORE III FIRST BEAT END: J1/J2 OK 8 ticks; frontera congelada.
+
+OBJETIVO H10.16
+- Probar exclusivamente CORE III SECOND BEAT END.
+- Detectar la transición snapshotable stage 4 (SEGUNDO_BEAT_FSM) -> stage 5 (CONTINUACION_ASYNC).
+- Esa transición entrega el control al tercer beat histórico todavía basado en await/Tween.
+- H10.16 es diagnóstico puro: NO convierte el tercer beat.
+
+CAMBIO FUNCIONAL
+- Sólo scripts/main.gd cambia frente a H10.15.
+- Nuevo observador Main-only del cruce stage 4 -> 5.
+- Localizador automático de ventana de rollback de 8 ticks.
+- Nueva clasificación: CORE III SECOND BEAT END.
+- Se conserva el delta histórico explícito CORE III durante la ventana.
+- Se amplía el trace CORE III para esta frontera.
+
+NO TOCADO
+- scripts/fighter.gd byte por byte igual a H10.15.
+- scripts/rollback_snapshot.gd byte por byte igual a H10.15.
+- scripts/perfect_block_90_1.gd byte por byte igual a H10.15.
+- CORE I completo congelado.
+- CORE II completo congelado.
+- CORE III ENTRY / RECARGA END / APPROACH END / FIRST BEAT END congelados.
+
+PRUEBA
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Activar CORE III con J1 y dejar correr.
+5. Repetir con J2.
+6. Enviar el log completo.
+
+ESPERADO ANTES DE LA NUEVA FRONTERA
+TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks
+TACTICAL ROLLBACK OK — CORE III RECARGA END — 8 ticks
+TACTICAL ROLLBACK OK — CORE III APPROACH END — 8 ticks
+TACTICAL ROLLBACK OK — CORE III FIRST BEAT END — 8 ticks
+
+NUEVA PRUEBA
+CORE III SECOND BEAT END AUTO MARCADO
+CORE III SECOND BEAT END LOCALIZADO — stage 4->5
+TACTICAL ROLLBACK — CORE III SECOND BEAT END
+
+Puede terminar OK o DESYNC. Si DESYNC, el primer subtick causal indicará exactamente cómo
+el tercer beat histórico contamina o deja de renacer tras restore. No modificar nada más antes
+de esa evidencia runtime.

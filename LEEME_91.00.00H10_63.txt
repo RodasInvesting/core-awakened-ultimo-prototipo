@@ -1,0 +1,48 @@
+CORE AWAKENED 91.00.00-H10.63
+CORE III ABSOLUTE VICTORY ENTRY DIAGNOSTIC
+
+BASE CERTIFICADA / CONGELADA:
+- CORE I completo
+- CORE II completo
+- CORE III entrada, recarga, approach y beats 1-18
+- ABSOLUTE FINISHER ENTRY (H10.58)
+- ABSOLUTE REVEAL END 0.18->0.42 (H10.60)
+- ABSOLUTE KO ENTRY (H10.62)
+
+OBJETIVO ÚNICO H10.63:
+Diagnosticar la frontera posterior al K.O. absoluto. El flujo actual mantiene
+un SceneTreeTimer(0.65, ignore_time_scale=true) y luego ejecuta:
+- Engine.time_scale 0.42 -> 1.0
+- congelando_ko true -> false
+- ganador.mostrar_pose_victoria()
+
+H10.63 NO convierte ese timer. Sólo observa/localiza la transición y rebobina
+8 ticks para que el runtime determine si el timer histórico es reconstruible.
+
+PRUEBA:
+1) Kai vs Dax: Kai/J1, CORE I -> II -> III completo.
+2) Dax vs Kai: Kai/J2, CORE I -> II -> III completo.
+No usar F11.
+
+Esperado:
+CORE III ABSOLUTE VICTORY ENTRY AUTO MARCADO
+CORE III ABSOLUTE VICTORY ENTRY LOCALIZADO
+TACTICAL ROLLBACK OK o DESYNC con causal.
+
+
+H10.63 FIX DE EMPAQUETADO
+- Se restauró bloque histórico de helpers del arnés omitido accidentalmente en el primer ZIP H10.63.
+- No cambia gameplay, Fighter, PerfectBlock, Snapshot ni la lógica del target ABSOLUTE VICTORY ENTRY.
+- Build interno sigue siendo 91.00.00-H10.63.
+
+FIXED2:
+- Restaurado return {} final de _h32_buscar_ventana_counter_marcado(), idéntico a H10.62 certificado.
+- Corrige Parse Error "Not all code paths return a value" en main.gd:6967.
+- Sin cambios de gameplay ni de la lógica rollback certificada.
+
+
+H10.63 FIXED3 — LOAD BLOCKER XENOID
+- Se conserva H10.63 FIXED2 sin cambios de rollback.
+- res://shaders/scripts/xenoid.gd ya no declara class_name Xenoid.
+- La clase global canónica sigue siendo res://scripts/xenoid.gd.
+- Motivo: evitar Parse Error "Class Xenoid hides a global script class".

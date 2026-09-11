@@ -1,0 +1,65 @@
+CORE AWAKENED — AUDITORÍA 90.12.00
+=================================
+Fuente oficial auditada: GitHub main / 90.11.29 Local Combat Baseline
+Commit: 5bcc895e4fe72db29da406266ae45e30db40f6ee
+
+ESTADO VERDE — APROBADO / SIN CAMBIOS DE GAMEPLAY
+[OK] Roster: 10 luchadores regulares + Varkhos jefe final.
+[OK] Versus Local: routing J1/J2 independiente.
+[OK] Guardia de Escape en esquina aislada a Versus Local humano.
+[OK] Bloqueo visual de Jester presente.
+[OK] Dash / Back Dash y Air Dash / Air Back Dash conservados.
+[OK] Perfect Block / Counter / Combo Cancel / Launcher / Air Combo conservados.
+[OK] CORE II/III: coreografía trifásica vigente.
+[OK] 11 escenarios registrados.
+[OK] Nombres actuales de escenarios, incluido SANTUARIO DEL DRAGÓN y TRONO DEL NÚCLEO.
+[OK] Música de los 11 escenarios presente.
+[OK] Overscan cinematográfico de escenarios rediseñados conservado.
+[OK] Brillo actual de escenarios conservado.
+[OK] Carga, menú y pausa: sin fallo estructural encontrado en auditoría estática.
+
+CORREGIDO EN ESTE PAQUETE
+[FIX] Arranque de instalación limpia en pantalla completa.
+[DEFER] Nombre interno del proyecto aún dice Prototipo 89.11. Se pospone el rename porque cambiarlo también cambia user:// y puede separar preferencias existentes.
+[FIX] Resultado Versus Local muestra al ganador real, sea J1 o J2.
+[FIX] Resultado Versus Local usa el escenario realmente seleccionado.
+[FIX] Dax añadido al mapa visual de la pantalla Resultado.
+[FIX] Resultado actualizado a PNGs rediseñados de Aethel, Cibor-X, Kali y Helena.
+[FIX] CÓMO JUGAR actualizado de 3 a 5 páginas con las mecánicas actuales.
+
+PENDIENTE DE VALIDACIÓN — NO PARCHEADO A CIEGAS
+[TEST] Xenoid CORE III: el código contiene 5 puños Furia + 4 patadas Furia.
+       La coreografía actual ejecuta 5 puños + 4 patadas + 9 pasos mixtos = 18 beats,
+       y luego el remate. Si visualmente falta un golpe, revisar video/frame a frame
+       antes de modificar índices o sprites.
+
+LIMPIEZA DE REPOSITORIO PENDIENTE
+[CLEAN] .godot/ sigue históricamente trackeado en el remoto aunque .gitignore ya lo ignora.
+        Procedimiento posterior a la prueba:
+        1. cerrar Godot;
+        2. borrar físicamente .godot de la carpeta del repo;
+        3. abrir GitHub Desktop y confirmar las eliminaciones;
+        4. commit/push de limpieza;
+        5. reabrir Godot: .godot se regenera localmente y ya queda ignorado.
+[CLEAN] Existen backups/parches históricos en la raíz. No borrar hasta terminar un chequeo
+        de referencias; son suciedad de desarrollo, no un bug del juego.
+
+CHECKLIST DE PRUEBA 90.12.00
+[ ] Arranca a pantalla completa.
+[ ] Menú principal visible y navegable.
+[ ] Cómo Jugar tiene 5 páginas.
+[ ] Selector de personajes correcto.
+[ ] Selector de escenarios correcto.
+[ ] J1 gana Versus: Resultado muestra J1/personaje correcto.
+[ ] J2 gana Versus: Resultado muestra J2/personaje correcto.
+[ ] Resultado conserva el escenario elegido, incluso si no coincide con el rival.
+[ ] Revancha conserva J1/J2 y escenario.
+[ ] Jester bloquea visualmente.
+[ ] Guardia de Escape en esquina sigue funcionando.
+[ ] CORE I/II/III siguen iguales.
+[ ] Cinemática CORE no muestra bordes negros.
+[ ] Xenoid CORE III observado específicamente.
+
+SI TODO PASA
+90.12.00 pasa a ser LOCAL COMBAT CERTIFIED BASELINE.
+Siguiente capítulo: 91.00.00 ONLINE FOUNDATION — Input Recording + Replay determinista.

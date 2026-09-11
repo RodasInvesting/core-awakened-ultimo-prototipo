@@ -1,0 +1,15 @@
+CORE AWAKENED 91.00.00-H10.72 — PERFECT BLOCK AUTO REVALIDATION
+
+Baseline: H10.70 CORE I/II/III certificado + H10.71 COUNTER certificado J1/J2.
+
+Objetivo unico:
+- Certificar PERFECT BLOCK J1 y J2 con 8 ticks identicos.
+- No tocar Fighter.gd, perfect_block_90_1.gd ni rollback_snapshot.gd.
+
+PRUEBA:
+1) Kai vs Dax — Kai/J1. Hacer un PERFECT BLOCK. NO hacer Counter y NO presionar F11.
+2) Esperar el rollback automatico. Objetivo: TACTICAL ROLLBACK OK — PERFECT BLOCK — 8 ticks.
+3) Dax vs Kai — Kai/J2. Repetir PERFECT BLOCK, sin Counter y sin F11.
+4) Esperar el segundo OK.
+
+El arnes detecta la transicion snapshotable _counter_disponible false->true y arma solo la ventana historica.

@@ -1,0 +1,74 @@
+CORE AWAKENED 91.02.51 — PASS 12H / PROYECTILES TANDA 2
+===========================================================
+
+BASE
+Instalar sobre la base actual con:
+- Helena cerrada.
+- Tanda 1 Kai/Fang/Cibor-X cerrada.
+- Motor común de proyectiles 91.02.49.
+
+PERSONAJES
+- Aethel
+- Magnus
+- Kali
+
+COMANDO
+ABAJO -> ADELANTE -> PUÑO
+Adelante = hacia el rival.
+
+REGLAS
+- Sólo suelo.
+- Un proyectil activo por personaje.
+- Startup castigable.
+- Mismo sonido de salida aprobado con Helena.
+- Velocidad base 805 px/s.
+- Misma evasión por salto/doble salto.
+- Misma hitbox/balance base del sistema aprobado.
+
+IDENTIDAD VISUAL
+AETHEL
+- Pose con energía celeste/blanca y alas.
+- Proyectil de plumas/energía azul.
+- Aura azul/celeste.
+
+MAGNUS
+- Pose roca/cristal.
+- Proyectil de cristales azules + roca naranja.
+- Aura azul/celeste.
+
+KALI
+- Pose insectoide verde.
+- Proyectil orgánico tipo alas/insecto.
+- Aura verde/lima.
+
+ARCHIVOS MODIFICADOS
+- scripts/aethel.gd
+- scripts/magnus.gd
+- scripts/kali.gd
+
+ASSETS NUEVOS
+- assets/aethel_redesign_final/poder_proyectil.png
+- assets/aethel_redesign_final/proyectil_oficial.png
+- assets/magnus/poder_proyectil.png
+- assets/magnus/proyectil_oficial.png
+- assets/kali/poder_proyectil.png
+- assets/kali/proyectil_oficial.png
+
+NO SE TOCA
+- fighter.gd
+- proyectil_energia.gd
+- main.gd
+- game_state.gd
+- perfect_block_90_1.gd
+- project.godot
+- IA
+- CORE
+- rollback/netcode
+
+PRUEBA
+1. Aethel: derecha/izquierda, bloqueo, impacto, doble salto.
+2. Magnus: revisar especialmente tamaño del proyectil cristal/roca.
+3. Kali: revisar lectura del proyectil verde y evasión aérea.
+4. Confirmar golpes normales, CORE, IA y movimiento sin regresiones.
+
+Si algo necesita ajuste, se calibra sólo por personaje.

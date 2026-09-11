@@ -1,0 +1,57 @@
+CORE AWAKENED 91.02.27 — PASS 9.3C CONTINUIDAD VISUAL CORE
+===========================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar.
+
+OBJETIVO
+Eliminar la sensacion de:
+golpe -> reposo/aceleracion -> golpe
+durante CORE II/III.
+
+RESULTADO BUSCADO
+golpe -> golpe -> golpe -> golpe -> remate
+
+CAMBIO UNICO
+- Durante en_combo_auto_visual, si el sprite actual ya es un puño/patada
+  normal o Furia, RECOVERY y los microacercamientos no pueden reemplazarlo
+  por parado/reposo/caminata/aceleracion.
+- El siguiente golpe entra normalmente en STARTUP y reemplaza al anterior.
+- La proteccion es global en Fighter: cubre Dax, Kai, Helena, Fang, Kali,
+  Cibor-X, Jester, Magnus, Xenoid, Aethel, Varkhos y futuros personajes.
+- Aethel y Varkhos conservan su pose de aceleracion PREVIA al combo, pero
+  ya no pueden intercalarla entre golpes de la rafaga.
+
+TIMINGS CORE — SIN CAMBIOS
+- STARTUP_COMBO_CORE_UNIFORME = 0.012
+- ACTIVO_COMBO_CORE_UNIFORME = 0.065
+- RECOVERY_COMBO_CORE_CONTINUO = 0.010
+- POLL_COMBO_CORE_CONTINUO = 0.004
+
+SE PRESERVA
+- PASS 9.3A recovery normal: puño 0.64 / patada 0.60
+- PASS 9.3B aceleracion +15 % / freno +18 %
+- PASS 9.2C pushbox 78 / 80 / 84
+- bloqueo del receptor PASS 9.1
+- daño, hitstun, hitstop, knockback y alcance
+- rematador, Absoluto y KO
+- gravedad, salto, dash/backdash
+- rollback / netcode / snapshots / RPC / serializacion
+
+PRUEBA RECOMENDADA
+1. Dax CORE II y CORE III como referencia.
+2. Kai CORE II/III.
+3. Helena CORE II/III.
+4. Aethel CORE II/III: mirar especialmente que aceleracion_combo NO aparezca
+   entre golpes.
+5. Varkhos CORE II/III: misma comprobacion.
+6. Si podes, probar Magnus y Xenoid para comparar repertorios largos/distintos.
+
+QUE MIRAR EN VIDEO
+- Ningun frame claro de pose de pelea/reposo entre impactos.
+- Ningun sprite de carrera/aceleracion metido dentro de la rafaga.
+- El receptor sigue totalmente bloqueado.
+- El remate y KO siguen iguales.

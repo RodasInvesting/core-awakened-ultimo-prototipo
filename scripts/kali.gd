@@ -88,6 +88,23 @@ func _init() -> void:
 	textura_carrera = load("res://assets/kali/carrera.png")
 	textura_furia_carrera = load("res://assets/kali/furia_carrera.png")
 
+	# 91.02.51 — PASS 12H / PROYECTIL TANDA 2 — KALI.
+	proyectil_especial_habilitado = true
+	textura_proyectil_pose = load("res://assets/kali/poder_proyectil.png")
+	textura_proyectil_nucleo = load("res://assets/kali/proyectil_oficial.png")
+	# 91.02.52 — compensación leve por el VFX incluido en el PNG.
+	proyectil_pose_escala_mult = 1.12
+	color_proyectil_primario = Color(0.42, 0.95, 0.08, 1.0)
+	color_proyectil_secundario = Color(0.93, 1.0, 0.48, 1.0)
+	proyectil_velocidad = 805.0
+	proyectil_dano_mult = 0.86
+	proyectil_empuje = 148.0
+	proyectil_hitstun = 0.22
+	proyectil_startup = 0.16
+	proyectil_recovery = 0.30
+	proyectil_cooldown = 0.62
+	sonido_proyectil_impacto = load("res://assets/helena/proyectil_impacto.wav")
+
 func _procesar_entrada(_delta: float, vel_actual: float) -> void:
 	if controlado_por_jugador:
 		_entrada_jugador(vel_actual)

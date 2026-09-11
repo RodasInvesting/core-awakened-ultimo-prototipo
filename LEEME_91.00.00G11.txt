@@ -1,0 +1,58 @@
+CORE AWAKENED 91.00.00-G11 — SAME-TICK NATIVE RECOVERY
+
+RESULTADO DE G10
+----------------
+- El usuario confirmó que la velocidad normal, dash/backdash y Combat Feel
+  volvieron correctamente.
+- Muchos rollback dieron OK.
+- Los fallos restantes mostraron un patrón inequívoco:
+  el estado se compara con residual faltante y la línea
+  NATIVE RECOVERY REPRODUCIDO aparece DESPUÉS.
+- En algunos casos el presente termina coincidiendo, confirmando que el
+  residual histórico calculado es correcto pero estaba aplicado un tick tarde.
+
+CAUSA
+-----
+En G10 el guard tenía physics_process desactivado durante LIVE.
+Main llamaba set_physics_process(true) al comenzar F11, pero Godot incorporaba
+el nodo al orden de physics recién en el tick siguiente.
+
+CAMBIO G11
+----------
+El nodo permanece registrado desde el comienzo con priority=1000.
+
+Durante gameplay LIVE:
+    if not activo:
+        return
+
+Eso es TODO:
+- no recorre propiedades;
+- no inspecciona Fighter;
+- no calcula residual;
+- no toca position/velocity;
+- no crea efectos;
+- no cambia Combat Feel.
+
+Durante F11:
+- Main pone activo=true antes de que procesen los Fighter;
+- ambos Fighter ejecutan el input histórico;
+- el guard, ya presente en el orden physics y con priority=1000,
+  reproduce el residual histórico EN ESE MISMO TICK;
+- al terminar los 8 frames vuelve a activo=false.
+
+PRUEBA
+------
+FASE 1:
+1. Pelea nueva.
+2. 20-30 segundos sin F11.
+3. Confirmar velocidad/dash/backdash normales.
+
+FASE 2:
+4. Hacer 15-20 F11.
+5. Probar caminata, dash/backdash, salto, doble salto y air dash.
+6. Meta: LOCAL ROLLBACK OK en todas.
+7. NATIVE RECOVERY REPRODUCIDO puede aparecer y es correcto.
+8. No debería aparecer ROLLBACK CAUSAL DESYNC.
+
+NO modifica fighter.gd.
+NO modifica parámetros de combate.

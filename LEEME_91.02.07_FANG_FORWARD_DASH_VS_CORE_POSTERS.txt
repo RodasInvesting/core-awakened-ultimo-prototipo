@@ -1,0 +1,30 @@
+CORE AWAKENED 91.02.07 — FANG FORWARD DASH + VS CORE POSTERS
+
+OBJETIVOS
+1) Fang: forward dash terrestre debe mostrar la ilustración de aceleración real.
+2) Nekhar: VS usa su gigantografía CORE/ABSOLUTO oficial, orientada al centro.
+3) Krovan: VS usa una ruta nueva y su gigantografía CORE/ABSOLUTO oficial para evitar cualquier import/cache anterior.
+
+CAMBIO DASH
+- main.gd conserva el guard visual certificado de 91.02.05/06.
+- Si textura_carrera no fue asignada por un script histórico, busca PASIVAMENTE assets de presentación:
+  aceleracion_normal.png / aceleracion.png / carrera.png / dash.png.
+- En Furia prioriza aceleracion_furia.png.
+- No modifica velocity, carrera_activa, timers, hitboxes, pushbox, Fighter ni rollback.
+
+CAMBIO VS
+- Krovan -> assets/vs/gigantografias/krovan_core_vs_910207.png
+- Nekhar -> assets/vs/gigantografias/nekhar_core_vs_910207.png
+- Ambos se copian desde sus assets/CHAR/absoluto.png oficiales.
+- presentacion_vs.gd conserva flip_h automático: J1 mira a la derecha y rival se invierte hacia la izquierda, ambos hacia el centro.
+
+PRUEBA
+A) Nekhar vs Fang: doble toque de Fang HACIA Nekhar desde suelo. Debe verse la pose de aceleración, no caminata.
+B) Fang back dash: confirmar que sigue correcto.
+C) Seleccionar Nekhar y Krovan como J1 y como rival; la pantalla VS debe mostrar poster CORE en ambos lados, mirando hacia el centro.
+D) CORE II/III: confirmar que el acercamiento automático sigue usando dash.
+
+FRONTERA
+- scripts/fighter.gd: SIN CAMBIOS
+- scripts/perfect_block_90_1.gd: SIN CAMBIOS
+- scripts/rollback_snapshot.gd: SIN CAMBIOS

@@ -1,0 +1,29 @@
+CORE AWAKENED — 91.00.00-H10.56
+
+OBJETIVO ÚNICO
+CORE III NINETEENTH BEAT ATTACK START dentro de stage 21 histórico.
+
+POR QUÉ EXISTE H10.56
+H10.55 todavía permitía que la señal de CORE III ENTRY armara un rollback automático.
+Eso impedía tener un arnés realmente aislado para estudiar el beat 19.
+
+CAMBIOS VS H10.55
+- fighter.gd NO cambia.
+- CORE I, CORE II y CORE III ENTRY sólo se observan: no arman rollback ni quedan pendientes.
+- Durante LIVE, el único observador que puede solicitar rollback es NINETEENTH BEAT ATTACK START.
+- Se añade una traza PASIVA de cambios stage 17->21 para saber exactamente hasta dónde llegó la FSM.
+- El detector conserva las dos formas válidas:
+  A) entrada 20->21 con fase_ataque ya activa;
+  B) stage 21 + transición posterior fase_ataque 0->activo.
+- PerfectBlock, Snapshot, Fighter y gameplay permanecen intactos.
+
+PRUEBA
+1) Kai vs Dax: CORE I, CORE II y CORE III completo con Kai/J1.
+2) Dax vs Kai: CORE I, CORE II y CORE III completo con Kai/J2.
+3) NO usar F11.
+
+RESULTADO BUSCADO
+CORE III TARGET TRACE — ... stage 20->21 ...
+CORE III NINETEENTH BEAT ATTACK START AUTO MARCADO
+CORE III NINETEENTH BEAT ATTACK START LOCALIZADO
+TACTICAL ROLLBACK OK o DESYNC tras 8 ticks.

@@ -1,0 +1,48 @@
+CORE AWAKENED 91.02.77 — PRE-RC 1 / LIMPIEZA RECURSO HELENA
+=================================================================
+
+BASE
+- Instalar SOBRE la baseline certificada 91.02.76.
+
+PROBLEMA CONFIRMADO
+- scripts/helena.gd intentaba cargar:
+  res://assets/helena/punetazo_9.png
+- Ese PNG no existe en el repositorio.
+- La consulta del historial del archivo tampoco devuelve commits: no hay una
+  versión histórica verificable que podamos restaurar.
+- Sí existen punetazo_1.png, punetazo_2.png ... punetazo_8.png y punetazo_10.png.
+
+SOLUCIÓN PRE-RC
+- Se elimina únicamente la referencia a punetazo_9.png de la rotación normal.
+- NO se duplica otro sprite con un nombre falso.
+- NO se reutiliza punetazo.png antiguo porque no fue certificado como sustituto.
+- Helena conserva sus estadísticas, físicas, IA, patadas, CORE, Furia,
+  carrera, salto, bloqueo y todos los demás recursos sin cambios.
+
+ARCHIVO ÚNICO
+- scripts/helena.gd
+
+NO TOCADO
+- main.gd 91.02.70
+- rollback_snapshot.gd 91.02.60
+- network_manager.gd 91.02.75
+- online_flow_manager.gd 91.02.76
+- pause_manager_online.gd 91.02.73
+- Fighter / PerfectBlock / CORE / proyectiles / físicas
+- Ningún PNG
+
+PRUEBA
+1. Copiar este ZIP ROOT sobre 91.02.76 y reemplazar.
+2. Abrir el proyecto y dejar que Godot reimporte si lo pide.
+3. Hacer una pelea LOCAL corta usando Helena y lanzar muchos puños.
+4. Confirmar que NO aparece:
+   "No loader found for resource: res://assets/helena/punetazo_9.png"
+5. Hacer una pelea ONLINE corta Helena vs cualquier rival.
+6. Jugar 30-60 segundos, usar puños y al menos CORE I.
+7. Pasar el log de PC1/HOST.
+8. Si no hay ERROR y el ring sigue alineado, PRE-RC 1 queda certificado.
+
+NOTA
+- Helena queda temporalmente con 9 poses normales verificadas de puño.
+- Si más adelante se diseña un verdadero punetazo_9.png, se puede incorporar
+  como mejora visual independiente sin tocar el netcode.

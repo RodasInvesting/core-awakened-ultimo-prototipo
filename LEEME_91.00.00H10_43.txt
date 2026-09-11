@@ -1,0 +1,28 @@
+CORE AWAKENED 91.00.00-H10.43
+CORE III — FOURTEENTH BEAT END DIAGNOSTIC
+
+Objetivo único:
+- Diagnosticar rollback de 8 ticks en CORE III FOURTEENTH BEAT END.
+- Frontera exacta: stage 16 -> stage 17.
+- stage 16 = decimocuarto beat físico snapshotable.
+- stage 17 = continuación histórica desde el decimoquinto beat.
+
+Estado certificado previo:
+- THIRTEENTH BEAT END stage 15->16 certificado J1/J2 por H10.42.
+- Beats 1-14 permanecen físicos/snapshotables.
+
+Cambio de H10.43:
+- Diagnóstico puro en main.gd para localizar y resimular stage 16->17.
+- Fighter y gameplay sin cambios respecto de H10.42.
+- Snapshot, PerfectBlock, GameState, Input Recorder/Replay, Ring Buffer, Motion Guard y Resultado sin cambios.
+
+Prueba:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar la pelea.
+5. Repetir CORE III completo con J2 y dejar terminar la pelea.
+6. Enviar el runtime completo.
+
+Resultado objetivo en ambos lados:
+TACTICAL ROLLBACK OK — CORE III FOURTEENTH BEAT END — 8 ticks; estado presente idéntico

@@ -1,0 +1,43 @@
+CORE AWAKENED 91.00.00-G4 — TWO-PHASE RESTORE
+
+Hallazgo de G3
+--------------
+La rehidratación de is_on_floor mejoró mucho la prueba, pero quedaron algunos
+DESYNC que aparecen inmediatamente en subtick 1/8.
+
+Hipótesis corregida
+-------------------
+G3 restauraba:
+1) J1 + sonda move_and_slide
+2) J2 + sonda move_and_slide
+
+Eso significa que la sonda nativa de J1 podía ejecutarse mientras J2 todavía
+estaba en la posición del PRESENTE, no en la posición histórica del snapshot.
+
+Cambio G4
+---------
+A) restaura estado/posición de J1 Y J2;
+B) con ambos ya en el mismo instante histórico, rehidrata caches nativos;
+C) vuelve a imponer posición/velocidad/estado exactos después de ambas sondas.
+
+También registra last_motion/real_velocity/floor_normal para diagnóstico.
+
+NO modifica fighter.gd.
+NO cambia Combat Feel, velocidades, dash, saltos, daño ni CORE.
+
+PRUEBA
+------
+Repetir la batería G3:
+- 15-20 F11;
+- caminata;
+- dash/backdash;
+- salto/doble salto;
+- air dash;
+- aterrizaje;
+- todavía sin golpes.
+
+Meta:
+LOCAL ROLLBACK OK en todas las pruebas.
+
+Si aparece DESYNC, enviar Output desde ROLLBACK SUBTRACE DESYNC hasta
+LOCAL ROLLBACK DESYNC. G4 imprimirá además el input histórico y last_motion.

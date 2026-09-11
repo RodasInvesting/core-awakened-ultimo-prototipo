@@ -1,0 +1,20 @@
+CORE AWAKENED 91.00.00-H10.78 — FORWARD DASH AUTO REVALIDATION
+
+BASELINE CONGELADO:
+- CORE I / CORE II / CORE III completos certificados.
+- PERFECT BLOCK certificado H10.72.
+- COUNTER certificado H10.71.
+- LAUNCHER certificado H10.73.
+- AIR x1/x2/x3 certificados H10.74/H10.75/H10.76.
+- BACKDASH certificado H10.77.
+
+OBJETIVO H10.78:
+Revalidar el dash/carrera terrestre hacia adelante por doble toque, detectando la transición snapshotable carrera_activa false->true hacia el rival.
+
+PRUEBA:
+1) Kai vs Dax — Kai/J1. En neutral, doble toque HACIA Dax. No usar F11.
+2) Dax vs Kai — Kai/J2. En neutral, doble toque HACIA Dax. No usar F11.
+3) Esperar TACTICAL ROLLBACK OK — FORWARD DASH — 8 ticks.
+
+ALCANCE:
+Sólo scripts/main.gd cambia funcionalmente para instrumentación target-only. Fighter, PerfectBlock y RollbackSnapshot permanecen byte-a-byte congelados.

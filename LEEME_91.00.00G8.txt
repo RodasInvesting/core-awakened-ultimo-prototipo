@@ -1,0 +1,55 @@
+CORE AWAKENED 91.00.00-G8 — NEUTRAL MOTION CANON
+
+Hallazgo decisivo de G7
+-----------------------
+Helena vs Fang reprodujo dos fallos físicos reales:
+- input/velocity/last_motion coincidían;
+- distancia al rival > 470 px;
+- sin golpes, bloqueo, hitstun ni contacto_post_golpe;
+- Godot aplicó -10.8212 px de desplazamiento lateral que get_last_motion()
+  NO reportó.
+
+Conclusión
+----------
+Ese delta es collision recovery interno de CharacterBody2D. No pertenece a
+input, pushbox ni Combat Feel y no es una fuente fiable para rollback.
+
+Cambio G8
+---------
+Se agrega RollbackNeutralMotionGuard:
+- Main captura X al inicio del physics tick.
+- Después de ambos Fighter (priority 1000), en neutral lejano:
+    X válida = X inicial + get_last_motion().x
+- Si Godot añadió recovery lateral oculto entre 0.35 y 24 px, se elimina.
+- NO actúa si:
+  * distancia < 150 px
+  * golpe/ataque
+  * bloqueo
+  * hitstun
+  * CORE/cinemática
+  * derribo/KO
+  * contacto post golpe
+  * empuje
+  * borde del escenario
+- Delta >24 px nunca se corrige automáticamente; se registra para diagnóstico.
+
+Además escala_actual/sprite_base_y se consideran presentación derivada y ya no
+declaran por sí solos un desync lógico.
+
+fighter.gd NO se modifica.
+Combat Feel cerca del rival NO se modifica.
+
+PRUEBA
+------
+1. Copiar encima de G7.
+2. Versus Local.
+3. Repetir 15-20 F11 con caminar, dash/backdash, salto/doble salto/air dash.
+4. Buscar:
+   [91.00.00-G8] LOCAL ROLLBACK OK ...
+5. Es normal ver:
+   [91.00.00-G8] NATIVE RECOVERY NEUTRALIZADO J1 — -10.8212 px
+   Esa línea confirma que atrapamos exactamente el movimiento fantasma.
+6. No debe aparecer ROLLBACK CAUSAL DESYNC / LOCAL ROLLBACK DESYNC.
+
+Si G8 pasa esta batería, movilidad queda certificada y seguimos con H:
+rollback atravesando un golpe real.

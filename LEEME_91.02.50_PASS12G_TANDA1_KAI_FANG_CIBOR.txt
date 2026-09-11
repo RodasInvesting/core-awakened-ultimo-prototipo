@@ -1,0 +1,80 @@
+CORE AWAKENED 91.02.50 — PASS 12G / PROYECTILES TANDA 1
+===========================================================
+
+REQUISITO
+Instalar sobre la base actual 91.02.49, donde HELENA ya quedó certificada.
+
+PERSONAJES INTEGRADOS
+- Kai
+- Fang
+- Cibor-X
+
+COMANDO
+ABAJO -> ADELANTE -> PUÑO
+El "adelante" siempre se resuelve hacia el rival.
+
+ARQUITECTURA
+Se reutiliza exactamente el motor aprobado con Helena:
+- sólo suelo;
+- un proyectil activo por luchador;
+- startup castigable;
+- orientación automática izquierda/derecha;
+- evasión con salto/doble salto a distancia;
+- misma velocidad base aprobada: 805 px/s;
+- misma hitbox y balance base;
+- mismo sonido de salida aprobado con Helena.
+
+IDENTIDAD VISUAL
+KAI:
+- pose oficial violeta;
+- núcleo/proyectil violeta;
+- aura violeta.
+
+FANG:
+- pose oficial con tigre;
+- proyectil tigre de fuego;
+- aura naranja/dorada.
+
+CIBOR-X:
+- pose tecnológica azul;
+- proyectil tecnológico azul;
+- aura celeste/azul.
+
+ARCHIVOS MODIFICADOS
+- scripts/kai.gd
+- scripts/fang.gd
+- scripts/cibor-x.gd
+
+ASSETS NUEVOS
+- assets/kai_redesign_final/poder_proyectil.png
+- assets/kai_redesign_final/proyectil_oficial.png
+- assets/fang/poder_proyectil.png
+- assets/fang/proyectil_oficial.png
+- assets/cibor-x/poder_proyectil.png
+- assets/cibor-x/proyectil_oficial.png
+
+NO SE MODIFICA
+- fighter.gd
+- proyectil_energia.gd
+- helena.gd
+- main.gd
+- game_state.gd
+- perfect_block_90_1.gd
+- project.godot
+- IA
+- CORE
+- rollback/netcode
+
+SONIDO
+Los 3 reutilizan:
+res://assets/helena/proyectil_impacto.wav
+En la base 91.02.49 ese audio se reproduce al NACER/SALIR el proyectil.
+
+PRUEBA RECOMENDADA
+1. Kai: derecha e izquierda, impacto, bloqueo, doble salto.
+2. Fang: misma secuencia; revisar especialmente tamaño/lectura del tigre.
+3. Cibor-X: misma secuencia; revisar tamaño/lectura del núcleo tecnológico.
+4. Confirmar que golpes normales, CORE, IA y movimiento siguen iguales.
+
+Si un proyectil necesita sólo tamaño/velocidad visual diferente, se calibra
+por personaje sin tocar el motor común certificado.

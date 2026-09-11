@@ -1,4 +1,105 @@
 class_name Fighter
+# CORE AWAKENED 91.02.37 — PASS 9.4H RETROCESO GLOBAL CORE I EXCLUSIVAS.
+# Ajuste fino visual general: TODAS las gigantografias exclusivas de CORE I
+# se desplazan un poco mas hacia atras para despegarse mejor del cuerpo real.
+# Se mantiene la calibracion extra de Cibor-X y Magnus incorporada en 91.02.36.
+# CORE AWAKENED 91.02.36 — PASS 9.4G CALIBRACION CORE I CIBOR/MAGNUS.
+# Ajuste fino visual: las gigantografias exclusivas de Cibor-X y Magnus
+# en CORE I se hacen un poco mas grandes y se desplazan mas hacia atras
+# para que se lean mejor sin tapar el cuerpo real del luchador.
+# CORE AWAKENED 91.02.35 — PASS 9.4F CORE I GIGANTOGRAFIAS EXCLUSIVAS.
+# Los PNG exclusivos enviados por el usuario pasan a mostrarse en el
+# golpe/poster de CORE I. CORE II vuelve a quedar limpio en la recarga
+# y conserva su flujo historico: recarga -> combo -> gigantografia final.
+# CORE AWAKENED 91.02.34 — PASS 9.4E CORE II SCREEN-SAFE DETRAS DEL LUCHADOR.
+# Conserva el calculo screen-safe de 91.02.33, pero la gigantografia ya
+# no vive en CanvasLayer frontal: vuelve al mundo 2D, en coordenadas
+# derivadas de la camara y con z_index detras de los luchadores.
+# Asi deja de tapar al personaje en doble salto y deja de verse adelante
+# en esquina, sin perder composicion segura ni tocar combate/rollback.
+# CORE AWAKENED 91.02.33 — PASS 9.4D GIGANTOGRAFIA CORE II SCREEN-SAFE.
+# La gigantografia exclusiva deja de depender de global_position del Fighter:
+# se presenta en coordenadas de pantalla, con margenes seguros y escala fit.
+# Doble salto, apice y esquinas ya no pueden expulsar el PNG del viewport.
+# Camara 9.4C, combate, CORE III y rollback quedan intactos.
+# CORE AWAKENED 91.02.32 — PASS 9.4C ENCUADRE ABIERTO CORE II.
+# CORE II deja de aceptar el punch-in 1.18 de la recarga: durante sus 1.05 s
+# usa un encuadre abierto/adaptativo que prioriza la gigantografia completa,
+# incluso si se activa desde el aire. Al terminar, devuelve la camara al sistema
+# dinamico normal. CORE III conserva intacto su zoom epico/camara lenta.
+# CORE AWAKENED 91.02.31 — PASS 9.4B CORE II / GIGANTOGRAFIA EXCLUSIVA DE ENTRADA.
+# Usa PNG dedicados por personaje para la presentacion previa al combo de CORE II.
+# La aparicion ocurre DENTRO de la recarga existente: no agrega tiempo nuevo,
+# no cambia la rafaga y no toca rollback/snapshots.
+# CORE AWAKENED 91.02.30 — PASS 9.4A CORE II / GIGANTOGRAFIA FLASH.
+# Presentacion PURAMENTE VISUAL: durante los ultimos ~0.42 s de la recarga
+# existente aparece un flash breve de la gigantografia CORE II detras del cuerpo.
+# No agrega tiempo a la secuencia, no retrasa la rafaga y no modifica snapshots.
+# El poster final/rematador conserva su presentacion grande original.
+# CORE AWAKENED 91.02.29 — PASS 9.3E MOVILIDAD AEREA / ATERRIZAJE.
+# El salto, doble salto, gravedad, altura y air dash conservan sus valores.
+# Al tocar suelo, un ataque normal que YA está en RECOVERY queda limitado a
+# una salida corta (~2 frames a 60 Hz), y una pose de movilidad aérea residual
+# se libera en el mismo aterrizaje para pasar directo a caminar/parado.
+# Nunca cancela STARTUP/ACTIVO, hitstun, derribo, CORE ni cinematica.
+# CORE AWAKENED 91.02.28 — PASS 9.3D HIT-STOP / IMPACTO NORMAL.
+# Recalibra el micro-hitstop LOCAL ya existente: ~2 frames de lectura en puño
+# y ~2-3 frames en patada a 60 Hz, sincronizando mejor atacante/receptor.
+# Solo aplica a impactos normales LIMPIOS fuera de CORE/Furia/cinematica.
+# Bloqueo, CORE, hitstun, daño, knockback, recovery y rollback quedan intactos.
+# CORE AWAKENED 91.02.27 — PASS 9.3C CONTINUIDAD VISUAL CORE.
+# Auditoria Dax/roster: los timings CORE II/III quedan EXACTAMENTE iguales.
+# Durante la rafaga, un sprite ofensivo ya mostrado no puede ser reemplazado
+# por reposo/caminata/aceleracion durante RECOVERY o microacercamientos.
+# El siguiente golpe sustituye directamente al anterior. Esto cubre tambien
+# Aethel y Varkhos sin tocar sus scripts ni sus poses iniciales de aceleracion.
+# CORE AWAKENED 91.02.26 — PASS 9.3B ACELERACION / FRENO TERRESTRE.
+# Segundo paso de dinamica contra referencias: la velocidad maxima NO cambia.
+# Solo el movimiento terrestre normal alcanza antes su velocidad objetivo y
+# frena antes al soltar direccion. Aire, dash, footwork de ataque, CORE,
+# pushbox, recovery 9.3A y rollback quedan intactos.
+# CORE AWAKENED 91.02.25 — PASS 9.3A RECOVERY / TRANSICIONES NORMALES.
+# Primer paso de dinamica contra referencias: se acorta SOLO el recovery logico
+# de puños/patadas normales. Pose visible, startup, activo, rango, hitbox, hitstun,
+# hitstop, daño, knockback, movimiento, pushbox, CORE y rollback quedan intactos.
+# El buffer humano existente consume el siguiente golpe en el primer frame legal.
+# CORE AWAKENED 91.02.24 — PASS 9.2C CALIBRACION ROCE CORPORAL.
+# Punto medio entre 91.02.22 (demasiada penetracion) y 91.02.23
+# (separacion perceptible): neutral 78 px, precontacto 80 px y torso 84 px.
+# Conserva rescate residual, prioridad del hitbox y exclusion total de CORE.
+# CORE AWAKENED 91.02.23 — PASS 9.2B CONTACTO CORPORAL EN COMBATE.
+# Conserva el roce neutral de 91.02.22 y extiende la protección de torso a
+# ataques normales, trades, hitstun y bloqueo SIN tocar CORE ni el hitbox real.
+# Precontacto compacto 80 px; tras contacto confirmado el torso exige 84 px.
+# Si un borde impide mover al defensor, el residuo lo absorbe el otro luchador.
+# CORE AWAKENED 91.02.22 — PASS 9.2 ROCE CORPORAL NEUTRAL.
+# Mantiene un contacto cercano tipo arcade sin permitir fusión de torsos:
+# neutral se detiene a 78 px y cualquier penetración residual se resuelve
+# aunque ambos luchadores ya estén quietos. No toca golpes, CORE, KO ni rollback.
+# CORE AWAKENED 91.02.21 — PASS 9.1 CORE RECEIVER LOCK / VS LOCAL.
+# Corrige exclusivamente la captura del receptor durante CORE I/II/III:
+# no acepta acciones durante la secuencia, no conserva ataques/buffers previos,
+# CORE I mantiene la reacción visual hasta el cierre y CORE II/III no liberan
+# al receptor antes del derribo/KO. Rollback, física global y timings quedan intactos.
+# CORE AWAKENED 91.02.20 — PASS 8 CONTINUIDAD REMATE CORE II + APOYO DERRIBO.
+# Mantiene íntegros PASS 1–6. Reduce de forma muy corta el hitstun únicamente
+# en el PRIMER impacto normal limpio, con ambos luchadores en suelo. La cadena
+# ya confirmada conserva el stun anterior para no romper COMBO x2/x3. Bloqueo,
+# AIR HIT, launcher, CORE, IA defensiva y rollback quedan fuera de este ajuste.
+# CORE AWAKENED 91.02.18 — PASS 6 IMPACTO LOCAL / HITSTOP.
+# Mantiene íntegros PASS 1–5. Ajusta únicamente el micro-hitstop LOCAL de golpes
+# NORMALES limpios para que el contacto se lea más sólido sin volver lenta la pelea.
+# No toca hitstun, daño, knockback, rangos, lunge, IA, Combo Cancel, CORE ni rollback.
+# El bloqueo conserva exactamente sus tiempos anteriores para no hacer la defensa pegajosa.
+# CORE AWAKENED 91.02.17 — PASS 5 CADENCIA DE COMBATE NORMAL.
+# Mantiene íntegros PASS 1–4 y acelera de forma quirúrgica sólo la respuesta de
+# golpes NORMALES: startup -10 % y recovery reducido, sin tocar daño, hitstun,
+# hitstop, knockback, rango, lunge, dash/backdash, launcher, CORE I/II/III ni rollback.
+# La patada conserva más peso que el puño; no se acorta su ventana ACTIVA.
+# CORE AWAKENED 91.00.00-H10.2 — CORE I SECUENCIA EXPLÍCITA POR PHYSICS TICKS.
+# Reemplaza exclusivamente el Tween de acercamiento de CORE I por el mismo
+# QUAD EASE OUT evaluado en _physics_process(), para que su progreso sea
+# snapshotable/re-simulable. No cambia destino, duración, daño ni CORE II/III.
 # CORE AWAKENED 90.11.09 — AIR DASH AISLADO SOBRE 90.11.08.
 # Mantiene intacta la coreografía trifásica CORE II/III aprobada y suma un único
 # dash horizontal por permanencia en el aire mediante el mismo doble toque.
@@ -28,8 +129,15 @@ signal rematador_iniciado
 signal rematador_conectado
 signal finalizacion_absoluta
 signal recarga_iniciada(camara_lenta: bool)
+# 91.02.56 — presentación pura: Main usa esta señal para un grito breve
+# exactamente al nacer el proyectil. No transporta estado de simulación.
+signal proyectil_disparado
 signal derrotado
 signal salto_hecho
+# H8.3 — continuación local de la secuencia CORE I cuando termina su Target Lock.
+signal core1_target_lock_finalizado
+# H9.9 — borde exacto del await del póster de rematador CORE II.
+signal core2_rematador_poster_finalizado
 
 # --- Estos valores los pisa cada personaje en su _init() ---
 var nombre_luchador := "Luchador"
@@ -37,10 +145,55 @@ var velocidad := 260.0
 var fuerza_salto := -420.0
 var gravedad := 1200.0
 
+# 91.02.44 — PASS 12A / PROYECTIL ESPECIAL PROTOTIPO.
+# Deshabilitado por defecto: sólo el personaje que lo configure participa.
+var proyectil_especial_habilitado := false
+var textura_proyectil_pose: Texture2D
+var proyectil_pose_escala_mult := 1.0
+var color_proyectil_primario := Color(1.0, 0.22, 0.72, 1.0)
+var color_proyectil_secundario := Color(1.0, 0.78, 0.95, 1.0)
+var textura_proyectil_nucleo: Texture2D
+var sonido_proyectil_impacto: AudioStream
+# 91.02.52 — altura de nacimiento configurable por personaje.
+# Default 0.54 conserva EXACTAMENTE Helena + Tanda 1 + Aethel/Kali.
+var proyectil_spawn_altura_mult := 0.54
+var proyectil_velocidad := 720.0
+var proyectil_dano_mult := 0.86
+var proyectil_empuje := 148.0
+var proyectil_hitstun := 0.22
+var proyectil_startup := 0.16
+var proyectil_recovery := 0.30
+var proyectil_cooldown := 0.62
+
+# 91.02.13 — PASS 1: caída con más peso sin tocar el despegue ni la altura.
+# 1.35 hace que, una vez iniciado el descenso normal, el personaje recupere el
+# suelo aproximadamente un 14 % antes que con una parábola simétrica. Se excluyen
+# derribos especiales/hitstun para no mezclar este test con física de impactos.
+const MULT_GRAVEDAD_CAIDA_LIBRE := 1.35
+
+# 91.02.15 — PASS 3: compresión quirúrgica del vértice.
+# Sólo se aplica a un salto real iniciado por Fighter (saltos_usados > 0),
+# dentro de una banda pequeña alrededor de velocidad Y=0. No toca launcher,
+# knockback, derribos especiales ni hitstun. La altura cambia sólo unos píxeles,
+# pero la transición subida→caída pierde varios frames de suspensión visual.
+const UMBRAL_VELOCIDAD_VERTICE := 120.0
+const MULT_GRAVEDAD_VERTICE := 1.50
+
+# 91.02.16 — PASS 4: peso extra únicamente en el último tramo del descenso.
+# Se activa cuando un salto real ya cae con velocidad suficiente. El refuerzo
+# es pequeño (x1.12 sobre la caída PASS 1), para que el contacto con el suelo
+# llegue antes y con más decisión sin convertir el salto en una caída brusca.
+const UMBRAL_CAIDA_FINAL := 360.0
+const MULT_GRAVEDAD_CAIDA_FINAL := 1.12
+
 # Multiplicador global de daño: bajalo para peleas más largas (la vida
 # tarda más en bajar), subilo para peleas más rápidas. Se aplica sobre
 # TODO el daño (golpes normales y especiales) de todos los personajes.
 const MULT_DANO_GLOBAL := 0.32
+
+# PASS 12A — comando ↓ → + PUÑO.
+const VENTANA_COMANDO_PROYECTIL := 0.48
+const SCRIPT_PROYECTIL_ENERGIA = preload("res://scripts/proyectil_energia.gd")
 
 # Multiplicador global de la barra de poder: bajalo para que tarde más en
 # llenarse (peleas más largas hasta ver la Fase Absoluta).
@@ -139,6 +292,25 @@ var rango_patada := 100.0
 var dano_patada := 13.0
 var cooldown_patada := 0.55
 
+# 91.02.17 — PASS 5: CADENCIA NORMAL MÁS REACTIVA.
+# El objetivo es quitar sensación de "espera" entre intención, contacto y regreso
+# a neutral sin convertir CORE ni los combos automáticos en una ametralladora.
+# Se conserva íntegra la ventana ACTIVA para no reducir alcance/fiabilidad de hit.
+const MULT_STARTUP_ATAQUE_NORMAL := 0.90
+# 91.02.25 — PASS 9.3A. No se acelera la animación ni la ventana de impacto:
+# únicamente el tiempo lógico DESPUÉS de que desaparece la pose de ataque.
+# Reducción moderada para quitar ~1 frame perceptible de espera sin borrar peso.
+const MULT_RECOVERY_PUNETAZO_NORMAL := 0.64
+const MULT_RECOVERY_PATADA_NORMAL := 0.60
+
+# 91.02.19 — PASS 7: recuperación del RECEPTOR en intercambio neutral.
+# Sólo acorta el primer impacto limpio de una cadena y sólo con ambos Fighters
+# en suelo. De este modo un golpe aislado vuelve antes a neutral, pero una cadena
+# ya confirmada conserva exactamente el hitstun de PASS 6. La patada mantiene
+# más peso que el puño.
+const MULT_HITSTUN_PUNETAZO_NEUTRAL := 0.92
+const MULT_HITSTUN_PATADA_NEUTRAL := 0.96
+
 var ventana_combo := 1.1
 
 var poder_maximo := 100.0
@@ -166,6 +338,10 @@ var indice_golpe_recibido := -1
 var textura_derribado: Texture2D = null
 var textura_especial: Texture2D = null
 var textura_rematador: Texture2D = null
+# 91.02.31 / 91.02.35 — PNG exclusivos enviados por el usuario.
+# Ahora se reutilizan como gigantografia cinematica de CORE I. Si algun
+# personaje no tiene PNG dedicado, el sistema mantiene sus posters normales.
+var textura_core2_entrada: Texture2D = null
 var textura_absoluto: Texture2D = null
 var textura_recarga: Texture2D = null
 # Opcional para futuros PNG de victoria. Mientras no exista un asset propio,
@@ -254,6 +430,32 @@ const PODER_CINEMA_VFX_MULT := {
 	"Kali": 0.76,
 }
 
+# 91.02.36 / 91.02.37 — ajuste fino SOLO para CORE I usando los PNG
+# exclusivos del usuario. Todas las gigantografias exclusivas retroceden
+# un poco mas; Cibor-X y Magnus además conservan su calibracion extra.
+const CORE1_POSTER_EXCLUSIVO_SEPARACION_GLOBAL := 18.0
+
+const CORE1_POSTER_EXCLUSIVO_ALTURA_MULT := {
+	"Cibor-X": 1.12,
+	"CiborX": 1.12,
+	"Cibor X": 1.12,
+	"Magnus": 1.10,
+}
+
+const CORE1_POSTER_EXCLUSIVO_SEPARACION_EXTRA := {
+	"Cibor-X": 34.0,
+	"CiborX": 34.0,
+	"Cibor X": 34.0,
+	"Magnus": 28.0,
+}
+
+const CORE1_POSTER_EXCLUSIVO_FRACCION_ANCHO_EXTRA := {
+	"Cibor-X": 0.05,
+	"CiborX": 0.05,
+	"Cibor X": 0.05,
+	"Magnus": 0.04,
+}
+
 const ALTURA_AJUSTES_VISUALES := {
 	"Kai": 1.00,
 	"Cibor-X": 1.00,
@@ -271,36 +473,28 @@ const ALTURA_AJUSTES_VISUALES := {
 # FASE 83: escala visual precalculada por PNG. Se calcula por masa alfa del
 # arte respecto al parado del personaje, para que un frame horizontal, uno
 # vertical o uno generado a mayor resolución NO cambie el tamaño corporal.
+# 91.02.08 — rediseños de recarga entregados por el usuario.
+# Estas ilustraciones incluyen aura alrededor del cuerpo; se deja que la
+# normalización geométrica use el parado REAL del personaje y se compensa
+# solamente el encuadre para que el fighter no quede visualmente al fondo.
+# No altera colisión, daño, velocidad, timers ni lógica de CORE.
+const RECARGA_REDRAW_MULT := {
+	"Aethel": 1.12,
+	"Cibor-X": 1.12,
+	"Fang": 1.12,
+	"Helena": 1.12,
+	"Jester": 1.12,
+	"Kai": 1.12,
+	"Kali": 1.12,
+	"Magnus": 1.12,
+	"Dax": 1.12,
+	# 91.02.10 — Xenoid usa la misma compensación del rediseño de recarga.
+	# En 91.02.09 la ruta era correcta, pero faltaba esta clave y por eso
+	# la normalización geométrica lo mostraba más chico que su parado.
+	"Xenoid": 1.12,
+}
+
 const ESCALAS_POSE_PRECALCULADAS := {
-	"res://assets/aethel/absoluto.png": 0.174353,
-	"res://assets/aethel/bloqueo.png": 0.939958,
-	"res://assets/aethel/derribado.png": 0.865472,
-	"res://assets/aethel/doble_salto.png": 0.854701,
-	"res://assets/aethel/especial.png": 0.272713,
-	"res://assets/aethel/furia_derribado.png": 0.871972,
-	"res://assets/aethel/furia_golpe_recibido.png": 0.882353,
-	"res://assets/aethel/furia_parado.png": 0.743486,
-	"res://assets/aethel/furia_patada.png": 0.474339,
-	"res://assets/aethel/furia_patada_1.png": 0.866477,
-	"res://assets/aethel/furia_patada_2.png": 0.727367,
-	"res://assets/aethel/furia_patada_3.png": 0.891813,
-	"res://assets/aethel/furia_punetazo.png": 0.362233,
-	"res://assets/aethel/furia_punetazo_1.png": 0.768262,
-	"res://assets/aethel/furia_punetazo_2.png": 0.780051,
-	"res://assets/aethel/furia_punetazo_3.png": 0.819892,
-	"res://assets/aethel/furia_punetazo_4.png": 0.780051,
-	"res://assets/aethel/furia_punetazo_5.png": 0.769593,
-	"res://assets/aethel/furia_punetazo_6.png": 0.836738,
-	"res://assets/aethel/golpe_recibido.png": 0.755668,
-	"res://assets/aethel/golpe_recibido_2.png": 0.517080,
-	"res://assets/aethel/golpe_recibido_3.png": 0.524622,
-	"res://assets/aethel/patada.png": 0.531687,
-	"res://assets/aethel/patada_1.png": 0.818133,
-	"res://assets/aethel/patada_2.png": 0.806878,
-	"res://assets/aethel/patada_3.png": 0.782746,
-	"res://assets/aethel/punetazo.png": 0.471322,
-	"res://assets/aethel/rematador.png": 0.195418,
-	"res://assets/aethel/salto.png": 1.060785,
 
 	"res://assets/cibor-x/absoluto.png": 0.203433,
 	"res://assets/cibor-x/bloqueo.png": 0.653844,
@@ -337,7 +531,6 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/cibor-x/punetazo_3.png": 0.204681,
 	"res://assets/cibor-x/punetazo_4.png": 0.202297,
 	"res://assets/cibor-x/punetazo_5.png": 0.207760,
-	"res://assets/cibor-x/recarga.png": 0.200803,
 	"res://assets/cibor-x/rematador.png": 0.201645,
 	"res://assets/cibor-x/salto.png": 0.215290,
 	"res://assets/cibor-x/victoria.png": 0.200834,
@@ -375,7 +568,6 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/fang/punetazo_2.png": 0.204231,
 	"res://assets/fang/punetazo_3.png": 0.203909,
 	"res://assets/fang/punetazo_4.png": 0.202276,
-	"res://assets/fang/recarga.png": 0.202925,
 	"res://assets/fang/rematador.png": 0.202276,
 	"res://assets/fang/salto.png": 0.203823,
 	"res://assets/fang/victoria.png": 0.202271,
@@ -413,7 +605,6 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/helena/punetazo_6.png": 0.201761,
 	"res://assets/helena/punetazo_7.png": 0.206462,
 	"res://assets/helena/punetazo_8.png": 0.210893,
-	"res://assets/helena/recarga.png": 0.202087,
 	"res://assets/helena/salto.png": 0.203403,
 	"res://assets/helena/victoria.png": 0.205342,
 
@@ -426,7 +617,6 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/jester/furia_punetazo_3.png": 0.238065,
 	"res://assets/jester/furia_punetazo_4.png": 0.238065,
 	"res://assets/jester/furia_punetazo_5.png": 0.239130,
-	"res://assets/jester/recarga.png": 0.237490,
 	"res://assets/jester/rematador.png": 0.236541,
 
 	"res://assets/kai/absoluto.png": 0.196786,
@@ -464,7 +654,6 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/kai/punetazo_7.png": 0.463262,
 	"res://assets/kai/punetazo_8.png": 0.499418,
 	"res://assets/kai/punetazo_9.png": 0.496358,
-	"res://assets/kai/recarga.png": 0.197785,
 	"res://assets/kai/salto.png": 0.463023,
 	"res://assets/kai/doble_salto.png": 0.434927,
 	"res://assets/kai/victoria.png": 0.306652,
@@ -488,7 +677,6 @@ const ESCALAS_POSE_PRECALCULADAS := {
 	"res://assets/magnus/furia_punetazo_4.png": 0.269539,
 	"res://assets/magnus/furia_punetazo_5.png": 0.269539,
 	"res://assets/magnus/furia_punetazo_6.png": 0.269539,
-	"res://assets/magnus/recarga.png": 0.269539,
 	"res://assets/magnus/rematador.png": 0.270511,
 }
 var mult_tamano_extra := 1.0
@@ -565,6 +753,16 @@ var puno_estaba_presionado: bool = false
 var patada_estaba_presionada: bool = false
 var ataque_buffer_tipo: String = ""
 var ataque_buffer_timer: float = 0.0
+
+# PASS 12A — estado del comando/lanzamiento.
+var comando_proyectil_etapa := 0
+var comando_proyectil_timer := 0.0
+var en_lanzamiento_proyectil := false
+var proyectil_lanzamiento_timer := 0.0
+var proyectil_spawn_timer := 0.0
+var proyectil_disparo_pendiente := false
+var proyectil_cooldown_timer := 0.0
+var proyectil_activo: Node = null
 # 90.10.30 — GAMEPAD FOUNDATION. El jugador sigue pudiendo usar teclado,
 # pero ahora el primer mando conectado se suma en paralelo. Se usan índices
 # estándar SDL/Godot: A=0, B=1, X=2, Y=3, RB=10, D-Pad 11..14.
@@ -650,11 +848,34 @@ var escala_actual := 1.0
 var aceleracion := 2400.0
 var friccion_suelo := 2800.0
 var friccion_aire := 1100.0
+# 91.02.26 — PASS 9.3B. Multiplicadores aislados del movimiento NORMAL en suelo.
+# No cambian velocidad maxima ni se aplican a aire, dash o footwork de ataque.
+const MULT_ACELERACION_SUELO_DINAMICA := 1.15
+const MULT_FRENO_SUELO_DINAMICA := 1.18
 var _delta_actual := 0.0166
+# H10.7 — override efímero usado sólo por la resimulación local CORE III.
+# Valor < 0 = gameplay normal, sin ninguna alteración. Main lo arma antes de
+# cada callback histórico y se consume una sola vez.
+var rollback_delta_override: float = -1.0
+# H10.8 — override one-shot exclusivo del reloj de seguridad de secuencia.
+# Se usa sólo en la transición CORE III donde el rival congelado conserva el
+# delta LIVE del frame causal aunque el resto de su callback use la escala post.
+var rollback_reloj_seguridad_delta_override: float = -1.0
 var _rect_visual_cache: Dictionary = {}
 # FASE 90.10 — separación física más legible.
 # Los cuerpos nunca deben fundirse visualmente cuando están cuerpo a cuerpo.
 const DISTANCIA_MINIMA_LUCHADORES := 62.0
+# 91.02.22 — PASS 9.2: contacto neutral compacto.
+# 62 px permitía que dos torsos quedaran demasiado penetrados visualmente.
+# 78 px coincide con el colchón mínimo de precontacto ya certificado para golpes,
+# pero sigue siendo suficientemente cercano para conservar roce visual natural.
+const PUSHBOX_NEUTRAL_DISTANCIA_MIN := 78.0
+# 91.02.23 — PASS 9.2B. En combate normal permitimos que manos, pies, ropa y
+# efectos invadan visualmente, pero no que el torso principal desaparezca.
+# 80 px se usa ANTES del impacto y 84 px sólo cuando el contacto/hitstun/bloqueo
+# ya confirmó que ambos luchadores están realmente cuerpo a cuerpo.
+const PUSHBOX_COMBATE_PRECONTACTO_MIN := 80.0
+const PUSHBOX_COMBATE_TORSO_MIN := 84.0
 # 90.10.80 — PUSHBOX NEUTRAL ANCLADO. Si un solo luchador camina contra
 # un rival quieto, el que avanza absorbe la corrección y se frena en el borde
 # corporal. El rival quieto ya no es arrastrado hacia atrás frame a frame.
@@ -780,6 +1001,210 @@ var congelado_por_rival := false
 # de seguridad corte una secuencia legítima.
 var reloj_seguridad_secuencia := 0.0
 const TIEMPO_MAXIMO_SECUENCIA := 18.0
+
+# 91.00.00-H10.2 — estado lógico del acercamiento de CORE I.
+# El Tween anterior guardaba su progreso dentro del motor y no podía ser
+# restaurado por rollback. Estos cinco valores son la misma trayectoria, pero
+# explícita y por physics ticks.
+var core1_target_lock_activo: bool = false
+var core1_target_lock_origen: Vector2 = Vector2.ZERO
+var core1_target_lock_destino: Vector2 = Vector2.ZERO
+var core1_target_lock_duracion: float = 0.0
+var core1_target_lock_tiempo: float = 0.0
+
+# H8.5 — CORE I deja de depender de una coroutine suspendida para continuar.
+# Etapas lógicas snapshotables:
+#   0 = inactivo
+#   1 = Target Lock
+#   2 = impacto + poster en curso
+const CORE1_ETAPA_INACTIVO := 0
+const CORE1_ETAPA_TARGET_LOCK := 1
+const CORE1_ETAPA_POSTER := 2
+const CORE1_POSTER_TIEMPO_VISIBLE := 1.05
+# _mostrar_poder_reemplazando:
+# 0.12 fade-in + 1.05 visible + 0.30 fade-out + 0.18 halo + 0.16 aura.
+const CORE1_POSTER_DURACION_LOGICA := 1.81
+
+var core1_secuencia_etapa: int = CORE1_ETAPA_INACTIVO
+var core1_poster_timer: float = 0.0
+var core1_poster_duracion: float = 0.0
+
+# Flag TRANSITORIO, deliberadamente fuera del snapshot. Main lo activa sólo
+# durante catch-up para no duplicar pósters/VFX al re-simular historia.
+var rollback_suprimir_presentacion_core1: bool = false
+
+# H9.3 — CORE II: recarga + primer acercamiento dejan de depender de
+# SceneTreeTimer/await y Tween internos del motor.
+const CORE2_ETAPA_INACTIVO := 0
+const CORE2_ETAPA_RECARGA := 1
+const CORE2_ETAPA_ACERCAMIENTO := 2
+const CORE2_ETAPA_COMBO_FSM := 3
+const CORE2_ETAPA_REMATADOR_FSM := 4
+const CORE2_RECARGA_DURACION := 1.05
+
+# 91.02.30 — PASS 9.4A. Flash visual dentro del tiempo YA existente de recarga.
+# 0.42 s antes del final se dispara una presencia de ~0.38 s, dejando un pequeño
+# margen antes del primer golpe. Estas constantes NO gobiernan lógica de combate.
+const CORE2_FLASH_ENTRADA_UMBRAL := 0.50
+const CORE2_FLASH_FADE_IN := 0.08
+const CORE2_FLASH_HOLD := 0.24
+const CORE2_FLASH_FADE_OUT := 0.10
+const CORE2_FLASH_ALTO := 430.0
+
+# 91.02.32 — PASS 9.4C / CAMARA DE RECARGA CORE II.
+# Zoom <= 1 abre la Camera2D. El valor final se calcula por contenido vertical:
+# en suelo normalmente queda cerca de 0.96-1.00; desde aire puede abrir hasta 0.88.
+const CORE2_CAM_ZOOM_MAX := 1.00
+const CORE2_CAM_ZOOM_MIN := 0.88
+const CORE2_CAM_MARGEN_VERTICAL := 34.0
+const CORE2_CAM_MARGEN_CUERPO_INFERIOR := 82.0
+const CORE2_CAM_SEPARACION_POSTER_X := 76.0
+const CORE2_CAM_ELEVACION_POSTER := 84.0
+
+# 91.02.33 — PASS 9.4D / ZONA SEGURA DE GIGANTOGRAFIA EN PANTALLA.
+# No depende de la posicion fisica ni de la altura del luchador.
+const CORE2_FLASH_SAFE_MARGEN_X_FRAC := 0.045
+const CORE2_FLASH_SAFE_TOP_FRAC := 0.035
+const CORE2_FLASH_SAFE_BOTTOM_FRAC := 0.245
+const CORE2_FLASH_SAFE_ANCHO_MAX_FRAC := 0.47
+const CORE2_FLASH_SAFE_ALTO_MAX_FRAC := 0.66
+const CORE2_FLASH_CENTRO_LADO_IZQ_FRAC := 0.30
+const CORE2_FLASH_CENTRO_LADO_DER_FRAC := 0.70
+const CORE2_FLASH_CENTRO_Y_FRAC := 0.355
+const CORE2_FLASH_CANVAS_LAYER := 2
+# 91.02.34 — render en mundo, detrás de los luchadores.
+const CORE2_FLASH_WORLD_Z := -1
+# 91.02.35 — la recarga de CORE II vuelve limpia.
+# Los PNG exclusivos se reutilizan en CORE I y no aparecen mas
+# durante la recarga/entrada del CORE II.
+const CORE2_FLASH_ENTRADA_ACTIVA := false
+
+# PNG exclusivos de entrada CORE II enviados por el usuario.
+const CORE2_ENTRADA_DIR := "res://assets/core2_entrada_flash/"
+const CORE2_ENTRADA_POR_LUCHADOR := {
+	"Aethel": "aethel.png",
+	"Cibor-X": "cibor_x.png",
+	"CiborX": "cibor_x.png",
+	"Cibor X": "cibor_x.png",
+	"Dax": "dax.png",
+	"Fang": "fang.png",
+	"Helena": "helena.png",
+	"Jester": "jester.png",
+	"Kai": "kai.png",
+	"Kali": "kali.png",
+	"Krovan": "krovan.png",
+	"Magnus": "magnus.png",
+	"Nekhar": "nekhar.png",
+	"Momia": "nekhar.png",
+	"Momia Gris": "nekhar.png",
+	"Varkhos": "varkhos.png",
+	"Xenoid": "xenoid.png",
+}
+
+# H9.10 — subfases lógicas del rematador CORE II.
+const CORE2_REM_SUB_POSTER := 0
+const CORE2_REM_SUB_ESPERA_FINAL := 1
+const CORE2_REM_POSTER_VISIBLE := 1.30
+# _mostrar_poder_reemplazando:
+# 0.12 fade-in + 1.30 visible + 0.30 fade-out + 0.18 halo + 0.16 aura = 2.06
+const CORE2_REM_POSTER_DURACION_LOGICA := 2.06
+const CORE2_REM_ESPERA_FINAL := 0.10
+
+# Subfases internas de la ráfaga CORE II.
+const CORE2_COMBO_SUB_PREPARAR := 0
+const CORE2_COMBO_SUB_ACERCAR := 1
+const CORE2_COMBO_SUB_ESPERAR_ATAQUE := 2
+
+var core2_secuencia_etapa: int = CORE2_ETAPA_INACTIVO
+var core2_recarga_timer: float = 0.0
+var core2_recarga_duracion: float = 0.0
+var core2_acercamiento_origen: Vector2 = Vector2.ZERO
+var core2_acercamiento_destino: Vector2 = Vector2.ZERO
+var core2_acercamiento_duracion: float = 0.0
+var core2_acercamiento_tiempo: float = 0.0
+
+# H9.7 — estado completo y snapshotable de la ráfaga CORE II.
+var core2_combo_paso_idx: int = 0
+var core2_combo_total_pasos: int = 0
+var core2_combo_subfase: int = CORE2_COMBO_SUB_PREPARAR
+var core2_combo_acercamiento_origen: Vector2 = Vector2.ZERO
+var core2_combo_acercamiento_destino: Vector2 = Vector2.ZERO
+var core2_combo_acercamiento_duracion: float = 0.0
+var core2_combo_acercamiento_tiempo: float = 0.0
+
+# H9.10 — estado snapshotable del rematador CORE II.
+var core2_rematador_subfase: int = CORE2_REM_SUB_POSTER
+var core2_rematador_timer: float = 0.0
+var core2_rematador_duracion: float = 0.0
+var core2_rematador_puede_conectar: bool = false
+var core2_rematador_bloqueado: bool = false
+var core2_rematador_direccion: float = 1.0
+
+# Presentación transitoria; deliberadamente fuera del snapshot.
+var core2_recarga_brillo: Tween
+# 91.02.30 — igualmente transitorio/presentación pura. Nunca gobierna daño,
+# posición, timers de secuencia, inputs ni ninguna frontera rollback.
+var core2_flash_entrada_mostrado: bool = false
+var core2_flash_entrada_sprite: Sprite2D = null
+var core2_flash_entrada_layer: CanvasLayer = null
+var core2_flash_entrada_tween: Tween = null
+# 91.02.32 — estado PURAMENTE VISUAL de cámara. Deliberadamente fuera de
+# snapshots/rollback: no gobierna posición, daño, timers ni inputs del Fighter.
+var core2_encuadre_abierto_activo: bool = false
+var rollback_suprimir_presentacion_core2: bool = false
+
+# H10.10 — CORE III: recarga lenta + primer acercamiento pasan a FSM física.
+# El timer de recarga avanza en tiempo NO escalado para conservar los 1.55 s
+# reales históricos aunque Engine.time_scale sea 0.32.
+const CORE3_ETAPA_INACTIVO := 0
+const CORE3_ETAPA_RECARGA := 1
+const CORE3_ETAPA_ACERCAMIENTO := 2
+const CORE3_ETAPA_PRIMER_BEAT_FSM := 3
+const CORE3_ETAPA_SEGUNDO_BEAT_FSM := 4
+const CORE3_ETAPA_TERCER_BEAT_FSM := 5
+const CORE3_ETAPA_CUARTO_BEAT_FSM := 6
+const CORE3_ETAPA_QUINTO_BEAT_FSM := 7
+const CORE3_ETAPA_SEXTO_BEAT_FSM := 8
+const CORE3_ETAPA_SEPTIMO_BEAT_FSM := 9
+const CORE3_ETAPA_OCTAVO_BEAT_FSM := 10
+const CORE3_ETAPA_NOVENO_BEAT_FSM := 11
+const CORE3_ETAPA_DECIMO_BEAT_FSM := 12
+const CORE3_ETAPA_UNDECIMO_BEAT_FSM := 13
+const CORE3_ETAPA_DUODECIMO_BEAT_FSM := 14
+const CORE3_ETAPA_DECIMOTERCER_BEAT_FSM := 15
+const CORE3_ETAPA_DECIMOCUARTO_BEAT_FSM := 16
+const CORE3_ETAPA_DECIMOQUINTO_BEAT_FSM := 17
+const CORE3_ETAPA_DECIMOSEXTO_BEAT_FSM := 18
+const CORE3_ETAPA_DECIMOSEPTIMO_BEAT_FSM := 19
+const CORE3_ETAPA_DECIMOCTAVO_BEAT_FSM := 20
+const CORE3_ETAPA_CONTINUACION_ASYNC := 21
+const CORE3_RECARGA_DURACION := 1.55
+
+# H10.50 — los primeros dieciocho beats de la ráfaga CORE III ya no dependen de
+# Tween/coroutine histórico. Reutilizan el mismo estado snapshotable de beat;
+# el resto continúa por la ruta histórica desde el decimonoveno paso.
+const CORE3_BEAT_SUB_PREPARAR := 0
+const CORE3_BEAT_SUB_ACERCAR := 1
+const CORE3_BEAT_SUB_ESPERAR_ATAQUE := 2
+
+var core3_secuencia_etapa: int = CORE3_ETAPA_INACTIVO
+var core3_recarga_timer: float = 0.0
+var core3_recarga_duracion: float = 0.0
+var core3_recarga_primer_tick: bool = false
+var core3_acercamiento_origen: Vector2 = Vector2.ZERO
+var core3_acercamiento_destino: Vector2 = Vector2.ZERO
+var core3_acercamiento_duracion: float = 0.0
+var core3_acercamiento_tiempo: float = 0.0
+
+var core3_primer_beat_subfase: int = CORE3_BEAT_SUB_PREPARAR
+var core3_primer_beat_acercamiento_origen: Vector2 = Vector2.ZERO
+var core3_primer_beat_acercamiento_destino: Vector2 = Vector2.ZERO
+var core3_primer_beat_acercamiento_duracion: float = 0.0
+var core3_primer_beat_acercamiento_tiempo: float = 0.0
+
+# Sólo presentación; nunca gobierna estado lógico ni forma parte del snapshot.
+var core3_recarga_brillo: Tween
+
 # Cuenta cuántas veces este personaje llenó la barra en TODA la pelea.
 # CORE I: especial + gigantografía normal.
 # CORE II: combo completo en modo normal, sin Furia ni gigantografía.
@@ -823,6 +1248,12 @@ var ia_doble_salto_pendiente := false
 var ia_doble_salto_timer := 0.0
 var ia_ataque_aereo_pendiente := false
 var ia_ataque_aereo_timer := 0.0
+
+# 91.02.43 — PASS 11E / ráfagas exclusivas de IA DIFÍCIL.
+# No cancela recovery ni altera timings de golpes: sólo encadena la próxima
+# decisión ofensiva en el primer frame legal, agrupando ataques en tandas.
+var ia_rafaga_dificil_restante: int = 0
+var ia_rafaga_dificil_ultimo_tipo: String = ""
 
 var visual: Polygon2D
 var sprite: Sprite2D
@@ -870,10 +1301,14 @@ var dash_aereo_activo: bool = false
 var dash_aereo_direccion: float = 0.0
 var dash_aereo_timer: float = 0.0
 var dash_aereo_usado: bool = false
-# 90.10.24 — el segundo salto gana altura real para que el cruce aéreo
-# pase limpiamente por encima del rival incluso si éste entra con dash.
-# El primer salto conserva exactamente el peso/altura anterior.
-const MULT_DOBLE_SALTO_ALTURA := 1.40
+# 91.02.14 — PASS 2 dinámica aérea. El segundo salto conserva ventaja real
+# para cruce aéreo, pero baja de x1.40 a x1.25 para reducir tiempo suspendido
+# y acercar el ritmo a la referencia de juegos de pelea sin tocar el primer salto.
+const MULT_DOBLE_SALTO_ALTURA := 1.25
+# 91.02.29 — PASS 9.3E. Sólo al ATERRIZAR y sólo si un ataque normal ya terminó
+# STARTUP+ACTIVO. Conserva una micro-recuperación legible sin dejar al luchador
+# clavado en suelo después de un ataque aéreo.
+const RECOVERY_ATERRIZAJE_NORMAL_MAX := 0.033
 var doble_pulso_izq_timer: float = 0.0
 var doble_pulso_der_timer: float = 0.0
 var tecla_izq_previa: bool = false
@@ -897,6 +1332,11 @@ const SUELO_REFERENCIA_Y := 560.0
 const OFFSET_VISUAL_LINEA_COMBATE_Y := 28.0
 # Ajuste adicional exclusivo de la pose horizontal de K.O.
 const OFFSET_DERRIBADO_FINAL_Y := 22.0
+# 91.02.20 — PASS 8: apoyo VISUAL del derribo temporal de CORE I/II.
+# No mueve el CharacterBody ni cambia gravedad, velocidad o timers: solamente
+# baja la textura horizontal unos píxeles para que el torso apoye en el piso.
+const OFFSET_DERRIBADO_ESPECIAL_Y := 18.0
+const OFFSET_DERRIBADO_ESPECIAL_DINAMICO_MAX := 12.0
 # 90.10.70 — apoyo visual dinámico del K.O. horizontal. Algunos PNG de
 # derribado (pelo, alas, aura, extremidades) tienen alfa por debajo del torso
 # y el used_rect deja al cuerpo principal visualmente suspendido aunque el
@@ -910,7 +1350,99 @@ const DISTANCIA_FINAL_GANADOR_DERRIBADO := 190.0
 const DISTANCIA_VICTORIA_GANADOR_DERRIBADO := 220.0
 const MARGEN_VICTORIA_KO_VISUAL := 34.0
 
+func _aplicar_redisenos_visuales_91_02_09() -> void:
+	# 91.02.09 — override VISUAL únicamente. No modifica física, daño, hitboxes ni timings.
+	# Aethel: su rediseño final vive en una ruta dedicada para no reutilizar
+	# escalas/rutas históricas del arte anterior. Se fuerza aquí para que funcione
+	# incluso si el script de personaje del proyecto todavía conserva referencias viejas.
+	if nombre_luchador == "Aethel":
+		const BASE := "res://assets/aethel_redesign_final/"
+		if ResourceLoader.exists(BASE + "parado.png"):
+			textura_parado = load(BASE + "parado.png")
+			textura_punetazo = load(BASE + "punetazo_1.png")
+			texturas_punetazo_extra = [
+				load(BASE + "punetazo_2.png"),
+				load(BASE + "punetazo_5_90_10_66.png"),
+				load(BASE + "punetazo_3.png"),
+				load(BASE + "punetazo_4.png"),
+			]
+			textura_patada = load(BASE + "patada_1.png")
+			texturas_patada_extra = [
+				load(BASE + "patada_2.png"),
+				load(BASE + "patada_5_rodillazo_90_10_66.png"),
+				load(BASE + "patada_3.png"),
+				load(BASE + "patada_6_90_10_66.png"),
+				load(BASE + "patada_4.png"),
+			]
+			textura_golpe_recibido = load(BASE + "golpe_recibido_1.png")
+			texturas_golpe_recibido_extra = [load(BASE + "golpe_recibido_2.png"), load(BASE + "golpe_recibido_3.png")]
+			textura_derribado = load(BASE + "derribado.png")
+			var levitacion: Texture2D = load(BASE + "levitacion.png")
+			texturas_caminata = [levitacion, levitacion]
+			textura_caminata_der = levitacion
+			textura_caminata_izq = levitacion
+			textura_carrera = load(BASE + "carrera.png")
+			textura_evasion = load(BASE + "evasion.png")
+			textura_furia_evasion = textura_evasion
+			textura_salto = load(BASE + "salto.png")
+			textura_doble_salto = load(BASE + "doble_salto.png")
+			textura_descenso = load(BASE + "descenso.png")
+			textura_bloqueo = load(BASE + "bloqueo.png")
+			textura_recarga = load(BASE + "recarga.png")
+			textura_victoria = load(BASE + "victoria.png")
+			textura_rematador = load(BASE + "rematador.png")
+			textura_furia_parado = textura_parado
+			textura_furia_punetazo = load(BASE + "combo_1.png")
+			texturas_furia_punetazo_extra = [load(BASE + "combo_3.png"), load(BASE + "combo_5.png")]
+			textura_furia_patada = load(BASE + "combo_2.png")
+			texturas_furia_patada_extra = [load(BASE + "combo_4.png"), load(BASE + "combo_6.png")]
+			textura_furia_golpe_recibido = textura_golpe_recibido
+			textura_furia_derribado = textura_derribado
+			texturas_furia_caminata = [levitacion, levitacion]
+			textura_furia_carrera = load(BASE + "aceleracion_combo.png")
+			textura_furia_salto = textura_salto
+			textura_furia_doble_salto = textura_doble_salto
+			textura_furia_descenso = textura_descenso
+			textura_furia_bloqueo = textura_bloqueo
+
+	# Kai y Xenoid: ruta nueva dedicada. Esto evita que el motor continúe usando
+	# una referencia/importación anterior de assets/<personaje>/recarga.png.
+	var recarga_override := {
+		"Kai": "res://assets/recharge_redesign_final/kai.png",
+		"Xenoid": "res://assets/recharge_redesign_final/xenoid.png",
+	}
+	if recarga_override.has(nombre_luchador):
+		var ruta_recarga: String = recarga_override[nombre_luchador]
+		if ResourceLoader.exists(ruta_recarga):
+			textura_recarga = load(ruta_recarga)
+
+func _cargar_textura_core2_entrada() -> void:
+	textura_core2_entrada = null
+
+	if CORE2_ENTRADA_POR_LUCHADOR.has(nombre_luchador):
+		var ruta_dedicada: String = CORE2_ENTRADA_DIR + String(CORE2_ENTRADA_POR_LUCHADOR[nombre_luchador])
+		if ResourceLoader.exists(ruta_dedicada):
+			textura_core2_entrada = load(ruta_dedicada)
+			return
+
+	# Fallback futuro: también acepta un PNG dedicado dentro de la carpeta
+	# propia del luchador, sin volver a tocar Fighter.
+	if textura_parado:
+		var base_assets: String = textura_parado.resource_path.get_base_dir()
+		var candidatos: Array[String] = [
+			"core2_entrada.png", "core2-entry.png", "entrada_core2.png",
+			"gigantografia_entrada.png", "poster_entrada.png", "entrada.png"
+		]
+		for nombre_asset in candidatos:
+			var ruta_local: String = base_assets + "/" + nombre_asset
+			if ResourceLoader.exists(ruta_local):
+				textura_core2_entrada = load(ruta_local)
+				return
+
+
 func _ready() -> void:
+	_aplicar_redisenos_visuales_91_02_09()
+	_cargar_textura_core2_entrada()
 	# FASE 85: si más adelante se agrega assets/<personaje>/victoria.png, se
 	# detecta solo. Así podemos incorporar las poses de victoria sin volver a
 	# tocar cada script individual.
@@ -1051,6 +1583,9 @@ func _crear_parpado() -> Polygon2D:
 	return p
 
 func _physics_process(delta: float) -> void:
+	if rollback_delta_override >= 0.0:
+		delta = rollback_delta_override
+		rollback_delta_override = -1.0
 	_delta_actual = delta
 	debug_x_inicio_frame = global_position.x
 	debug_delta_x_frame = 0.0
@@ -1066,6 +1601,9 @@ func _physics_process(delta: float) -> void:
 	# recepción no dure artificialmente más que la ráfaga que protege.
 	if ia_combo_cancel_lock_timer > 0.0:
 		ia_combo_cancel_lock_timer = maxf(0.0, ia_combo_cancel_lock_timer - delta)
+
+	# PASS 12A — reloj propio del nuevo movimiento.
+	_actualizar_lanzamiento_proyectil(delta)
 
 	# Snapshot del rival antes de cualquier mutación hecha por este Fighter.
 	var rival_x_antes_del_frame: float = objetivo.global_position.x if objetivo and is_instance_valid(objetivo) else 0.0
@@ -1118,7 +1656,21 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 	else:
 		if not is_on_floor():
-			velocity.y += gravedad * delta
+			var gravedad_frame: float = gravedad
+			var vuelo_salto_normal: bool = saltos_usados > 0 and hitstun_timer <= 0.0 and not derribo_especial_activo
+			# 91.02.15 — PASS 3. Al entrar en la banda del vértice, un salto real
+			# atraviesa Y≈0 un poco más rápido. Es una rama mutuamente exclusiva
+			# con la caída x1.35 para no acumular multiplicadores.
+			if vuelo_salto_normal and absf(velocity.y) <= UMBRAL_VELOCIDAD_VERTICE:
+				gravedad_frame *= MULT_GRAVEDAD_VERTICE
+			# 91.02.13 — PASS 1: sólo el descenso libre normal gana peso.
+			elif velocity.y > 0.0 and hitstun_timer <= 0.0 and not derribo_especial_activo:
+				gravedad_frame *= MULT_GRAVEDAD_CAIDA_LIBRE
+				# 91.02.16 — PASS 4. Sólo un salto real en caída franca recibe
+				# este último empujón de gravedad. Launcher/impactos/derribos quedan fuera.
+				if vuelo_salto_normal and velocity.y >= UMBRAL_CAIDA_FINAL:
+					gravedad_frame *= MULT_GRAVEDAD_CAIDA_FINAL
+			velocity.y += gravedad_frame * delta
 		else:
 			velocity.y = 0.0
 
@@ -1131,8 +1683,13 @@ func _physics_process(delta: float) -> void:
 			else:
 				velocity.x = move_toward(velocity.x, 0.0, 220.0 * delta)
 		else:
-			var puede_actuar: bool = not esta_derrotado and not congelado_por_rival 				and fase_ataque == FaseAtaque.NINGUNA and hitstun_timer <= 0.0 and recuperacion_post_levantada_timer <= 0.0
-			if puede_actuar:
+			var puede_actuar: bool = not esta_derrotado and not congelado_por_rival \
+				and not en_lanzamiento_proyectil \
+				and fase_ataque == FaseAtaque.NINGUNA and hitstun_timer <= 0.0 \
+				and recuperacion_post_levantada_timer <= 0.0
+			if en_lanzamiento_proyectil:
+				velocity.x = move_toward(velocity.x, 0.0, friccion_suelo * 2.0 * delta)
+			elif puede_actuar:
 				_procesar_entrada(delta, vel_actual)
 			elif fase_ataque != FaseAtaque.NINGUNA and not esta_derrotado and not congelado_por_rival and hitstun_timer <= 0.0 and recuperacion_post_levantada_timer <= 0.0:
 				# Durante un golpe normal seguimos permitiendo FOOTWORK horizontal:
@@ -1176,14 +1733,27 @@ func _physics_process(delta: float) -> void:
 	_actualizar_buffer_ataque(delta)
 	_actualizar_orientacion_hacia_rival()
 
+	# H8.3 — el Target Lock CORE I avanza una sola vez por physics tick.
+	# Si Especial se activó en este mismo tick, éste es también su primer paso,
+	# igualando el primer avance que antes hacía Tween al final del frame.
+	_actualizar_core1_target_lock(delta)
+	_actualizar_core1_poster_logico(delta)
+	_actualizar_core2_fsm(delta)
+	_actualizar_core3_fsm(delta)
+
 	# Profundidad dinámica: un luchador más bajo en pantalla queda delante
 	# de uno que está saltando. Durante un impacto, el que recibe queda un
 	# poco por delante para que el golpe se lea como contacto físico y no
 	# como dos papeles atravesándose.
 	_actualizar_profundidad_visual()
 
+	var delta_reloj_seguridad := delta
+	if rollback_reloj_seguridad_delta_override >= 0.0:
+		delta_reloj_seguridad = rollback_reloj_seguridad_delta_override
+		rollback_reloj_seguridad_delta_override = -1.0
+
 	if en_secuencia_especial or congelado_por_rival:
-		reloj_seguridad_secuencia += delta
+		reloj_seguridad_secuencia += delta_reloj_seguridad
 		if reloj_seguridad_secuencia > TIEMPO_MAXIMO_SECUENCIA:
 			en_secuencia_especial = false
 			congelado_por_rival = false
@@ -1245,6 +1815,7 @@ func _physics_process(delta: float) -> void:
 		# expresa con movimiento/sombra/polvo, nunca escalando el personaje.
 		velocity.x *= _retencion_horizontal_aterrizaje()
 		_efecto_aterrizaje()
+		_resolver_transicion_aterrizaje_dinamica()
 	_estaba_en_aire = en_el_aire
 
 	if derribo_especial_activo and not derribo_especial_esperando_aterrizar and derribo_especial_se_levanta and not esta_derrotado:
@@ -1294,8 +1865,11 @@ func _physics_process(delta: float) -> void:
 		# esto es lo que hace que el bloqueo, el salto y la caminata real
 		# aparezcan y desaparezcan solos según el estado del personaje.
 		if pose_timer <= 0.0 and not esta_derrotado and not derribo_especial_activo:
-			var mantener_reaccion_combo: bool = congelado_por_rival \
-				and objetivo and is_instance_valid(objetivo) and objetivo.en_combo_auto_visual
+			# 91.02.20 — PASS 8. Durante el póster/remate de CORE II el rival
+			# permanece congelado en su última pose de impacto hasta el instante
+			# exacto del derribo. Es presentación pura: no prolonga hitstun ni
+			# altera el tick lógico del rematador.
+			var mantener_reaccion_combo: bool = _mantener_reaccion_visual_congelada()
 			if not mantener_reaccion_combo:
 				_actualizar_textura(_tex_reposo())
 
@@ -1348,8 +1922,7 @@ func _physics_process(delta: float) -> void:
 	if pose_timer > 0.0:
 		pose_timer -= delta
 		if pose_timer <= 0.0 and not esta_derrotado and not derribo_especial_activo:
-			var mantener_reaccion_combo_timer: bool = congelado_por_rival \
-				and objetivo and is_instance_valid(objetivo) and objetivo.en_combo_auto_visual
+			var mantener_reaccion_combo_timer: bool = _mantener_reaccion_visual_congelada()
 			if not mantener_reaccion_combo_timer:
 				_actualizar_textura(_tex_reposo())
 
@@ -1516,8 +2089,24 @@ func _aplicar_input_frame(frame: Dictionary, vel_actual: float) -> void:
 	var puno_presionado: bool = bool(frame.get("puno", false))
 	var patada_presionada: bool = bool(frame.get("patada", false))
 	var especial_presionado: bool = bool(frame.get("especial", false))
+	var puno_presionado_crudo: bool = puno_presionado
 	var puno_justo: bool = puno_presionado and not puno_estaba_presionado
 	var patada_justa: bool = patada_presionada and not patada_estaba_presionada
+
+	# PASS 12A — ↓ → + PUÑO. Si completa el comando, ese PUÑO/BLOQUEO
+	# se consume sólo en este frame para no disparar también otra mecánica.
+	var comando_proyectil_consumido: bool = _procesar_comando_proyectil(
+		bloqueo_presionado,
+		izquierda,
+		derecha,
+		puno_justo
+	)
+	if comando_proyectil_consumido:
+		bloqueo_presionado = false
+		puno_presionado = false
+		puno_justo = false
+		input_frame_enrutado_actual["bloqueo"] = false
+		input_frame_enrutado_actual["puno"] = false
 
 	ultima_intencion_horizontal = (-1.0 if izquierda else 0.0) + (1.0 if derecha else 0.0)
 
@@ -1593,12 +2182,151 @@ func _aplicar_input_frame(frame: Dictionary, vel_actual: float) -> void:
 	if patada_presionada:
 		intentar_patada()
 
-	puno_estaba_presionado = puno_presionado
+	puno_estaba_presionado = puno_presionado_crudo
 	patada_estaba_presionada = patada_presionada
 
 	if especial_presionado and not z_estaba_presionado:
 		intentar_poder_especial()
 	z_estaba_presionado = especial_presionado
+
+# PASS 12A — parser del comando ↓ → + PUÑO.
+func _procesar_comando_proyectil(
+	abajo: bool,
+	izquierda: bool,
+	derecha: bool,
+	puno_justo: bool
+) -> bool:
+	if not proyectil_especial_habilitado:
+		return false
+
+	if comando_proyectil_timer > 0.0:
+		comando_proyectil_timer = maxf(0.0, comando_proyectil_timer - _delta_actual)
+		if comando_proyectil_timer <= 0.0:
+			comando_proyectil_etapa = 0
+
+	var adelante: bool = derecha if mirando >= 0.0 else izquierda
+
+	if comando_proyectil_etapa == 0 and abajo:
+		comando_proyectil_etapa = 1
+		comando_proyectil_timer = VENTANA_COMANDO_PROYECTIL
+
+	if comando_proyectil_etapa == 1 and adelante:
+		comando_proyectil_etapa = 2
+		comando_proyectil_timer = VENTANA_COMANDO_PROYECTIL
+
+	if comando_proyectil_etapa == 2 and puno_justo:
+		var salio: bool = intentar_proyectil_especial()
+		comando_proyectil_etapa = 0
+		comando_proyectil_timer = 0.0
+		return salio
+
+	return false
+
+
+func intentar_proyectil_especial() -> bool:
+	if not proyectil_especial_habilitado:
+		return false
+	if esta_derrotado or congelado_por_rival or hitstun_timer > 0.0:
+		return false
+	if en_secuencia_especial or bloqueo_cinematico or en_fase_absoluta:
+		return false
+	if fase_ataque != FaseAtaque.NINGUNA or not is_on_floor():
+		return false
+	if en_lanzamiento_proyectil or proyectil_cooldown_timer > 0.0:
+		return false
+	if proyectil_activo and is_instance_valid(proyectil_activo):
+		return false
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		return false
+
+	_detener_carrera()
+	_detener_dash_aereo()
+	if bloqueando:
+		_detener_bloqueo()
+	_orientar_hacia_rival_inmediato()
+	velocity.x = 0.0
+
+	en_lanzamiento_proyectil = true
+	proyectil_lanzamiento_timer = proyectil_startup + proyectil_recovery
+	proyectil_spawn_timer = proyectil_startup
+	proyectil_disparo_pendiente = true
+	proyectil_cooldown_timer = proyectil_cooldown
+
+	if textura_proyectil_pose and sprite:
+		_actualizar_textura(textura_proyectil_pose)
+		pose_timer = proyectil_lanzamiento_timer
+
+	return true
+
+
+func _actualizar_lanzamiento_proyectil(delta: float) -> void:
+	if proyectil_cooldown_timer > 0.0:
+		proyectil_cooldown_timer = maxf(0.0, proyectil_cooldown_timer - delta)
+
+	if not en_lanzamiento_proyectil:
+		return
+
+	# Startup castigable.
+	if esta_derrotado or congelado_por_rival or hitstun_timer > 0.0:
+		en_lanzamiento_proyectil = false
+		proyectil_disparo_pendiente = false
+		proyectil_lanzamiento_timer = 0.0
+		proyectil_spawn_timer = 0.0
+		return
+
+	proyectil_lanzamiento_timer = maxf(0.0, proyectil_lanzamiento_timer - delta)
+	if proyectil_disparo_pendiente:
+		proyectil_spawn_timer -= delta
+		if proyectil_spawn_timer <= 0.0:
+			proyectil_disparo_pendiente = false
+			_disparar_proyectil_energia()
+
+	if proyectil_lanzamiento_timer <= 0.0:
+		en_lanzamiento_proyectil = false
+
+
+func _disparar_proyectil_energia() -> void:
+	if proyectil_activo and is_instance_valid(proyectil_activo):
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		return
+
+	var nodo = SCRIPT_PROYECTIL_ENERGIA.new()
+	var dano_real: float = dano_punetazo * MULT_DANO_GLOBAL * proyectil_dano_mult
+	nodo.configurar(
+		self,
+		objetivo,
+		mirando,
+		proyectil_velocidad,
+		dano_real,
+		proyectil_empuje * peso_golpe,
+		proyectil_hitstun,
+		color_proyectil_primario,
+		color_proyectil_secundario,
+		textura_proyectil_nucleo,
+		sonido_proyectil_impacto
+	)
+
+	var escena = get_tree().current_scene
+	if not escena:
+		return
+	escena.add_child(nodo)
+
+	var alto_visible: float = _altura_visible_objetivo()
+	var salida_x: float = maxf(76.0, ancho_cuerpo * 0.72)
+	nodo.global_position = global_position + Vector2(
+		mirando * salida_x,
+		-alto_visible * proyectil_spawn_altura_mult
+	)
+	proyectil_activo = nodo
+	# Audio/voz se resuelve en Main para no mezclar presentación con colisión.
+	proyectil_disparado.emit()
+
+
+func _notificar_proyectil_terminado(nodo: Node) -> void:
+	if proyectil_activo == nodo:
+		proyectil_activo = null
+
 
 # Resuelve el mando asignado a ESTE Fighter.
 # -2 = teclado solamente (sin fallback a un gamepad compartido).
@@ -1752,7 +2480,7 @@ func _actualizar_dash_aereo(delta: float) -> void:
 func _iniciar_carrera(direccion: float) -> void:
 	# Dash solamente desde suelo. En el aire las flechas quedan reservadas al
 	# control horizontal y al cruce del doble salto.
-	if not is_on_floor() or esta_derrotado or en_secuencia_especial or bloqueo_cinematico:
+	if not is_on_floor() or esta_derrotado or en_secuencia_especial or bloqueo_cinematico or congelado_por_rival:
 		return
 	carrera_activa = true
 	dash_iniciado_este_frame = true
@@ -1919,12 +2647,22 @@ func mover(direccion: float, vel_actual: float) -> void:
 		# la orientación queda fijada hacia el golpe/rival.
 		if fase_ataque == FaseAtaque.NINGUNA or fase_ataque == FaseAtaque.RECOVERY:
 			mirando = sign(direccion)
-		velocity.x = move_toward(velocity.x, direccion * vel_actual, aceleracion * _delta_actual)
+		# 91.02.26 — respuesta terrestre mas inmediata sin elevar vel_actual.
+		# En aire conservamos exactamente la aceleracion anterior.
+		var aceleracion_aplicada: float = aceleracion
+		if is_on_floor():
+			aceleracion_aplicada *= MULT_ACELERACION_SUELO_DINAMICA
+		velocity.x = move_toward(velocity.x, direccion * vel_actual, aceleracion_aplicada * _delta_actual)
 	else:
 		var friccion: float = friccion_suelo if is_on_floor() else friccion_aire
+		# El freno extra existe solo en suelo. Friccion de aire queda congelada.
+		if is_on_floor():
+			friccion *= MULT_FRENO_SUELO_DINAMICA
 		velocity.x = move_toward(velocity.x, 0.0, friccion * _delta_actual)
 
 func saltar() -> void:
+	if congelado_por_rival:
+		return
 	if is_on_floor():
 		velocity.y = fuerza_salto
 		saltos_usados = 1
@@ -1978,7 +2716,7 @@ func _actualizar_buffer_ataque(delta: float) -> void:
 		intentar_patada()
 
 func intentar_punetazo() -> void:
-	if fase_ataque != FaseAtaque.NINGUNA or bloqueando:
+	if congelado_por_rival or fase_ataque != FaseAtaque.NINGUNA or bloqueando:
 		return
 	var lista := _lista_punetazo()
 	if lista.is_empty():
@@ -1989,7 +2727,7 @@ func intentar_punetazo() -> void:
 	indice_punetazo = (indice_punetazo + 1) % lista.size()
 
 func intentar_patada() -> void:
-	if fase_ataque != FaseAtaque.NINGUNA or bloqueando:
+	if congelado_por_rival or fase_ataque != FaseAtaque.NINGUNA or bloqueando:
 		return
 	var lista := _lista_patada()
 	if lista.is_empty():
@@ -2001,7 +2739,7 @@ func intentar_patada() -> void:
 	indice_patada = (indice_patada + 1) % lista.size()
 
 func intentar_poder_especial() -> void:
-	if poder < poder_maximo or en_fase_absoluta or en_secuencia_especial:
+	if poder < poder_maximo or en_fase_absoluta or en_secuencia_especial or congelado_por_rival:
 		return
 	# Blindaje extra: si el rival ya está en SU secuencia de poder (o
 	# recién la está por arrancar en este mismo cuadro), no dejamos que
@@ -2057,9 +2795,13 @@ func _iniciar_ataque(tipo: String, rango: float, dano_base: float, empuje_base: 
 		_atk_dur_activo = ACTIVO_COMBO_CORE_UNIFORME
 		_atk_dur_recovery = RECOVERY_COMBO_CORE_CONTINUO
 	else:
-		startup = ciclo_efectivo * frac_startup * _mult_startup_personalidad()
+		# PASS 5: los ataques normales responden antes y vuelven antes a neutral.
+		# El tiempo ACTIVO no se toca: seguimos respetando exactamente la ventana
+		# visual/de contacto ya aprobada. Sólo quitamos latencia de startup/recovery.
+		startup = ciclo_efectivo * frac_startup * _mult_startup_personalidad() * MULT_STARTUP_ATAQUE_NORMAL
 		_atk_dur_activo = ciclo_efectivo * frac_activo
-		_atk_dur_recovery = ciclo_efectivo * frac_recovery * _mult_recovery_personalidad()
+		var mult_recovery_pass5: float = MULT_RECOVERY_PUNETAZO_NORMAL if tipo == "punetazo" else MULT_RECOVERY_PATADA_NORMAL
+		_atk_dur_recovery = ciclo_efectivo * frac_recovery * _mult_recovery_personalidad() * mult_recovery_pass5
 
 	fase_ataque = FaseAtaque.STARTUP
 	timer_fase_ataque = startup
@@ -2171,6 +2913,20 @@ func _chequear_impacto_ataque() -> void:
 	if objetivo.global_position.y < global_position.y - 25.0:
 		hitstun_final *= 0.85
 
+	# 91.02.19 — PASS 7. En un intercambio NEUTRAL de suelo el receptor vuelve
+	# un poco antes a control/neutral. No se aplica a bloqueo, AIR HIT, launcher,
+	# CORE ni a un segundo/tercer golpe ya encadenado: esos caminos conservan
+	# exactamente el hitstun de PASS 6 para no romper secuencias aprobadas.
+	var primer_impacto_normal_limpio_suelo: bool = not bloqueado \
+		and not en_combo_auto_visual \
+		and not en_secuencia_especial \
+		and not en_fase_absoluta \
+		and combo_count == 0 \
+		and is_on_floor() \
+		and objetivo.is_on_floor()
+	if primer_impacto_normal_limpio_suelo:
+		hitstun_final *= MULT_HITSTUN_PUNETAZO_NEUTRAL if _atk_tipo == "punetazo" else MULT_HITSTUN_PATADA_NEUTRAL
+
 	# Transferencia de peso en el contacto. No escalamos el sprite: el golpe
 	# se vende con avance, follow-through, hit-stop y la reacción del rival.
 	var avance_contacto: float = (19.0 if _atk_tipo == "punetazo" else 28.0) * _mult_followthrough_personalidad()
@@ -2182,9 +2938,28 @@ func _chequear_impacto_ataque() -> void:
 	# con hit-stop LOCAL del Fighter. Puño = seco/rápido; patada = un poco más
 	# pesada. Esto mantiene la velocidad del juego y prepara mejor el combate para
 	# una futura simulación online/rollback.
-	var pausa_contacto: float = 0.018 + intensidad_contacto * (0.007 if _atk_tipo == "punetazo" else 0.012)
+	#
+	# 91.02.28 — PASS 9.3D. El sistema YA existía; no se apila otro hit-stop.
+	# Recalibramos únicamente el contacto limpio normal fuera de CORE/Furia:
+	#   puño  ≈ 0.033–0.041 s  (~2 frames a 60 Hz)
+	#   patada≈ 0.038–0.051 s  (~2–3 frames a 60 Hz)
+	# Bloqueo y cualquier ruta CORE conservan literalmente la fórmula anterior.
+	var impacto_normal_limpio_fuera_core: bool = not bloqueado \
+		and not en_combo_auto_visual \
+		and not en_secuencia_especial \
+		and not en_fase_absoluta
+	var pausa_contacto_base: float = 0.022 + intensidad_contacto * (0.009 if _atk_tipo == "punetazo" else 0.015)
+	var pausa_contacto: float = pausa_contacto_base
+	if impacto_normal_limpio_fuera_core:
+		pausa_contacto = (0.026 + intensidad_contacto * 0.010) if _atk_tipo == "punetazo" \
+			else (0.028 + intensidad_contacto * 0.016)
 	hitstop_timer = pausa_contacto if not bloqueado else 0.014 + intensidad_contacto * 0.003
 	objetivo.recibir_dano(dano, empuje_final, hitstun_final, mirando, _atk_tipo)
+	# Sincronización visual del contacto NORMAL: el receptor conserva su lógica
+	# propia, pero nunca sale del freeze mucho antes que el atacante. No modifica
+	# hitstun ni estados de control y queda totalmente fuera de CORE.
+	if impacto_normal_limpio_fuera_core:
+		objetivo.hitstop_timer = maxf(objetivo.hitstop_timer, pausa_contacto * 0.92)
 	_aplicar_contacto_corporal_post_golpe(objetivo, empuje_final, bloqueado)
 	# Un bloqueo firme devuelve presión al atacante. La patada rebota un poco
 	# más que el puño, pero sin teletransportes ni cambios de escala.
@@ -2289,6 +3064,44 @@ func _registrar_golpe_conectado(bloqueado: bool = false) -> void:
 	if poder_anterior < poder_maximo and poder >= poder_maximo:
 		core_listo.emit()
 
+# 91.02.57 — PASS 12N / CORE POR PROYECTIL.
+# Un proyectil que conecta LIMPIO suma la misma carga base que un puño normal.
+# Bloqueado no suma nada. No depende de _atk_tipo para evitar heredar una patada
+# previa y aplicar por error el +8 % de las patadas.
+func _registrar_proyectil_conectado() -> void:
+	combo_count += 1
+	combo_timer = ventana_combo
+
+	# Igual que los golpes normales: no recargar el siguiente CORE dentro de
+	# una secuencia/cinemática CORE ya activa.
+	if en_fase_absoluta or en_secuencia_especial:
+		return
+
+	var ganancia: float = clampf(
+		poder_por_golpe * MULT_PODER_GLOBAL,
+		CORE_GANANCIA_MIN,
+		CORE_GANANCIA_MAX
+	)
+
+	if veces_fase_absoluta <= 0:
+		ganancia *= CORE_CARGA_NIVEL_1_MULT
+	elif veces_fase_absoluta == 1:
+		ganancia *= CORE_CARGA_NIVEL_2_MULT
+	else:
+		ganancia *= CORE_CARGA_NIVEL_3_MULT
+
+	# Conserva la misma curva decreciente de combo ya certificada.
+	if combo_count == 2:
+		ganancia *= CORE_COMBO_SEGUNDO_GOLPE_MULT
+	elif combo_count >= 3:
+		ganancia *= CORE_COMBO_TERCER_MAS_MULT
+
+	var poder_anterior: float = poder
+	poder = min(poder_maximo, poder + ganancia)
+	if poder_anterior < poder_maximo and poder >= poder_maximo:
+		core_listo.emit()
+
+
 func _activar_fase_absoluta() -> void:
 	poder = 0.0
 	indice_punetazo = 0
@@ -2298,12 +3111,13 @@ func _activar_fase_absoluta() -> void:
 	fase_activada.emit()
 
 	if veces_fase_absoluta == 1:
-		# CORE I — PODER: se conserva exactamente el especial/gigantografía
-		# actual. Todo ocurre en modo normal.
+		# CORE I — PODER: mantiene su golpe/logica actual, pero ahora muestra
+		# la gigantografia exclusiva del usuario cuando exista. Todo ocurre en
+		# modo normal.
 		_secuencia_poder_simple()
 	elif veces_fase_absoluta == 2:
-		# CORE II — COMBO NORMAL + REMATE: la cadena usa sólo golpes
-		# normales, pero conserva el remate/gigantografía propios del segundo CORE.
+		# CORE II — COMBO NORMAL + REMATE: la recarga vuelve limpia. La cadena
+		# usa sólo golpes normales y conserva su gigantografia final propia.
 		_secuencia_combo_normal()
 	else:
 		# CORE III — FURIA FINAL: transformación exclusiva, combo con todo el
@@ -2341,6 +3155,342 @@ func _terminar_fase_absoluta() -> void:
 # Cada personaje define su propio golpe definitivo
 func _ejecutar_especial() -> void:
 	pass
+
+func _core2_construir_coreografia_actual() -> Array[Dictionary]:
+	var total_punos: int = _lista_punetazo().size()
+	var total_patadas: int = _lista_patada().size() if combo_auto_incluye_patada else 0
+
+	var pasada_punos: Array[Dictionary] = []
+	for i in range(total_punos):
+		pasada_punos.append({"tipo": "punetazo", "indice": i})
+
+	var pasada_patadas: Array[Dictionary] = []
+	for i in range(total_patadas):
+		pasada_patadas.append({"tipo": "patada", "indice": i})
+
+	var pasada_mixta: Array[Dictionary] = _construir_pasada_completa_combo_core(
+		total_punos,
+		total_patadas
+	)
+
+	var coreografia: Array[Dictionary] = []
+	coreografia.append_array(pasada_punos)
+	coreografia.append_array(pasada_patadas)
+	coreografia.append_array(pasada_mixta)
+	return coreografia
+
+
+func _core2_iniciar_combo_fsm() -> void:
+	if veces_fase_absoluta != 2 or not en_secuencia_especial or esta_derrotado:
+		return
+
+	core2_secuencia_etapa = CORE2_ETAPA_COMBO_FSM
+	core2_combo_paso_idx = 0
+	core2_combo_subfase = CORE2_COMBO_SUB_PREPARAR
+	core2_combo_acercamiento_origen = global_position
+	core2_combo_acercamiento_destino = global_position
+	core2_combo_acercamiento_duracion = 0.0
+	core2_combo_acercamiento_tiempo = 0.0
+
+	var coreografia := _core2_construir_coreografia_actual()
+	core2_combo_total_pasos = coreografia.size()
+
+	en_combo_auto_visual = true
+
+	# Mismo inicio histórico de _racha_combo_auto().
+	if objetivo and is_instance_valid(objetivo):
+		objetivo.empuje_timer = 0.0
+		objetivo.empuje_x = 0.0
+		objetivo.empuje_pendiente_timer = 0.0
+		objetivo.empuje_pendiente_fuerza = 0.0
+		objetivo.velocity.x = 0.0
+
+	indice_punetazo = 0
+	indice_patada = 0
+
+	# La coroutine histórica comenzaba el primer paso inmediatamente después
+	# del fin del acercamiento inicial. Hacemos lo mismo en este physics tick.
+	_core2_combo_preparar_paso_actual()
+
+
+func _core2_combo_preparar_paso_actual() -> void:
+	if core2_secuencia_etapa != CORE2_ETAPA_COMBO_FSM:
+		return
+	if veces_fase_absoluta != 2 or not en_secuencia_especial or esta_derrotado:
+		_core2_combo_terminar_rafaga()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core2_combo_terminar_rafaga()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	core2_combo_total_pasos = coreografia.size()
+
+	if core2_combo_paso_idx >= core2_combo_total_pasos:
+		_core2_combo_terminar_rafaga()
+		return
+
+	# Si el ataque anterior aún sigue activo, esperar a su fin lógico.
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core2_combo_subfase = CORE2_COMBO_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core2_combo_ejecutar_paso_actual(coreografia)
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core2_combo_acercamiento_origen = global_position
+	core2_combo_acercamiento_destino = destino
+	core2_combo_acercamiento_duracion = duracion
+	core2_combo_acercamiento_tiempo = 0.0
+	core2_combo_subfase = CORE2_COMBO_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core2_combo_ejecutar_paso_actual(coreografia: Array[Dictionary]) -> void:
+	if core2_combo_paso_idx < 0 or core2_combo_paso_idx >= coreografia.size():
+		_core2_combo_terminar_rafaga()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core2_combo_terminar_rafaga()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	var paso: Dictionary = coreografia[core2_combo_paso_idx]
+	_ejecutar_paso_coreografia_combo_core(paso)
+
+	# El viejo bucle siempre hacía un await/poll inmediatamente después de
+	# lanzar el golpe y luego esperaba fase_ataque==NINGUNA. Esta subfase
+	# representa exactamente esa espera, pero sin coroutine.
+	core2_combo_subfase = CORE2_COMBO_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core2_combo_fsm(delta: float) -> void:
+	if core2_secuencia_etapa != CORE2_ETAPA_COMBO_FSM:
+		return
+
+	if veces_fase_absoluta != 2 or not en_secuencia_especial or esta_derrotado:
+		_core2_combo_terminar_rafaga()
+		return
+
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core2_combo_terminar_rafaga()
+		return
+
+	match core2_combo_subfase:
+		CORE2_COMBO_SUB_PREPARAR:
+			_core2_combo_preparar_paso_actual()
+
+		CORE2_COMBO_SUB_ACERCAR:
+			var duracion := maxf(core2_combo_acercamiento_duracion, 0.000001)
+			core2_combo_acercamiento_tiempo = minf(
+				core2_combo_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core2_combo_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core2_combo_acercamiento_origen.lerp(
+				core2_combo_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core2_combo_acercamiento_destino
+				core2_combo_acercamiento_tiempo = core2_combo_acercamiento_duracion
+				var coreografia := _core2_construir_coreografia_actual()
+				_core2_combo_ejecutar_paso_actual(coreografia)
+
+		CORE2_COMBO_SUB_ESPERAR_ATAQUE:
+			# _actualizar_fase_ataque(delta) corre antes que esta FSM. Cuando el
+			# golpe termina, avanzamos al siguiente paso EN ESTE MISMO physics
+			# tick, igual que el poll de 0.004 s del código histórico.
+			if fase_ataque == FaseAtaque.NINGUNA:
+				core2_combo_paso_idx += 1
+				core2_combo_subfase = CORE2_COMBO_SUB_PREPARAR
+				_core2_combo_preparar_paso_actual()
+
+
+func _core2_combo_terminar_rafaga() -> void:
+	if core2_secuencia_etapa != CORE2_ETAPA_COMBO_FSM:
+		return
+
+	indice_punetazo = 0
+	indice_patada = 0
+	velocity.x = 0.0
+	en_combo_auto_visual = false
+
+	core2_combo_subfase = CORE2_COMBO_SUB_PREPARAR
+	core2_combo_acercamiento_duracion = 0.0
+	core2_combo_acercamiento_tiempo = 0.0
+
+	_core2_iniciar_rematador_fsm()
+
+
+func _core2_iniciar_rematador_fsm() -> void:
+	if veces_fase_absoluta != 2 or not en_secuencia_especial:
+		return
+
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core2_finalizar_secuencia()
+		return
+
+	core2_secuencia_etapa = CORE2_ETAPA_REMATADOR_FSM
+	core2_rematador_subfase = CORE2_REM_SUB_POSTER
+	core2_rematador_duracion = CORE2_REM_POSTER_DURACION_LOGICA
+	core2_rematador_timer = core2_rematador_duracion
+
+	var distancia: float = absf(objetivo.global_position.x - global_position.x)
+	core2_rematador_puede_conectar = distancia <= maxf(rango_patada * 2.8, 360.0)
+	core2_rematador_bloqueado = objetivo.bloqueando
+	core2_rematador_direccion = signf(objetivo.global_position.x - global_position.x)
+	if core2_rematador_direccion == 0.0:
+		core2_rematador_direccion = mirando
+
+	# Mismo comienzo lógico del rematador histórico.
+	rematador_iniciado.emit()
+	_congelar_rival(true)
+	bloqueo_cinematico = true
+	velocity = Vector2.ZERO
+	_pose_final_especial(CORE2_REM_POSTER_VISIBLE + 0.25)
+
+	if core2_rematador_puede_conectar 	and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+		objetivo.preparar_impacto_cinematico(
+			1.35,
+			core2_rematador_direccion,
+			"rematador"
+		)
+
+	# El póster real queda como presentación pura: jamás gobierna daño/timers.
+	if not rollback_suprimir_presentacion_core2:
+		_mostrar_poder_reemplazando(
+			textura_rematador,
+			CORE2_REM_POSTER_VISIBLE,
+			390.0,
+			false,
+			2.4,
+			true
+		)
+
+
+func _actualizar_core2_rematador_fsm(delta: float) -> void:
+	if core2_secuencia_etapa != CORE2_ETAPA_REMATADOR_FSM:
+		return
+	if veces_fase_absoluta != 2 or not en_secuencia_especial:
+		return
+
+	match core2_rematador_subfase:
+		CORE2_REM_SUB_POSTER:
+			core2_rematador_timer = maxf(0.0, core2_rematador_timer - delta)
+			if core2_rematador_timer <= 0.0:
+				_core2_rematador_aplicar_impacto()
+
+		CORE2_REM_SUB_ESPERA_FINAL:
+			core2_rematador_timer = maxf(0.0, core2_rematador_timer - delta)
+			if core2_rematador_timer <= 0.0:
+				rematador_conectado.emit()
+				_core2_finalizar_secuencia()
+
+
+func _core2_rematador_aplicar_impacto() -> void:
+	if core2_secuencia_etapa != CORE2_ETAPA_REMATADOR_FSM:
+		return
+	if core2_rematador_subfase != CORE2_REM_SUB_POSTER:
+		return
+
+	core2_rematador_timer = 0.0
+
+	# Mismo borde que H9.9 diagnosticaba, pero ahora lo produce la FSM.
+	core2_rematador_poster_finalizado.emit()
+
+	# 91.02.21 — PASS 9.1. El receptor sigue capturado en este borde.
+	# El impacto/derribo entra primero y _core2_finalizar_secuencia() libera después.
+	var conecta := core2_rematador_puede_conectar 		and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado
+
+	if conecta:
+		var dano: float = dano_patada * MULT_DANO_GLOBAL * mult_dano_fase * 2.4
+		objetivo.recibir_dano(
+			dano,
+			520.0,
+			0.75,
+			core2_rematador_direccion,
+			"rematador"
+		)
+		objetivo.recibir_derribo_especial(
+			core2_rematador_direccion,
+			570.0 if core2_rematador_bloqueado else 1045.0,
+			310.0 if core2_rematador_bloqueado else 505.0,
+			0.45 if core2_rematador_bloqueado else 0.95,
+			true
+		)
+		_efecto_chispas(core2_rematador_bloqueado, objetivo.global_position)
+
+		core2_rematador_subfase = CORE2_REM_SUB_ESPERA_FINAL
+		core2_rematador_duracion = CORE2_REM_ESPERA_FINAL
+		core2_rematador_timer = CORE2_REM_ESPERA_FINAL
+		return
+
+	# Históricamente, si no conectaba no existía await 0.10.
+	rematador_conectado.emit()
+	_core2_finalizar_secuencia()
+
+
+func _core2_finalizar_secuencia() -> void:
+	_core2_liberar_encuadre_abierto_recarga()
+	_limpiar_core2_flash_entrada()
+	core2_flash_entrada_mostrado = false
+
+	_congelar_rival(false)
+	_desbloquear_cinematica()
+	en_secuencia_especial = false
+
+	core2_secuencia_etapa = CORE2_ETAPA_INACTIVO
+	core2_recarga_timer = 0.0
+	core2_recarga_duracion = 0.0
+	core2_acercamiento_duracion = 0.0
+	core2_acercamiento_tiempo = 0.0
+
+	core2_combo_paso_idx = 0
+	core2_combo_total_pasos = 0
+	core2_combo_subfase = CORE2_COMBO_SUB_PREPARAR
+	core2_combo_acercamiento_duracion = 0.0
+	core2_combo_acercamiento_tiempo = 0.0
+
+	core2_rematador_subfase = CORE2_REM_SUB_POSTER
+	core2_rematador_timer = 0.0
+	core2_rematador_duracion = 0.0
+	core2_rematador_puede_conectar = false
+	core2_rematador_bloqueado = false
+	core2_rematador_direccion = 1.0
+
+
 
 # El bucle de puños/patadas automáticos en sí (sin el remate al final).
 # Lo usan tanto el remate normal como el absoluto. Corre en Fase Absoluta
@@ -2635,9 +3785,3052 @@ func _acercar_para_combo_auto() -> void:
 func _congelar_rival(activo: bool) -> void:
 	if objetivo and is_instance_valid(objetivo):
 		objetivo.congelado_por_rival = activo
-		if not activo and not objetivo.esta_derrotado \
+
+		if activo:
+			# 91.02.21 — PASS 9.1. Al quedar capturado por un CORE se cancela
+			# únicamente una acción manual que ya hubiera arrancado antes del lock.
+			# No se toca hitstun, gravedad, knockback, derribo ni estado rollback.
+			objetivo._detener_carrera()
+			objetivo._detener_dash_aereo()
+			objetivo.velocity.x = 0.0
+			objetivo.fase_ataque = FaseAtaque.NINGUNA
+			objetivo.timer_fase_ataque = 0.0
+			objetivo._atk_ya_conecto = false
+			objetivo.ataque_buffer_tipo = ""
+			objetivo.ataque_buffer_timer = 0.0
+			return
+
+		# Al liberar VS Local absorbemos el estado ACTUAL de los botones
+		# enrutados. Así una tecla mantenida durante el CORE no nace como
+		# "just pressed" en el primer frame libre.
+		if objetivo.fuente_control == FuenteControl.EXTERNA:
+			var frame_liberacion: Dictionary = objetivo.input_frame_externo \
+				if objetivo.input_externo_disponible else objetivo.input_frame_enrutado_actual
+			objetivo.puno_estaba_presionado = bool(frame_liberacion.get("puno", false))
+			objetivo.patada_estaba_presionada = bool(frame_liberacion.get("patada", false))
+			objetivo.salto_estaba_presionado = bool(frame_liberacion.get("salto", false))
+			objetivo.gamepad_salto_previo = objetivo.salto_estaba_presionado
+			objetivo.z_estaba_presionado = bool(frame_liberacion.get("especial", false))
+			objetivo.tecla_izq_previa = bool(frame_liberacion.get("izquierda", false))
+			objetivo.tecla_der_previa = bool(frame_liberacion.get("derecha", false))
+			objetivo.doble_pulso_izq_timer = 0.0
+			objetivo.doble_pulso_der_timer = 0.0
+			objetivo.ataque_buffer_tipo = ""
+			objetivo.ataque_buffer_timer = 0.0
+
+		if not objetivo.esta_derrotado \
 			and not objetivo.derribo_especial_activo and objetivo.pose_timer <= 0.0:
 			objetivo._actualizar_textura(objetivo._tex_reposo())
+
+# 91.02.32 — PASS 9.4C / ENCUADRE ABIERTO CORE II.
+# Main recibe recarga_iniciada(false) y su presentación histórica intenta un
+# punch-in 1.18. Inmediatamente después de emitir la señal, CORE II cancela
+# ÚNICAMENTE ese tween visual y sostiene un encuadre abierto durante la recarga.
+# No se usa en CORE III.
+func _core2_controlador_camara() -> Node:
+	var candidato: Node = get_parent()
+	if candidato and candidato.has_method("_zoom_dramatico"):
+		return candidato
+	var escena := get_tree().current_scene
+	if escena and escena.has_method("_zoom_dramatico"):
+		return escena
+	return null
+
+
+func _core2_cancelar_tween_camara_recarga() -> void:
+	var controlador := _core2_controlador_camara()
+	if not controlador:
+		return
+	var tw_variant = controlador.get("tween_camara_cinematica")
+	if tw_variant is Tween and is_instance_valid(tw_variant):
+		(tw_variant as Tween).kill()
+	controlador.set("tween_camara_cinematica", null)
+
+
+func _core2_calcular_encuadre_abierto() -> Dictionary:
+	var cam := get_viewport().get_camera_2d()
+	if not cam:
+		return {}
+
+	var viewport_size := get_viewport_rect().size
+	if viewport_size.y <= 1.0:
+		viewport_size = Vector2(1280.0, 720.0)
+
+	# Replicamos la altura visual que usa la gigantografía dedicada.
+	var mult_altura: float = float(PODER_CINEMA_ALTURA_MULT.get(nombre_luchador, 1.0))
+	var alto_poster: float = CORE2_FLASH_ALTO * mult_altura
+	var elevacion: float = CORE2_CAM_ELEVACION_POSTER
+	if nombre_luchador == "Jester":
+		elevacion += 12.0
+	elif nombre_luchador == "Varkhos":
+		elevacion += 20.0
+	elif nombre_luchador == "Magnus":
+		elevacion += 10.0
+
+	# El límite superior representa la cabeza/efecto superior del póster.
+	var y_superior: float = global_position.y - elevacion - alto_poster - CORE2_CAM_MARGEN_VERTICAL
+	var y_inferior: float = global_position.y + CORE2_CAM_MARGEN_CUERPO_INFERIOR
+	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+		y_inferior = maxf(
+			y_inferior,
+			objetivo.global_position.y + CORE2_CAM_MARGEN_CUERPO_INFERIOR
+		)
+
+	var alto_necesario: float = maxf(1.0, y_inferior - y_superior + CORE2_CAM_MARGEN_VERTICAL)
+	var zoom_fit: float = viewport_size.y / alto_necesario
+	var zoom_objetivo: float = clampf(zoom_fit, CORE2_CAM_ZOOM_MIN, CORE2_CAM_ZOOM_MAX)
+
+	# Horizontalmente priorizamos el par de luchadores y sesgamos muy levemente
+	# hacia la espalda del atacante, donde vive la gigantografía de entrada.
+	var centro_x: float = global_position.x
+	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+		centro_x = (global_position.x + objetivo.global_position.x) * 0.5
+	var sesgo_poster_x: float = -mirando * CORE2_CAM_SEPARACION_POSTER_X * 0.32
+	centro_x += sesgo_poster_x
+
+	var centro_y: float = (y_superior + y_inferior) * 0.5
+	return {
+		"camara": cam,
+		"centro": Vector2(centro_x, centro_y),
+		"zoom": zoom_objetivo,
+	}
+
+
+func _core2_aplicar_encuadre_abierto_recarga() -> void:
+	if rollback_suprimir_presentacion_core2:
+		return
+	var datos := _core2_calcular_encuadre_abierto()
+	if datos.is_empty():
+		return
+
+	var controlador := _core2_controlador_camara()
+	if controlador:
+		# Evita que la cámara dinámica o el viejo tween de recarga peleen contra
+		# este encuadre durante los 1.05 s. Es una bandera visual de Main.
+		controlador.set("camara_cinematica_activa", true)
+
+	var cam: Camera2D = datos.get("camara", null)
+	if not cam:
+		return
+	var centro: Vector2 = datos.get("centro", cam.global_position)
+	var zoom_objetivo: float = float(datos.get("zoom", 1.0))
+
+	cam.global_position = centro
+	cam.zoom = Vector2(zoom_objetivo, zoom_objetivo)
+	core2_encuadre_abierto_activo = true
+
+
+func _core2_liberar_encuadre_abierto_recarga() -> void:
+	if not core2_encuadre_abierto_activo:
+		return
+	core2_encuadre_abierto_activo = false
+
+	var controlador := _core2_controlador_camara()
+	if controlador:
+		# La cámara normal recupera el control de forma natural desde el zoom
+		# abierto actual; no forzamos ningún salto de zoom al salir.
+		controlador.set("camara_cinematica_activa", false)
+
+
+# 91.02.30 — PASS 9.4A / FLASH DE ENTRADA CORE II.
+# Usa la gigantografía del rematador como "presagio" visual: menor escala,
+# semitransparente y detrás del luchador. El remate final sigue usando su póster
+# grande original. Esta función no contiene await ni modifica ningún estado lógico.
+func _limpiar_core2_flash_entrada() -> void:
+	if core2_flash_entrada_tween and is_instance_valid(core2_flash_entrada_tween):
+		core2_flash_entrada_tween.kill()
+	core2_flash_entrada_tween = null
+
+	if core2_flash_entrada_layer and is_instance_valid(core2_flash_entrada_layer):
+		core2_flash_entrada_layer.queue_free()
+	if core2_flash_entrada_sprite and is_instance_valid(core2_flash_entrada_sprite):
+		core2_flash_entrada_sprite.queue_free()
+
+	core2_flash_entrada_sprite = null
+	core2_flash_entrada_layer = null
+
+
+func _actualizar_core2_flash_entrada_worldsafe() -> void:
+	if not core2_flash_entrada_sprite or not is_instance_valid(core2_flash_entrada_sprite):
+		return
+
+	var tex_flash: Texture2D = core2_flash_entrada_sprite.texture
+	if not tex_flash:
+		return
+
+	var rect_visible: Rect2 = _obtener_rect_visual(tex_flash)
+	if rect_visible.size.x <= 1.0 or rect_visible.size.y <= 1.0:
+		rect_visible = Rect2(
+			0.0,
+			0.0,
+			float(tex_flash.get_width()),
+			float(tex_flash.get_height())
+		)
+
+	var viewport_size := get_viewport_rect().size
+	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
+		viewport_size = Vector2(1280.0, 720.0)
+
+	# Conserva la presencia grande de 9.4B/9.4D, pero con FIT real al safe-area.
+	var mult_altura: float = float(PODER_CINEMA_ALTURA_MULT.get(nombre_luchador, 1.0))
+	var escala_por_altura: float = (CORE2_FLASH_ALTO * mult_altura) / maxf(rect_visible.size.y, 1.0)
+	var ancho_maximo: float = viewport_size.x * CORE2_FLASH_SAFE_ANCHO_MAX_FRAC
+	var alto_maximo: float = viewport_size.y * CORE2_FLASH_SAFE_ALTO_MAX_FRAC
+	var escala_fit_x: float = ancho_maximo / maxf(rect_visible.size.x, 1.0)
+	var escala_fit_y: float = alto_maximo / maxf(rect_visible.size.y, 1.0)
+	var esc_pantalla: float = minf(escala_por_altura, minf(escala_fit_x, escala_fit_y))
+
+	var centro_visible_tex := Vector2(
+		rect_visible.position.x + rect_visible.size.x * 0.5,
+		rect_visible.position.y + rect_visible.size.y * 0.5
+	)
+	var centro_textura := Vector2(
+		float(tex_flash.get_width()) * 0.5,
+		float(tex_flash.get_height()) * 0.5
+	)
+	var offset_centro_visible_px: Vector2 = (centro_visible_tex - centro_textura) * esc_pantalla
+	if core2_flash_entrada_sprite.flip_h:
+		offset_centro_visible_px.x *= -1.0
+
+	var centro_x_deseado: float = viewport_size.x * (
+		CORE2_FLASH_CENTRO_LADO_IZQ_FRAC if mirando >= 0.0
+		else CORE2_FLASH_CENTRO_LADO_DER_FRAC
+	)
+	var centro_y_deseado: float = viewport_size.y * CORE2_FLASH_CENTRO_Y_FRAC
+
+	var medio_ancho_visible: float = rect_visible.size.x * esc_pantalla * 0.5
+	var medio_alto_visible: float = rect_visible.size.y * esc_pantalla * 0.5
+	var margen_x: float = viewport_size.x * CORE2_FLASH_SAFE_MARGEN_X_FRAC
+	var safe_top: float = viewport_size.y * CORE2_FLASH_SAFE_TOP_FRAC
+	var safe_bottom: float = viewport_size.y * (1.0 - CORE2_FLASH_SAFE_BOTTOM_FRAC)
+
+	var centro_x_seguro: float = clampf(
+		centro_x_deseado,
+		margen_x + medio_ancho_visible,
+		viewport_size.x - margen_x - medio_ancho_visible
+	)
+	var centro_y_seguro: float = clampf(
+		centro_y_deseado,
+		safe_top + medio_alto_visible,
+		safe_bottom - medio_alto_visible
+	)
+
+	var cam := get_viewport().get_camera_2d()
+	if not cam:
+		# Fallback robusto si la cámara aún no existe.
+		core2_flash_entrada_sprite.position = Vector2(centro_x_seguro, centro_y_seguro) - offset_centro_visible_px
+		core2_flash_entrada_sprite.scale = Vector2(esc_pantalla, esc_pantalla)
+		return
+
+	# 91.02.34 — convertir la composición screen-safe a coordenadas del mundo.
+	# Como el sprite vive detrás de los luchadores, el personaje real queda
+	# siempre por delante aun en doble salto o esquina.
+	var zoom := cam.zoom
+	var zoom_x := maxf(zoom.x, 0.0001)
+	var zoom_y := maxf(zoom.y, 0.0001)
+	var top_left_world := cam.get_screen_center_position() - Vector2(viewport_size.x * 0.5 / zoom_x, viewport_size.y * 0.5 / zoom_y)
+	var centro_world := top_left_world + Vector2(centro_x_seguro / zoom_x, centro_y_seguro / zoom_y)
+	var offset_world := Vector2(offset_centro_visible_px.x / zoom_x, offset_centro_visible_px.y / zoom_y)
+	var esc_world := Vector2(esc_pantalla / zoom_x, esc_pantalla / zoom_y)
+
+	core2_flash_entrada_sprite.position = centro_world - offset_world
+	core2_flash_entrada_sprite.scale = esc_world
+
+
+func _mostrar_core2_flash_entrada() -> void:
+	if not CORE2_FLASH_ENTRADA_ACTIVA:
+		core2_flash_entrada_mostrado = true
+		return
+	if core2_flash_entrada_mostrado:
+		return
+
+	# Marcamos el beat aunque el catch-up suprima presentación; así jamás se
+	# reproduce tarde o duplicado al volver de una re-simulación.
+	core2_flash_entrada_mostrado = true
+	if rollback_suprimir_presentacion_core2:
+		return
+	if not sprite:
+		return
+
+	var tex_flash: Texture2D = textura_core2_entrada
+	if not tex_flash:
+		tex_flash = textura_rematador if textura_rematador else textura_especial
+	if not tex_flash:
+		return
+
+	_limpiar_core2_flash_entrada()
+
+	# 91.02.34 — SCREEN-SAFE + DETRÁS DEL LUCHADOR.
+	# El arte vuelve al mundo 2D, pero su composición sigue derivándose de la
+	# cámara. Ya no queda por delante del personaje ni tapa la recarga.
+	var img := Sprite2D.new()
+	img.texture = tex_flash
+	img.centered = true
+	img.flip_h = mirando < 0.0
+	img.top_level = true
+	img.z_as_relative = false
+	img.z_index = CORE2_FLASH_WORLD_Z
+	img.show_behind_parent = false
+
+	var escena_actual := get_tree().current_scene
+	if not escena_actual:
+		return
+	escena_actual.add_child(img)
+	core2_flash_entrada_sprite = img
+	core2_flash_entrada_layer = null
+
+	_actualizar_core2_flash_entrada_worldsafe()
+
+	var alpha_objetivo: float = minf(
+		0.92,
+		0.90 * float(PODER_CINEMA_ALPHA_MULT.get(nombre_luchador, 1.0))
+	)
+	img.modulate = Color(1.0, 1.0, 1.0, 0.0)
+
+	core2_flash_entrada_tween = create_tween()
+	core2_flash_entrada_tween.tween_property(
+		img,
+		"modulate",
+		Color(1.0, 1.0, 1.0, alpha_objetivo),
+		CORE2_FLASH_FADE_IN
+	)
+	core2_flash_entrada_tween.tween_interval(CORE2_FLASH_HOLD)
+	core2_flash_entrada_tween.tween_property(
+		img,
+		"modulate",
+		Color(1.0, 1.0, 1.0, 0.0),
+		CORE2_FLASH_FADE_OUT
+	)
+	core2_flash_entrada_tween.tween_callback(Callable(img, "queue_free"))
+
+func _core2_iniciar_recarga_logica() -> void:
+	_limpiar_core2_flash_entrada()
+	core2_flash_entrada_mostrado = false
+
+	core2_secuencia_etapa = CORE2_ETAPA_RECARGA
+	core2_recarga_duracion = CORE2_RECARGA_DURACION
+	# El updater corre también en el tick de activación; compensamos un delta
+	# para que la duración efectiva siga siendo 1.05 s.
+	core2_recarga_timer = core2_recarga_duracion + maxf(_delta_actual, 0.0)
+
+	en_pose_recarga = true
+	velocity = Vector2.ZERO
+	pose_timer = CORE2_RECARGA_DURACION + 0.08
+
+	if textura_recarga and sprite:
+		_actualizar_textura(textura_recarga)
+		sprite.rotation = 0.0
+		sprite.position.x = _sprite_ancla_x()
+		recarga_iniciada.emit(false)
+
+		# 91.02.32 — la señal anterior dispara sonido/oscurecimiento histórico
+		# en Main y también su antiguo zoom 1.18. Conservamos audio/escenario,
+		# cancelamos sólo ese tween de cámara y abrimos el encuadre CORE II.
+		_core2_cancelar_tween_camara_recarga()
+		_core2_aplicar_encuadre_abierto_recarga()
+
+		# Misma pulsación visual histórica. No gobierna lógica.
+		if core2_recarga_brillo and is_instance_valid(core2_recarga_brillo):
+			core2_recarga_brillo.kill()
+		core2_recarga_brillo = create_tween()
+		core2_recarga_brillo.set_loops(4)
+		core2_recarga_brillo.tween_property(sprite, "modulate", Color(1.48, 1.48, 1.48, 1.0), 0.14)
+		core2_recarga_brillo.tween_property(sprite, "modulate", Color(1.08, 1.08, 1.08, 1.0), 0.14)
+
+
+func _core2_finalizar_recarga_logica() -> void:
+	_core2_liberar_encuadre_abierto_recarga()
+	en_pose_recarga = false
+	core2_recarga_timer = 0.0
+
+	if core2_recarga_brillo and is_instance_valid(core2_recarga_brillo):
+		core2_recarga_brillo.kill()
+	core2_recarga_brillo = null
+	if sprite:
+		sprite.modulate = Color.WHITE
+
+	_core2_iniciar_acercamiento_inicial()
+
+
+func _core2_iniciar_acercamiento_inicial() -> void:
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core2_iniciar_combo_fsm()
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_combo_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_combo_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		core2_acercamiento_origen = global_position
+		core2_acercamiento_destino = global_position
+		core2_acercamiento_duracion = 0.0
+		core2_acercamiento_tiempo = 0.0
+		_core2_iniciar_combo_fsm()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_combo_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core2_secuencia_etapa = CORE2_ETAPA_ACERCAMIENTO
+	core2_acercamiento_origen = global_position
+	core2_acercamiento_destino = destino
+	core2_acercamiento_duracion = duracion
+	core2_acercamiento_tiempo = 0.0
+	velocity = Vector2.ZERO
+
+
+func _actualizar_core2_fsm(delta: float) -> void:
+	if core2_secuencia_etapa == CORE2_ETAPA_INACTIVO:
+		return
+
+	if veces_fase_absoluta != 2 or not en_secuencia_especial:
+		_core2_liberar_encuadre_abierto_recarga()
+		core2_secuencia_etapa = CORE2_ETAPA_INACTIVO
+		core2_recarga_timer = 0.0
+		core2_recarga_duracion = 0.0
+		core2_acercamiento_duracion = 0.0
+		core2_acercamiento_tiempo = 0.0
+		core2_combo_paso_idx = 0
+		core2_combo_total_pasos = 0
+		core2_combo_subfase = CORE2_COMBO_SUB_PREPARAR
+		core2_combo_acercamiento_duracion = 0.0
+		core2_combo_acercamiento_tiempo = 0.0
+		core2_rematador_subfase = CORE2_REM_SUB_POSTER
+		core2_rematador_timer = 0.0
+		core2_rematador_duracion = 0.0
+		core2_rematador_puede_conectar = false
+		core2_rematador_bloqueado = false
+		core2_rematador_direccion = 1.0
+		return
+
+	match core2_secuencia_etapa:
+		CORE2_ETAPA_RECARGA:
+			core2_recarga_timer = maxf(0.0, core2_recarga_timer - delta)
+
+			# 91.02.32 — mantener el encuadre completo durante toda la recarga,
+			# especialmente cuando CORE II nace desde salto/doble salto.
+			_core2_aplicar_encuadre_abierto_recarga()
+			# 91.02.34 — si la cámara ajusta levemente durante la recarga,
+			# recomponemos el arte screen-safe en el mundo detrás del luchador.
+			_actualizar_core2_flash_entrada_worldsafe()
+
+			# 91.02.30 / 91.02.35 — la llamada queda neutralizada cuando la entrada
+			# exclusiva de CORE II esta desactivada, dejando la recarga limpia.
+			# No altera core2_recarga_timer ni el instante de entrada al combo.
+			if not core2_flash_entrada_mostrado 			and core2_recarga_timer <= CORE2_FLASH_ENTRADA_UMBRAL 			and core2_recarga_timer > 0.0:
+				_mostrar_core2_flash_entrada()
+
+			if core2_recarga_timer <= 0.0:
+				_core2_finalizar_recarga_logica()
+
+		CORE2_ETAPA_ACERCAMIENTO:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				velocity = Vector2.ZERO
+				_core2_iniciar_combo_fsm()
+				return
+
+			var duracion := maxf(core2_acercamiento_duracion, 0.000001)
+			core2_acercamiento_tiempo = minf(core2_acercamiento_tiempo + delta, duracion)
+			var t := clampf(core2_acercamiento_tiempo / duracion, 0.0, 1.0)
+
+			# Tween.TRANS_QUAD + EASE_OUT.
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core2_acercamiento_origen.lerp(core2_acercamiento_destino, eased)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core2_acercamiento_destino
+				velocity = Vector2.ZERO
+				_core2_iniciar_combo_fsm()
+
+
+		CORE2_ETAPA_COMBO_FSM:
+			_actualizar_core2_combo_fsm(delta)
+
+		CORE2_ETAPA_REMATADOR_FSM:
+			velocity = Vector2.ZERO
+			_actualizar_core2_rematador_fsm(delta)
+
+
+
+# H10.10 — CORE III determinista: sólo la recarga lenta y el primer Target Lock.
+# La ráfaga/finalización posterior sigue siendo la implementación histórica y será
+# certificada en fronteras siguientes.
+func _core3_iniciar_recarga_logica() -> void:
+	core3_secuencia_etapa = CORE3_ETAPA_RECARGA
+	core3_recarga_duracion = CORE3_RECARGA_DURACION
+	# _actualizar_core3_fsm corre también en el tick de activación. Sumamos ese
+	# primer paso para que la duración efectiva siga siendo exactamente 1.55 s.
+	core3_recarga_timer = core3_recarga_duracion + maxf(_delta_actual, 0.0)
+	core3_recarga_primer_tick = true
+
+	en_pose_recarga = true
+	velocity = Vector2.ZERO
+	pose_timer = CORE3_RECARGA_DURACION + 0.08
+
+	if textura_recarga and sprite:
+		_actualizar_textura(textura_recarga)
+		sprite.rotation = 0.0
+		sprite.position.x = _sprite_ancla_x()
+		recarga_iniciada.emit(true)
+
+		# Pulsación visual histórica. Si un rollback de ENTRY vuelve a pasar por
+		# aquí, matar la instancia previa evita Tweens visuales duplicados.
+		if core3_recarga_brillo and is_instance_valid(core3_recarga_brillo):
+			core3_recarga_brillo.kill()
+		core3_recarga_brillo = create_tween()
+		core3_recarga_brillo.set_loops(5)
+		core3_recarga_brillo.tween_property(sprite, "modulate", Color(1.48, 1.48, 1.48, 1.0), 0.14)
+		core3_recarga_brillo.tween_property(sprite, "modulate", Color(1.08, 1.08, 1.08, 1.0), 0.14)
+
+
+func _core3_finalizar_recarga_logica() -> void:
+	core3_recarga_timer = 0.0
+	core3_recarga_primer_tick = false
+	en_pose_recarga = false
+
+	if core3_recarga_brillo and is_instance_valid(core3_recarga_brillo):
+		core3_recarga_brillo.kill()
+	core3_recarga_brillo = null
+	if sprite:
+		sprite.modulate = Color.WHITE
+
+	# H10.10: el fin lógico de CORE III es ahora la única autoridad que devuelve
+	# la simulación a velocidad normal. Main conserva sólo presentación/cámara.
+	if not get_tree().paused:
+		Engine.time_scale = 1.0
+
+	_entrar_furia()
+	_core3_iniciar_acercamiento_inicial()
+
+
+func _core3_iniciar_acercamiento_inicial() -> void:
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_iniciar_primer_beat_fsm()
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_combo_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_combo_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		core3_acercamiento_origen = global_position
+		core3_acercamiento_destino = global_position
+		core3_acercamiento_duracion = 0.0
+		core3_acercamiento_tiempo = 0.0
+		_core3_iniciar_primer_beat_fsm()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_combo_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_secuencia_etapa = CORE3_ETAPA_ACERCAMIENTO
+	core3_acercamiento_origen = global_position
+	core3_acercamiento_destino = destino
+	core3_acercamiento_duracion = duracion
+	core3_acercamiento_tiempo = 0.0
+	velocity = Vector2.ZERO
+
+
+func _actualizar_core3_fsm(delta: float) -> void:
+	if core3_secuencia_etapa == CORE3_ETAPA_INACTIVO:
+		return
+
+	if veces_fase_absoluta < 3 or not en_secuencia_especial:
+		core3_secuencia_etapa = CORE3_ETAPA_INACTIVO
+		core3_recarga_timer = 0.0
+		core3_recarga_duracion = 0.0
+		core3_recarga_primer_tick = false
+		core3_acercamiento_duracion = 0.0
+		core3_acercamiento_tiempo = 0.0
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+		core3_primer_beat_acercamiento_origen = Vector2.ZERO
+		core3_primer_beat_acercamiento_destino = Vector2.ZERO
+		core3_primer_beat_acercamiento_duracion = 0.0
+		core3_primer_beat_acercamiento_tiempo = 0.0
+		return
+
+	match core3_secuencia_etapa:
+		CORE3_ETAPA_RECARGA:
+			var paso_no_escalado: float
+			if core3_recarga_primer_tick:
+				# El frame de activación nació a time_scale=1.0 aunque la señal lo
+				# cambie a 0.32 dentro del mismo callback. No dividir este delta.
+				paso_no_escalado = delta
+				core3_recarga_primer_tick = false
+			else:
+				var escala := maxf(Engine.time_scale, 0.000001)
+				paso_no_escalado = delta / escala
+			core3_recarga_timer = maxf(0.0, core3_recarga_timer - paso_no_escalado)
+			if core3_recarga_timer <= 0.0:
+				_core3_finalizar_recarga_logica()
+
+		CORE3_ETAPA_ACERCAMIENTO:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				velocity = Vector2.ZERO
+				_core3_iniciar_primer_beat_fsm()
+				return
+
+			var duracion := maxf(core3_acercamiento_duracion, 0.000001)
+			core3_acercamiento_tiempo = minf(core3_acercamiento_tiempo + delta, duracion)
+			var t := clampf(core3_acercamiento_tiempo / duracion, 0.0, 1.0)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_acercamiento_origen.lerp(core3_acercamiento_destino, eased)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_acercamiento_destino
+				velocity = Vector2.ZERO
+				_core3_iniciar_primer_beat_fsm()
+
+		CORE3_ETAPA_PRIMER_BEAT_FSM:
+			_actualizar_core3_primer_beat_fsm(delta)
+
+		CORE3_ETAPA_SEGUNDO_BEAT_FSM:
+			_actualizar_core3_segundo_beat_fsm(delta)
+
+		CORE3_ETAPA_TERCER_BEAT_FSM:
+			_actualizar_core3_tercer_beat_fsm(delta)
+
+		CORE3_ETAPA_CUARTO_BEAT_FSM:
+			_actualizar_core3_cuarto_beat_fsm(delta)
+
+		CORE3_ETAPA_QUINTO_BEAT_FSM:
+			_actualizar_core3_quinto_beat_fsm(delta)
+
+		CORE3_ETAPA_SEXTO_BEAT_FSM:
+			_actualizar_core3_sexto_beat_fsm(delta)
+
+		CORE3_ETAPA_SEPTIMO_BEAT_FSM:
+			_actualizar_core3_septimo_beat_fsm(delta)
+
+		CORE3_ETAPA_OCTAVO_BEAT_FSM:
+			_actualizar_core3_octavo_beat_fsm(delta)
+
+		CORE3_ETAPA_NOVENO_BEAT_FSM:
+			_actualizar_core3_noveno_beat_fsm(delta)
+
+		CORE3_ETAPA_DECIMO_BEAT_FSM:
+			_actualizar_core3_decimo_beat_fsm(delta)
+
+		CORE3_ETAPA_UNDECIMO_BEAT_FSM:
+			_actualizar_core3_undecimo_beat_fsm(delta)
+
+		CORE3_ETAPA_DUODECIMO_BEAT_FSM:
+			_actualizar_core3_duodecimo_beat_fsm(delta)
+
+		CORE3_ETAPA_DECIMOTERCER_BEAT_FSM:
+			_actualizar_core3_decimotercer_beat_fsm(delta)
+
+		CORE3_ETAPA_DECIMOCUARTO_BEAT_FSM:
+			_actualizar_core3_decimocuarto_beat_fsm(delta)
+
+		CORE3_ETAPA_DECIMOQUINTO_BEAT_FSM:
+			_actualizar_core3_decimoquinto_beat_fsm(delta)
+
+		CORE3_ETAPA_DECIMOSEXTO_BEAT_FSM:
+			_actualizar_core3_decimosexto_beat_fsm(delta)
+
+		CORE3_ETAPA_DECIMOSEPTIMO_BEAT_FSM:
+			_actualizar_core3_decimoseptimo_beat_fsm(delta)
+
+		CORE3_ETAPA_DECIMOCTAVO_BEAT_FSM:
+			_actualizar_core3_decimoctavo_beat_fsm(delta)
+
+
+func _core3_iniciar_primer_beat_fsm() -> void:
+	# H10.13 — la frontera stage 2->3 ya no crea un Tween/coroutine de futuro.
+	# Sólo reproducimos el primer beat de la misma coreografía histórica.
+	core3_secuencia_etapa = CORE3_ETAPA_PRIMER_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+
+	en_combo_auto_visual = true
+	if objetivo and is_instance_valid(objetivo):
+		objetivo.empuje_timer = 0.0
+		objetivo.empuje_x = 0.0
+		objetivo.empuje_pendiente_timer = 0.0
+		objetivo.empuje_pendiente_fuerza = 0.0
+		objetivo.velocity.x = 0.0
+
+	indice_punetazo = 0
+	indice_patada = 0
+	_core3_primer_beat_preparar()
+
+
+func _core3_primer_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_PRIMER_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_primer_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_primer_beat_terminar_y_continuar()
+		return
+
+	# El primer paso de _racha_combo_auto() siempre es coreografia[0].
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_primer_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_primer_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.is_empty():
+		_core3_primer_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_primer_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[0])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_primer_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_PRIMER_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_primer_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_primer_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_primer_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			# La coroutine histórica no inicia el segundo paso hasta que el primer
+			# ataque termina lógicamente. Al llegar aquí entregamos el resto.
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_primer_beat_terminar_y_continuar()
+
+
+func _core3_primer_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_PRIMER_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_segundo_beat_fsm()
+
+
+func _core3_iniciar_segundo_beat_fsm() -> void:
+	# H10.15 — stage 3->4 ya no entrega a una coroutine. El segundo beat usa
+	# exactamente los mismos campos físicos/snapshotables del beat anterior.
+	core3_secuencia_etapa = CORE3_ETAPA_SEGUNDO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_segundo_beat_preparar()
+
+
+func _core3_segundo_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEGUNDO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_segundo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_segundo_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 1:
+		_core3_segundo_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_segundo_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_segundo_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 1:
+		_core3_segundo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_segundo_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[1])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_segundo_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEGUNDO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_segundo_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_segundo_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_segundo_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_segundo_beat_terminar_y_continuar()
+
+
+func _core3_segundo_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEGUNDO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_tercer_beat_fsm()
+
+
+func _core3_iniciar_tercer_beat_fsm() -> void:
+	# H10.17 — stage 4->5 tampoco entrega a una coroutine. El tercer beat
+	# reutiliza los mismos campos físicos/snapshotables de los beats 1 y 2.
+	core3_secuencia_etapa = CORE3_ETAPA_TERCER_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_tercer_beat_preparar()
+
+
+func _core3_tercer_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_TERCER_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_tercer_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_tercer_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 2:
+		_core3_tercer_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_tercer_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_tercer_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 2:
+		_core3_tercer_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_tercer_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[2])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_tercer_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_TERCER_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_tercer_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_tercer_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_tercer_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_tercer_beat_terminar_y_continuar()
+
+
+func _core3_tercer_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_TERCER_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_cuarto_beat_fsm()
+
+
+func _core3_iniciar_cuarto_beat_fsm() -> void:
+	# H10.20 — stage 5->6 tampoco entrega a la coroutine histórica. El cuarto
+	# beat reutiliza los campos físicos/snapshotables de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_CUARTO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_cuarto_beat_preparar()
+
+
+func _core3_cuarto_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_CUARTO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_cuarto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_cuarto_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 3:
+		_core3_cuarto_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_cuarto_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_cuarto_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 3:
+		_core3_cuarto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_cuarto_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[3])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_cuarto_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_CUARTO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_cuarto_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_cuarto_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_cuarto_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_cuarto_beat_terminar_y_continuar()
+
+
+func _core3_cuarto_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_CUARTO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_quinto_beat_fsm()
+
+
+func _core3_iniciar_quinto_beat_fsm() -> void:
+	# H10.22 — stage 6->7 ya no entrega al quinto beat histórico. El quinto
+	# beat reutiliza la misma FSM física/snapshotable de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_QUINTO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_quinto_beat_preparar()
+
+
+func _core3_quinto_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_QUINTO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_quinto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_quinto_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 4:
+		_core3_quinto_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_quinto_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_quinto_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 4:
+		_core3_quinto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_quinto_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[4])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_quinto_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_QUINTO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_quinto_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_quinto_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_quinto_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_quinto_beat_terminar_y_continuar()
+
+
+func _core3_quinto_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_QUINTO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_sexto_beat_fsm()
+
+
+func _core3_iniciar_sexto_beat_fsm() -> void:
+	# H10.24 — stage 7->8 ya no entrega al sexto beat histórico. El sexto
+	# beat reutiliza la misma FSM física/snapshotable de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_SEXTO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_sexto_beat_preparar()
+
+
+func _core3_sexto_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEXTO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_sexto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_sexto_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 5:
+		_core3_sexto_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_sexto_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_sexto_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 5:
+		_core3_sexto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_sexto_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[5])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_sexto_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEXTO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_sexto_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_sexto_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_sexto_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_sexto_beat_terminar_y_continuar()
+
+
+func _core3_sexto_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEXTO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_septimo_beat_fsm()
+
+
+func _core3_iniciar_septimo_beat_fsm() -> void:
+	# H10.26 — stage 8->9 ya no entrega al séptimo beat histórico. El séptimo
+	# beat reutiliza la misma FSM física/snapshotable de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_SEPTIMO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_septimo_beat_preparar()
+
+
+func _core3_septimo_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEPTIMO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_septimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_septimo_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 6:
+		_core3_septimo_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_septimo_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_septimo_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 6:
+		_core3_septimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_septimo_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[6])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_septimo_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEPTIMO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_septimo_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_septimo_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_septimo_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_septimo_beat_terminar_y_continuar()
+
+
+func _core3_septimo_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_SEPTIMO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_octavo_beat_fsm()
+
+
+func _core3_iniciar_octavo_beat_fsm() -> void:
+	# H10.30 — stage 9->10 ya no entrega al octavo beat histórico. El octavo
+	# beat reutiliza la misma FSM física/snapshotable de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_OCTAVO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_octavo_beat_preparar()
+
+
+func _core3_octavo_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_OCTAVO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_octavo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_octavo_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 7:
+		_core3_octavo_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_octavo_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_octavo_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 7:
+		_core3_octavo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_octavo_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[7])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_octavo_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_OCTAVO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_octavo_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_octavo_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_octavo_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_octavo_beat_terminar_y_continuar()
+
+
+func _core3_octavo_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_OCTAVO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_noveno_beat_fsm()
+
+
+func _core3_iniciar_noveno_beat_fsm() -> void:
+	# H10.32 — stage 10->11 ya no entrega al noveno beat histórico. El noveno
+	# beat reutiliza la misma FSM física/snapshotable de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_NOVENO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_noveno_beat_preparar()
+
+
+func _core3_noveno_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_NOVENO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_noveno_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_noveno_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 8:
+		_core3_noveno_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_noveno_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_noveno_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 8:
+		_core3_noveno_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_noveno_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[8])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_noveno_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_NOVENO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_noveno_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_noveno_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_noveno_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_noveno_beat_terminar_y_continuar()
+
+
+func _core3_noveno_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_NOVENO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_decimo_beat_fsm()
+
+
+func _core3_iniciar_decimo_beat_fsm() -> void:
+	# H10.34 — stage 11->12 ya no entrega al décimo beat histórico. El décimo
+	# beat reutiliza la misma FSM física/snapshotable de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_DECIMO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_decimo_beat_preparar()
+
+
+func _core3_decimo_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_decimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimo_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 9:
+		_core3_decimo_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_decimo_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_decimo_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 9:
+		_core3_decimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimo_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[9])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_decimo_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_decimo_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_decimo_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_decimo_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_decimo_beat_terminar_y_continuar()
+
+
+func _core3_decimo_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_undecimo_beat_fsm()
+
+
+func _core3_iniciar_undecimo_beat_fsm() -> void:
+	# H10.36 — stage 12->13 ya no entrega al undécimo beat histórico. El beat 11
+	# reutiliza la misma FSM física/snapshotable de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_UNDECIMO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_undecimo_beat_preparar()
+
+
+func _core3_undecimo_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_UNDECIMO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_undecimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_undecimo_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 10:
+		_core3_undecimo_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_undecimo_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_undecimo_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 10:
+		_core3_undecimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_undecimo_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[10])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_undecimo_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_UNDECIMO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_undecimo_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_undecimo_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_undecimo_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_undecimo_beat_terminar_y_continuar()
+
+
+func _core3_undecimo_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_UNDECIMO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_duodecimo_beat_fsm()
+
+
+func _core3_iniciar_duodecimo_beat_fsm() -> void:
+	# H10.38 — stage 13->14 ya no entrega al duodécimo beat histórico. El beat 12
+	# reutiliza la misma FSM física/snapshotable de los beats anteriores.
+	core3_secuencia_etapa = CORE3_ETAPA_DUODECIMO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_duodecimo_beat_preparar()
+
+
+func _core3_duodecimo_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DUODECIMO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_duodecimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_duodecimo_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 11:
+		_core3_duodecimo_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_duodecimo_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_duodecimo_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 11:
+		_core3_duodecimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_duodecimo_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[11])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_duodecimo_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DUODECIMO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_duodecimo_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_duodecimo_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_duodecimo_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_duodecimo_beat_terminar_y_continuar()
+
+
+func _core3_duodecimo_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DUODECIMO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_decimotercer_beat_fsm()
+
+
+func _core3_iniciar_decimotercer_beat_fsm() -> void:
+	# H10.40 — stage 14->15 ya no entrega al decimotercer beat histórico.
+	# El beat 13 reutiliza la misma FSM física/snapshotable.
+	core3_secuencia_etapa = CORE3_ETAPA_DECIMOTERCER_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_decimotercer_beat_preparar()
+
+
+func _core3_decimotercer_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOTERCER_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_decimotercer_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimotercer_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 12:
+		_core3_decimotercer_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_decimotercer_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_decimotercer_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 12:
+		_core3_decimotercer_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimotercer_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[12])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_decimotercer_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOTERCER_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_decimotercer_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_decimotercer_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_decimotercer_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_decimotercer_beat_terminar_y_continuar()
+
+
+func _core3_decimotercer_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOTERCER_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_decimocuarto_beat_fsm()
+
+
+func _core3_iniciar_decimocuarto_beat_fsm() -> void:
+	# H10.42 — stage 15->16 ya no entrega al decimocuarto beat histórico.
+	# El beat 14 reutiliza la misma FSM física/snapshotable.
+	core3_secuencia_etapa = CORE3_ETAPA_DECIMOCUARTO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_decimocuarto_beat_preparar()
+
+
+func _core3_decimocuarto_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOCUARTO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_decimocuarto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimocuarto_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 13:
+		_core3_decimocuarto_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_decimocuarto_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_decimocuarto_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 13:
+		_core3_decimocuarto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimocuarto_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[13])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_decimocuarto_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOCUARTO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_decimocuarto_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_decimocuarto_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_decimocuarto_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_decimocuarto_beat_terminar_y_continuar()
+
+
+func _core3_decimocuarto_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOCUARTO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_decimoquinto_beat_fsm()
+
+
+func _core3_iniciar_decimoquinto_beat_fsm() -> void:
+	# H10.44 — stage 16->17 ya no entrega al decimoquinto beat histórico.
+	# El beat 15 reutiliza la misma FSM física/snapshotable.
+	core3_secuencia_etapa = CORE3_ETAPA_DECIMOQUINTO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_decimoquinto_beat_preparar()
+
+
+func _core3_decimoquinto_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOQUINTO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_decimoquinto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimoquinto_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 14:
+		_core3_decimoquinto_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_decimoquinto_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_decimoquinto_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 14:
+		_core3_decimoquinto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimoquinto_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[14])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_decimoquinto_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOQUINTO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_decimoquinto_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_decimoquinto_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_decimoquinto_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_decimoquinto_beat_terminar_y_continuar()
+
+
+func _core3_decimoquinto_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOQUINTO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_decimosexto_beat_fsm()
+
+
+func _core3_iniciar_decimosexto_beat_fsm() -> void:
+	# H10.46 — stage 17->18 ya no entrega al decimosexto beat histórico.
+	# El beat 16 reutiliza la misma FSM física/snapshotable.
+	core3_secuencia_etapa = CORE3_ETAPA_DECIMOSEXTO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_decimosexto_beat_preparar()
+
+
+func _core3_decimosexto_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOSEXTO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_decimosexto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimosexto_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 15:
+		_core3_decimosexto_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_decimosexto_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_decimosexto_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 15:
+		_core3_decimosexto_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimosexto_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[15])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_decimosexto_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOSEXTO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_decimosexto_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_decimosexto_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_decimosexto_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_decimosexto_beat_terminar_y_continuar()
+
+
+func _core3_decimosexto_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOSEXTO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_decimoseptimo_beat_fsm()
+
+
+func _core3_iniciar_decimoseptimo_beat_fsm() -> void:
+	# H10.48 — stage 18->19 ya no entrega al decimoséptimo beat histórico.
+	# El beat 17 reutiliza la misma FSM física/snapshotable.
+	core3_secuencia_etapa = CORE3_ETAPA_DECIMOSEPTIMO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_decimoseptimo_beat_preparar()
+
+
+func _core3_decimoseptimo_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOSEPTIMO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_decimoseptimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimoseptimo_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 16:
+		_core3_decimoseptimo_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_decimoseptimo_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_decimoseptimo_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 16:
+		_core3_decimoseptimo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimoseptimo_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[16])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_decimoseptimo_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOSEPTIMO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_decimoseptimo_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_decimoseptimo_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_decimoseptimo_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_decimoseptimo_beat_terminar_y_continuar()
+
+
+func _core3_decimoseptimo_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOSEPTIMO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_iniciar_decimoctavo_beat_fsm()
+
+
+func _core3_iniciar_decimoctavo_beat_fsm() -> void:
+	# H10.50 — stage 19->20 ya no entrega al decimoctavo beat histórico.
+	# El beat 18 reutiliza la misma FSM física/snapshotable.
+	core3_secuencia_etapa = CORE3_ETAPA_DECIMOCTAVO_BEAT_FSM
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = global_position
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	_core3_decimoctavo_beat_preparar()
+
+
+func _core3_decimoctavo_beat_preparar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOCTAVO_BEAT_FSM:
+		return
+	if veces_fase_absoluta < 3 or not en_secuencia_especial or esta_derrotado:
+		_core3_decimoctavo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimoctavo_beat_terminar_y_continuar()
+		return
+
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 17:
+		_core3_decimoctavo_beat_terminar_y_continuar()
+		return
+
+	if fase_ataque != FaseAtaque.NINGUNA:
+		core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+		return
+
+	var dx: float = objetivo.global_position.x - global_position.x
+	var dy: float = objetivo.global_position.y - global_position.y
+	var distancia_x: float = absf(dx)
+	var distancia_y: float = absf(dy)
+	var distancia_objetivo: float = _distancia_combo_auto_adaptativa(objetivo)
+
+	if distancia_x <= distancia_objetivo \
+	and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
+		_core3_decimoctavo_beat_ejecutar()
+		return
+
+	var lado: float = signf(dx)
+	if lado == 0.0:
+		lado = mirando if absf(mirando) > 0.01 else 1.0
+	mirando = lado
+
+	var destino := Vector2(
+		objetivo.global_position.x - lado * distancia_objetivo,
+		objetivo.global_position.y
+	)
+	var distancia_recorrido: float = global_position.distance_to(destino)
+	var duracion: float = clampf(distancia_recorrido / 900.0, 0.08, 0.30)
+
+	core3_primer_beat_acercamiento_origen = global_position
+	core3_primer_beat_acercamiento_destino = destino
+	core3_primer_beat_acercamiento_duracion = duracion
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ACERCAR
+	velocity = Vector2.ZERO
+
+
+func _core3_decimoctavo_beat_ejecutar() -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	if coreografia.size() <= 17:
+		_core3_decimoctavo_beat_terminar_y_continuar()
+		return
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		_core3_decimoctavo_beat_terminar_y_continuar()
+		return
+
+	var distancia: float = objetivo.global_position.x - global_position.x
+	if absf(distancia) > 1.0:
+		mirando = signf(distancia)
+
+	_ejecutar_paso_coreografia_combo_core(coreografia[17])
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_ESPERAR_ATAQUE
+
+
+func _actualizar_core3_decimoctavo_beat_fsm(delta: float) -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOCTAVO_BEAT_FSM:
+		return
+
+	match core3_primer_beat_subfase:
+		CORE3_BEAT_SUB_PREPARAR:
+			_core3_decimoctavo_beat_preparar()
+
+		CORE3_BEAT_SUB_ACERCAR:
+			if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+				_core3_decimoctavo_beat_terminar_y_continuar()
+				return
+			var duracion := maxf(core3_primer_beat_acercamiento_duracion, 0.000001)
+			core3_primer_beat_acercamiento_tiempo = minf(
+				core3_primer_beat_acercamiento_tiempo + delta,
+				duracion
+			)
+			var t := clampf(
+				core3_primer_beat_acercamiento_tiempo / duracion,
+				0.0,
+				1.0
+			)
+			var inv := 1.0 - t
+			var eased := 1.0 - inv * inv
+			global_position = core3_primer_beat_acercamiento_origen.lerp(
+				core3_primer_beat_acercamiento_destino,
+				eased
+			)
+			velocity = Vector2.ZERO
+
+			if t >= 1.0:
+				global_position = core3_primer_beat_acercamiento_destino
+				core3_primer_beat_acercamiento_tiempo = core3_primer_beat_acercamiento_duracion
+				_core3_decimoctavo_beat_ejecutar()
+
+		CORE3_BEAT_SUB_ESPERAR_ATAQUE:
+			if fase_ataque == FaseAtaque.NINGUNA:
+				_core3_decimoctavo_beat_terminar_y_continuar()
+
+
+func _core3_decimoctavo_beat_terminar_y_continuar() -> void:
+	if core3_secuencia_etapa != CORE3_ETAPA_DECIMOCTAVO_BEAT_FSM:
+		return
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	core3_secuencia_etapa = CORE3_ETAPA_CONTINUACION_ASYNC
+	_core3_continuar_desde_decimonoveno_beat()
+
+
+func _core3_racha_restante_desde(indice_inicio: int) -> void:
+	var coreografia := _core2_construir_coreografia_actual()
+	for i in range(maxi(0, indice_inicio), coreografia.size()):
+		if esta_derrotado:
+			break
+		if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+			break
+
+		while fase_ataque != FaseAtaque.NINGUNA and not esta_derrotado:
+			await get_tree().create_timer(POLL_COMBO_CORE_CONTINUO, true, false, true).timeout
+		if esta_derrotado:
+			break
+
+		await _acercar_para_combo_auto()
+		if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+			break
+
+		var distancia: float = objetivo.global_position.x - global_position.x
+		if absf(distancia) > 1.0:
+			mirando = signf(distancia)
+		_ejecutar_paso_coreografia_combo_core(coreografia[i])
+		await get_tree().create_timer(POLL_COMBO_CORE_CONTINUO, true, false, true).timeout
+
+	while fase_ataque != FaseAtaque.NINGUNA and not esta_derrotado:
+		await get_tree().create_timer(POLL_COMBO_CORE_CONTINUO, true, false, true).timeout
+
+	indice_punetazo = 0
+	indice_patada = 0
+	velocity.x = 0.0
+	en_combo_auto_visual = false
+
+
+func _core3_continuar_desde_decimonoveno_beat() -> void:
+	await _core3_racha_restante_desde(18)
+	if not esta_derrotado:
+		await _ejecutar_finalizacion_absoluta()
+	_salir_furia()
+	_congelar_rival(false)
+	_desbloquear_cinematica()
+	en_secuencia_especial = false
+	core3_secuencia_etapa = CORE3_ETAPA_INACTIVO
+	core3_recarga_timer = 0.0
+	core3_recarga_duracion = 0.0
+	core3_recarga_primer_tick = false
+	core3_acercamiento_duracion = 0.0
+	core3_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = Vector2.ZERO
+	core3_primer_beat_acercamiento_destino = Vector2.ZERO
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+
 
 # Beat cinematográfico antes del combo automático (cargas 2 y 3): el
 # personaje pasa a su pose de "recarga de energía" propia, brilla, y le
@@ -2711,20 +6904,17 @@ func _pose_final_especial(duracion: float) -> void:
 		_actualizar_textura(lista[lista.size() - 1])
 		pose_timer = duracion
 
-func _acercar_para_especial() -> void:
+func _acercar_para_especial() -> bool:
 	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
-		return
+		return false
 
-	# 90.10.47 — CORE I TARGET LOCK 2D. El primer CORE debe tener la misma
-	# fiabilidad espacial que CORE II/III: si se dispara lejos, desde salto o
-	# doble salto, primero acelera hacia la posición REAL del rival y recién
-	# entonces ejecuta el golpe/gigantografía. Antes sólo corregía X.
+	# 90.10.47 / H8.3-H8.5 — mismo Target Lock 2D, ya sin Tween ni await.
 	var dx: float = objetivo.global_position.x - global_position.x
 	var dy: float = objetivo.global_position.y - global_position.y
 	var distancia_x: float = absf(dx)
 	var distancia_y: float = absf(dy)
 	if distancia_x <= 210.0 and distancia_y <= DISTANCIA_VERTICAL_COMBO_AUTO_OBJETIVO:
-		return
+		return false
 
 	var lado: float = signf(dx)
 	if lado == 0.0:
@@ -2738,18 +6928,128 @@ func _acercar_para_especial() -> void:
 	var distancia_recorrido: float = global_position.distance_to(destino)
 	var duracion: float = clampf(distancia_recorrido / 980.0, 0.08, 0.32)
 
-	# Si existe una pose de carrera/aceleración, se usa únicamente durante el
-	# cierre de distancia. No altera hitboxes, daño ni la pose del especial.
 	var tex_aceleracion: Texture2D = _tex_carrera()
 	if tex_aceleracion and sprite:
 		_actualizar_textura(tex_aceleracion)
 		pose_timer = duracion + 0.03
 
-	var tween := create_tween()
-	tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(self, "global_position", destino, duracion)
-	await tween.finished
+	core1_target_lock_origen = global_position
+	core1_target_lock_destino = destino
+	core1_target_lock_duracion = duracion
+	core1_target_lock_tiempo = 0.0
+	core1_target_lock_activo = true
+	core1_secuencia_etapa = CORE1_ETAPA_TARGET_LOCK
+	return true
+
+
+func _actualizar_core1_target_lock(delta: float) -> void:
+	if not core1_target_lock_activo:
+		return
+
+	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
+		core1_target_lock_activo = false
+		core1_target_lock_tiempo = core1_target_lock_duracion
+		velocity = Vector2.ZERO
+		core1_target_lock_finalizado.emit()
+		_core1_continuar_tras_target_lock()
+		return
+
+	var duracion := maxf(core1_target_lock_duracion, 0.000001)
+	core1_target_lock_tiempo = minf(core1_target_lock_tiempo + delta, duracion)
+	var t := clampf(core1_target_lock_tiempo / duracion, 0.0, 1.0)
+
+	# Tween.TRANS_QUAD + EASE_OUT = 1 - (1-t)^2.
+	var inverso := 1.0 - t
+	var eased := 1.0 - inverso * inverso
+	global_position = core1_target_lock_origen.lerp(core1_target_lock_destino, eased)
 	velocity = Vector2.ZERO
+
+	if t >= 1.0:
+		global_position = core1_target_lock_destino
+		core1_target_lock_activo = false
+
+		# Orden histórico preservado:
+		# 1) señal de final del lock
+		# 2) continuación inmediata del especial EN EL MISMO physics tick.
+		core1_target_lock_finalizado.emit()
+		_core1_continuar_tras_target_lock()
+
+
+func _core1_continuar_tras_target_lock() -> void:
+	if core1_secuencia_etapa != CORE1_ETAPA_TARGET_LOCK:
+		return
+	if not en_secuencia_especial or veces_fase_absoluta != 1:
+		return
+
+	core1_secuencia_etapa = CORE1_ETAPA_POSTER
+	velocity = Vector2.ZERO
+
+	# Mismo bloque que históricamente vivía después de:
+	#   await _acercar_para_especial()
+	_pose_final_especial(0.95)
+	_ejecutar_especial()
+
+	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
+		var dir_previa: float = signf(objetivo.global_position.x - global_position.x)
+		if dir_previa == 0.0:
+			dir_previa = mirando
+		objetivo.preparar_impacto_cinematico(1.10, dir_previa, "especial")
+		_aplicar_impacto_especial(2.6)
+
+	# La parte LÓGICA de la espera del póster ahora está en physics ticks.
+	# Sumamos un delta porque este updater también corre en el tick de transición;
+	# así el primer decremento deja exactamente la duración nominal.
+	core1_poster_duracion = CORE1_POSTER_DURACION_LOGICA
+	core1_poster_timer = core1_poster_duracion + maxf(_delta_actual, 0.0)
+
+	# Replicar de forma explícita las únicas mutaciones lógicas del inicio del
+	# póster. Durante rollback catch-up omitimos sólo nodos/Tweens visuales.
+	bloqueo_cinematico = true
+	velocity = Vector2.ZERO
+	_pose_final_especial(CORE1_POSTER_TIEMPO_VISIBLE + 0.25)
+
+	if not rollback_suprimir_presentacion_core1:
+		# 91.02.35 / 91.02.36 / 91.02.37 — si existe un PNG exclusivo del
+		# usuario, CORE I lo usa aqui como gigantografia cinematica. Todas
+		# reciben un retroceso global adicional; Cibor-X y Magnus conservan
+		# su calibracion extra de escala/retroceso. Si no existe, cae al
+		# poster especial historico sin tocar la logica del golpe.
+		var tex_core1_poster: Texture2D = textura_core2_entrada if textura_core2_entrada else textura_especial
+		# Presentación asíncrona aislada: en CORE I ya NO gobierna desbloqueo,
+		# daño, hitstun ni fin de secuencia.
+		_mostrar_poder_reemplazando(
+			tex_core1_poster,
+			CORE1_POSTER_TIEMPO_VISIBLE,
+			320.0,
+			false,
+			2.6,
+			true
+		)
+
+
+func _actualizar_core1_poster_logico(delta: float) -> void:
+	if core1_secuencia_etapa != CORE1_ETAPA_POSTER:
+		return
+	if not en_secuencia_especial or veces_fase_absoluta != 1:
+		core1_secuencia_etapa = CORE1_ETAPA_INACTIVO
+		core1_poster_timer = 0.0
+		core1_poster_duracion = 0.0
+		return
+
+	core1_poster_timer = maxf(0.0, core1_poster_timer - delta)
+	if core1_poster_timer > 0.0:
+		return
+
+	# Equivalente lógico del tramo posterior al viejo:
+	#   await _mostrar_poder_reemplazando(...)
+	_congelar_rival(false)
+	_desbloquear_cinematica()
+	en_secuencia_especial = false
+	core1_secuencia_etapa = CORE1_ETAPA_INACTIVO
+	core1_poster_duracion = 0.0
+	velocity = Vector2.ZERO
+
+
 
 func preparar_impacto_cinematico(duracion: float, direccion_atacante: float = 0.0, tipo_impacto: String = "especial") -> void:
 	if esta_derrotado:
@@ -2821,31 +7121,25 @@ func _aplicar_impacto_especial(multiplicador_dano: float = 2.6) -> void:
 func _secuencia_poder_simple() -> void:
 	if en_secuencia_especial:
 		return
+
 	en_secuencia_especial = true
 	_bloquear_cinematica()
 	_congelar_rival(true)
-	await _acercar_para_especial()
-	_pose_final_especial(0.95)
-	_ejecutar_especial()
-	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
-		var dir_previa: float = signf(objetivo.global_position.x - global_position.x)
-		if dir_previa == 0.0:
-			dir_previa = mirando
-		objetivo.preparar_impacto_cinematico(1.10, dir_previa, "especial")
-		# 90.10.57 — CORE I GUARANTEED HIT. El impacto real ocurre en el
-		# instante del golpe, antes de mostrar la gigantografía. Antes el daño
-		# quedaba postergado hasta que terminaba todo el póster, lo que hacía
-		# que visualmente pareciera que el CORE I no conectaba. Se aplica una
-		# sola vez; _mostrar_poder_reemplazando recibe aplicar_impacto=false.
-		_aplicar_impacto_especial(2.6)
-	await _mostrar_poder_reemplazando(textura_especial, 1.05, 320.0, false, 2.6)
-	_congelar_rival(false)
-	_desbloquear_cinematica()
-	en_secuencia_especial = false
+	core1_secuencia_etapa = CORE1_ETAPA_TARGET_LOCK
+	core1_poster_timer = 0.0
+	core1_poster_duracion = 0.0
 
-# CORE II: combo en modo normal seguido por su remate/gigantografía.
-# No activa aura/Furia; sólo usa los golpes normales y luego conserva
-# el cierre cinematográfico propio del segundo CORE.
+	# Si hace falta distancia, physics ticks gobernarán la trayectoria y luego
+	# llamarán _core1_continuar_tras_target_lock().
+	# Si ya estamos cerca, el impacto/poster comienza en este mismo tick.
+	var necesita_target_lock := _acercar_para_especial()
+	if not necesita_target_lock:
+		_core1_continuar_tras_target_lock()
+
+
+# CORE II: recarga limpia, combo en modo normal y luego su remate/
+# gigantografia final. No activa aura/Furia; sólo usa los golpes normales
+# y conserva el cierre cinematografico propio del segundo CORE.
 func _secuencia_combo_normal() -> void:
 	if en_secuencia_especial:
 		return
@@ -2853,28 +7147,20 @@ func _secuencia_combo_normal() -> void:
 	_bloquear_cinematica()
 	_congelar_rival(true)
 
-	# CORE II NO entra en Furia. Los índices/listas permanecen en modo normal
-	# y se reproducen en tres actos: puños, patadas y mezcla completa.
+	# CORE II permanece en modo normal.
 	en_fase_absoluta = false
 	indice_punetazo = 0
 	indice_patada = 0
-	# CORE II conserva su recarga de energía original antes del combo.
-	# La única diferencia frente al diseño anterior es que el combo usa
-	# exclusivamente sprites normales, no Furia.
-	await _mostrar_recarga_energia(false)
-	await _acercar_para_combo_auto()
-	await _racha_combo_auto()
-	if not esta_derrotado:
-		await _ejecutar_rematador()
 
-	_congelar_rival(false)
-	_desbloquear_cinematica()
-	en_secuencia_especial = false
+	# H9.3 — la recarga y el primer Target Lock ya son estados explícitos
+	# gobernados por _physics_process. No existe await/timer/Tween lógico aquí.
+	_core2_iniciar_recarga_logica()
+
 
 # Alias de compatibilidad por si algún script viejo todavía invoca el nombre
 # anterior. Desde 90.10.40 CORE II ejecuta combo normal + remate.
 func _secuencia_rematador() -> void:
-	await _secuencia_combo_normal()
+	_secuencia_combo_normal()
 
 func _ejecutar_rematador() -> void:
 	if not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
@@ -2886,8 +7172,6 @@ func _ejecutar_rematador() -> void:
 	if direccion == 0.0:
 		direccion = mirando
 
-	# El rival queda quieto durante TODO el póster. Primero se presenta el
-	# remate; recién cuando desaparece el arte grande ocurre la reacción física.
 	rematador_iniciado.emit()
 	_congelar_rival(true)
 	if puede_conectar and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
@@ -2897,8 +7181,13 @@ func _ejecutar_rematador() -> void:
 	if puede_conectar and objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
 		var dano: float = dano_patada * MULT_DANO_GLOBAL * mult_dano_fase * 2.4
 		objetivo.recibir_dano(dano, 520.0, 0.75, direccion, "rematador")
-		# CORE 2: vuelo fuerte dentro del sistema físico normal.
-		objetivo.recibir_derribo_especial(direccion, 1045.0 if not bloqueado else 570.0, 505.0 if not bloqueado else 310.0, 0.95 if not bloqueado else 0.45, true)
+		objetivo.recibir_derribo_especial(
+			direccion,
+			1045.0 if not bloqueado else 570.0,
+			505.0 if not bloqueado else 310.0,
+			0.95 if not bloqueado else 0.45,
+			true
+		)
 		_efecto_chispas(bloqueado, objetivo.global_position)
 		await get_tree().create_timer(0.10, true, false, true).timeout
 	rematador_conectado.emit()
@@ -2914,18 +7203,9 @@ func _secuencia_absoluta() -> void:
 	_bloquear_cinematica()
 	_congelar_rival(true)
 
-	# CORE III: primero la recarga de energía en estado normal; al terminar
-	# entra la transformación Furia/Aura y recién ahí comienza el combo final.
-	await _mostrar_recarga_energia(true)
-	_entrar_furia()
-	await _acercar_para_combo_auto()
-	await _racha_combo_auto()
-	if not esta_derrotado:
-		await _ejecutar_finalizacion_absoluta()
-	_salir_furia()
-	_congelar_rival(false)
-	_desbloquear_cinematica()
-	en_secuencia_especial = false
+	# H10.10 — CORE III ENTRY permanece idéntico visualmente, pero la recarga
+	# 1.55 s y el primer acercamiento ya son estados físicos snapshotables.
+	_core3_iniciar_recarga_logica()
 
 func _ejecutar_finalizacion_absoluta() -> void:
 	bloqueo_cinematico = true
@@ -2939,7 +7219,8 @@ func _ejecutar_finalizacion_absoluta() -> void:
 			dir_previa = mirando
 		objetivo.preparar_impacto_cinematico(2.95, dir_previa, "absoluto")
 	await _mostrar_poder_reemplazando(textura_absoluto, 2.80, 430.0)
-	_congelar_rival(false)
+	# 91.02.21 — PASS 9.1. No abrir control entre póster e impacto/KO.
+	# _core3_continuar_desde_decimonoveno_beat() conserva el unlock final existente.
 	if objetivo and is_instance_valid(objetivo) and not objetivo.esta_derrotado:
 		var direccion: float = signf(objetivo.global_position.x - global_position.x)
 		if direccion == 0.0:
@@ -2959,12 +7240,30 @@ func _resolver_aterrizaje_derribo_especial() -> void:
 	velocity.x *= 0.42 if derribo_especial_se_levanta else 0.56
 	pose_timer = 0.0
 	_actualizar_textura(_tex_derribado())
+	_aplicar_apoyo_visual_derribo_especial()
 	# La textura derribada suele ser mucho más ancha que la pose de pie. Recalcular
 	# el límite en el mismo frame evita que desaparezca fuera del borde.
 	_aplicar_limites_arena()
 	var fuerza_caida: float = 430.0 if derribo_especial_se_levanta else 560.0
 	_efecto_golpe_suelo(fuerza_caida)
 	aterrizaje_hecho.emit(fuerza_caida, true)
+
+func _aplicar_apoyo_visual_derribo_especial() -> void:
+	if not sprite or not sprite.texture:
+		return
+	# El used_rect de sprites horizontales puede incluir alas, pelo o efectos
+	# por debajo del torso. Eso hace parecer que el cuerpo flota aunque la
+	# colisión ya esté exactamente en el suelo. Corregimos sólo la presentación.
+	var rect_derribo: Rect2 = _obtener_rect_visual(sprite.texture)
+	var alto_visible: float = rect_derribo.size.y * absf(sprite.scale.y)
+	var apoyo_dinamico: float = clampf(
+		alto_visible * 0.055,
+		0.0,
+		OFFSET_DERRIBADO_ESPECIAL_DINAMICO_MAX
+	)
+	sprite_base_y += OFFSET_DERRIBADO_ESPECIAL_Y + apoyo_dinamico
+	sprite.position.y = sprite_base_y
+
 
 func recibir_derribo_especial(direccion: float, fuerza_x: float, fuerza_y: float, tiempo_tendido: float, se_levanta: bool) -> void:
 	if esta_derrotado:
@@ -3117,6 +7416,48 @@ func _retencion_horizontal_aterrizaje() -> float:
 func _peso_visual_aterrizaje() -> float:
 	return clampf(_masa_corporal(), 0.72, 1.55)
 
+# 91.02.29 — PASS 9.3E / transición suelo inmediata.
+# No es un cancel de ataque: STARTUP y ACTIVO jamás se tocan. Únicamente recorta
+# el remanente de RECOVERY cuando el golpe aéreo ya terminó visualmente y el
+# Fighter acaba de apoyar los pies. También limpia una pose de salto/descenso/
+# air-dash que haya quedado retenida por pose_timer.
+func _resolver_transicion_aterrizaje_dinamica() -> void:
+	if esta_derrotado or derribo_especial_activo or en_secuencia_especial \
+		or bloqueo_cinematico or congelado_por_rival or hitstun_timer > 0.0 \
+		or en_combo_auto_visual:
+		return
+
+	# Si aterrizamos durante la recuperación de un ataque normal, dejamos como
+	# máximo ~2 frames a 60 Hz. No se altera daño, hitbox ni ventana ACTIVA.
+	if fase_ataque == FaseAtaque.RECOVERY:
+		timer_fase_ataque = minf(timer_fase_ataque, RECOVERY_ATERRIZAJE_NORMAL_MAX)
+		return
+
+	# STARTUP/ACTIVO conservan su compromiso completo incluso al tocar suelo.
+	if fase_ataque != FaseAtaque.NINGUNA or not sprite:
+		return
+
+	var tex_actual: Texture2D = sprite.texture
+	var es_pose_movilidad_aerea: bool = false
+	if tex_actual:
+		es_pose_movilidad_aerea = \
+			(tex_actual == _tex_salto()) \
+			or (tex_actual == _tex_doble_salto()) \
+			or (tex_actual == _tex_descenso()) \
+			or (tex_actual == _tex_carrera()) \
+			or (tex_actual == _tex_evasion())
+
+	if not es_pose_movilidad_aerea:
+		return
+
+	# El air dash ya cumplió su función física al tocar suelo. Liberamos además
+	# su retención visual para que el mismo frame pueda mostrar caminata/parado.
+	if dash_aereo_activo:
+		_detener_dash_aereo()
+	pose_timer = 0.0
+	_actualizar_textura(_tex_reposo())
+	sprite.rotation = 0.0
+
 func intentar_guardia_escape_esquina_preimpacto() -> bool:
 	# Sólo control humano enrutado: ésta es la ruta exclusiva de Versus Local.
 	# No se habilita para IA ni para el control histórico de Arcade.
@@ -3177,6 +7518,8 @@ func aplicar_empuje(direccion: float, fuerza: float) -> void:
 	empuje_timer = clampf(0.13 + fuerza_final / 2600.0, 0.14, 0.27)
 
 func _iniciar_bloqueo(duracion: float) -> void:
+	if congelado_por_rival:
+		return
 	bloqueando = true
 	bloqueo_timer = duracion
 	_set_color(Color.WHITE)
@@ -3248,9 +7591,9 @@ func recibir_dano(cantidad: float, empuje_fuerza: float = 150.0, hitstun: float 
 	else:
 		match tipo_impacto:
 			"punetazo":
-				pausa_receptor = 0.010 + float(nivel_impacto_actual) * 0.005
+				pausa_receptor = 0.012 + float(nivel_impacto_actual) * 0.006
 			"patada":
-				pausa_receptor = 0.016 + float(nivel_impacto_actual) * 0.006
+				pausa_receptor = 0.018 + float(nivel_impacto_actual) * 0.007
 			"especial":
 				pausa_receptor = 0.038
 			"rematador":
@@ -3478,6 +7821,63 @@ func reiniciar_para_ronda() -> void:
 	combo_count = 0
 	en_secuencia_especial = false
 	congelado_por_rival = false
+	# H8.3 — ninguna trayectoria CORE I puede sobrevivir al reinicio de ronda.
+	core1_target_lock_activo = false
+	core1_target_lock_origen = Vector2.ZERO
+	core1_target_lock_destino = Vector2.ZERO
+	core1_target_lock_duracion = 0.0
+	core1_target_lock_tiempo = 0.0
+	core1_secuencia_etapa = CORE1_ETAPA_INACTIVO
+	core1_poster_timer = 0.0
+	core1_poster_duracion = 0.0
+	rollback_suprimir_presentacion_core1 = false
+
+	# H9.3 — limpiar completamente CORE II explícito.
+	core2_secuencia_etapa = CORE2_ETAPA_INACTIVO
+	core2_recarga_timer = 0.0
+	core2_recarga_duracion = 0.0
+	core2_acercamiento_origen = Vector2.ZERO
+	core2_acercamiento_destino = Vector2.ZERO
+	core2_acercamiento_duracion = 0.0
+	core2_acercamiento_tiempo = 0.0
+	core2_combo_paso_idx = 0
+	core2_combo_total_pasos = 0
+	core2_combo_subfase = CORE2_COMBO_SUB_PREPARAR
+	core2_combo_acercamiento_origen = Vector2.ZERO
+	core2_combo_acercamiento_destino = Vector2.ZERO
+	core2_combo_acercamiento_duracion = 0.0
+	core2_combo_acercamiento_tiempo = 0.0
+	core2_rematador_subfase = CORE2_REM_SUB_POSTER
+	core2_rematador_timer = 0.0
+	core2_rematador_duracion = 0.0
+	core2_rematador_puede_conectar = false
+	core2_rematador_bloqueado = false
+	core2_rematador_direccion = 1.0
+	rollback_suprimir_presentacion_core2 = false
+	core2_flash_entrada_mostrado = false
+	_limpiar_core2_flash_entrada()
+	if core2_recarga_brillo and is_instance_valid(core2_recarga_brillo):
+		core2_recarga_brillo.kill()
+	core2_recarga_brillo = null
+
+	# H10.10 — limpiar frontera explícita CORE III.
+	core3_secuencia_etapa = CORE3_ETAPA_INACTIVO
+	core3_recarga_timer = 0.0
+	core3_recarga_duracion = 0.0
+	core3_recarga_primer_tick = false
+	core3_acercamiento_origen = Vector2.ZERO
+	core3_acercamiento_destino = Vector2.ZERO
+	core3_acercamiento_duracion = 0.0
+	core3_acercamiento_tiempo = 0.0
+	core3_primer_beat_subfase = CORE3_BEAT_SUB_PREPARAR
+	core3_primer_beat_acercamiento_origen = Vector2.ZERO
+	core3_primer_beat_acercamiento_destino = Vector2.ZERO
+	core3_primer_beat_acercamiento_duracion = 0.0
+	core3_primer_beat_acercamiento_tiempo = 0.0
+	if core3_recarga_brillo and is_instance_valid(core3_recarga_brillo):
+		core3_recarga_brillo.kill()
+	core3_recarga_brillo = null
+
 	derribo_especial_activo = false
 	derribo_especial_esperando_aterrizar = false
 	derribo_especial_se_levanta = false
@@ -3490,6 +7890,17 @@ func reiniciar_para_ronda() -> void:
 	timer_fase_ataque = 0.0
 	hitstun_timer = 0.0
 	hitstop_timer = 0.0
+	# PASS 12A — limpiar cualquier comando/tiro de la ronda anterior.
+	comando_proyectil_etapa = 0
+	comando_proyectil_timer = 0.0
+	en_lanzamiento_proyectil = false
+	proyectil_lanzamiento_timer = 0.0
+	proyectil_spawn_timer = 0.0
+	proyectil_disparo_pendiente = false
+	proyectil_cooldown_timer = 0.0
+	if proyectil_activo and is_instance_valid(proyectil_activo):
+		proyectil_activo.queue_free()
+	proyectil_activo = null
 	# Limpiar flancos del Input Frame al comenzar una ronda nueva.
 	z_estaba_presionado = false
 	salto_estaba_presionado = false
@@ -3519,6 +7930,8 @@ func reiniciar_para_ronda() -> void:
 	ia_doble_salto_timer = 0.0
 	ia_ataque_aereo_pendiente = false
 	ia_ataque_aereo_timer = 0.0
+	ia_rafaga_dificil_restante = 0
+	ia_rafaga_dificil_ultimo_tipo = ""
 	dash_aereo_activo = false
 	dash_aereo_direccion = 0.0
 	dash_aereo_timer = 0.0
@@ -3580,27 +7993,81 @@ func mostrar_pose_victoria() -> void:
 # timing y toma de decisiones: jamás tocan daño, velocidad, alcance o CORE.
 func _ia_factor_tiempo_decision() -> float:
 	match dificultad_ia:
-		DificultadIA.MEDIA: return 0.84
-		DificultadIA.DIFICIL: return 0.70
+		DificultadIA.MEDIA: return 0.78
+		DificultadIA.DIFICIL: return 0.24
 		_: return 1.0
 
 func _ia_factor_bloqueo() -> float:
 	match dificultad_ia:
 		DificultadIA.MEDIA: return 1.16
-		DificultadIA.DIFICIL: return 1.34
+		# 91.02.42 — Difícil deja de ser "tortuga": menos bloqueo, más ofensiva.
+		DificultadIA.DIFICIL: return 0.78
 		_: return 1.0
 
 func _ia_factor_ataque() -> float:
 	match dificultad_ia:
-		DificultadIA.MEDIA: return 1.05
-		DificultadIA.DIFICIL: return 1.10
+		DificultadIA.MEDIA: return 1.08
+		DificultadIA.DIFICIL: return 1.58
 		_: return 1.0
 
 func _ia_factor_movilidad() -> float:
 	match dificultad_ia:
-		DificultadIA.MEDIA: return 1.08
-		DificultadIA.DIFICIL: return 1.16
+		DificultadIA.MEDIA: return 1.14
+		DificultadIA.DIFICIL: return 2.05
 		_: return 1.0
+
+func _ia_prob_mantener_distancia() -> float:
+	match dificultad_ia:
+		DificultadIA.MEDIA: return 0.13
+		DificultadIA.DIFICIL: return 0.0
+		_: return 0.25
+
+func _ia_factor_salto() -> float:
+	match dificultad_ia:
+		DificultadIA.MEDIA: return 1.16
+		# Menos salto que 91.02.41: el jefe difícil debe entrar a pegar, no brincar.
+		DificultadIA.DIFICIL: return 0.62
+		_: return 1.0
+
+func _ia_factor_backdash() -> float:
+	match dificultad_ia:
+		DificultadIA.MEDIA: return 1.10
+		DificultadIA.DIFICIL: return 0.72
+		_: return 1.0
+
+func _ia_factor_doble_salto() -> float:
+	return 0.82 if dificultad_ia == DificultadIA.DIFICIL else 1.0
+
+func _ia_factor_ataque_aereo() -> float:
+	return 1.05 if dificultad_ia == DificultadIA.DIFICIL else 1.0
+
+func _ia_prob_patada_actual() -> float:
+	# Difícil mezcla más puño/patada para que la presión no parezca una sola tecla.
+	if dificultad_ia == DificultadIA.DIFICIL:
+		return clampf(ia_prob_patada + 0.12, 0.42, 0.58)
+	return ia_prob_patada
+
+func _ia_dificil_asegurar_rafaga() -> void:
+	if dificultad_ia != DificultadIA.DIFICIL:
+		return
+	if ia_rafaga_dificil_restante <= 0:
+		# Tandas de 3 a 5 ataques normales. Cada ataque mantiene SU recovery legal.
+		ia_rafaga_dificil_restante = randi_range(3, 5)
+
+func _ia_dificil_elegir_patada_rafaga() -> bool:
+	var prob: float = _ia_prob_patada_actual()
+	# Evita series visuales monótonas y favorece puño/patada alternados.
+	if ia_rafaga_dificil_ultimo_tipo == "patada":
+		prob *= 0.42
+	elif ia_rafaga_dificil_ultimo_tipo == "punetazo":
+		prob = minf(0.72, prob + 0.20)
+	return randf() < prob
+
+func _ia_dificil_registrar_golpe_rafaga(tipo: String) -> void:
+	if dificultad_ia != DificultadIA.DIFICIL:
+		return
+	ia_rafaga_dificil_ultimo_tipo = tipo
+	ia_rafaga_dificil_restante = maxi(0, ia_rafaga_dificil_restante - 1)
 
 # 90.11.06 — API llamada sólo por PerfectBlock después de CONFIRMAR x2/x3.
 # Centralizarlo acá garantiza que todos los personajes CPU respeten el mismo lock,
@@ -3622,6 +8089,14 @@ func _comportamiento_ia_basico(delta: float, vel_actual: float, distancia_ataque
 	if esta_derrotado or not objetivo or not is_instance_valid(objetivo) or objetivo.esta_derrotado:
 		mover(0.0, vel_actual)
 		return
+
+	# 91.02.42 — DIFICIL usa el CORE en cuanto la barra REAL ya está completa.
+	# No se regala energía ni se acelera la carga: sólo se evita gastar una
+	# decisión ofensiva en otro golpe normal cuando el CORE ya está disponible.
+	if dificultad_ia == DificultadIA.DIFICIL 		and poder >= poder_maximo 		and fase_ataque == FaseAtaque.NINGUNA 		and not en_fase_absoluta 		and not en_secuencia_especial 		and not congelado_por_rival:
+		intentar_poder_especial()
+		if en_secuencia_especial:
+			return
 
 	# 90.11.06 — el jugador ya confirmó un Combo Cancel. Durante esta microventana
 	# la CPU recibe exactamente como un rival neutral de Versus: no decide nada.
@@ -3661,6 +8136,15 @@ func _comportamiento_ia_basico(delta: float, vel_actual: float, distancia_ataque
 	var factor_movilidad: float = _ia_factor_movilidad()
 	var en_zona_corta: bool = distancia_abs <= zona_corta
 	var en_zona_media: bool = distancia_abs > zona_corta and distancia_abs <= zona_media
+	# Después de un impacto el knockback puede dejar al rival apenas fuera de
+	# zona_corta. En DIFÍCIL permitimos que la siguiente decisión de la ráfaga
+	# arranque desde esta franja; el lunge/rango real del golpe sigue intacto.
+	var zona_rafaga_dificil: float = maxf(zona_corta * 1.28, rango_ataque_ia + 42.0)
+	var en_zona_rafaga_dificil: bool = (
+		dificultad_ia == DificultadIA.DIFICIL
+		and ia_rafaga_dificil_restante > 0
+		and distancia_abs <= zona_rafaga_dificil
+	)
 
 	ia_dash_cooldown = maxf(0.0, ia_dash_cooldown - delta)
 	ia_cooldown_decision -= delta
@@ -3684,7 +8168,7 @@ func _comportamiento_ia_basico(delta: float, vel_actual: float, distancia_ataque
 			if ia_ataque_aereo_timer <= 0.0 and distancia_abs <= rango_aereo:
 				ia_ataque_aereo_pendiente = false
 				_orientar_hacia_rival_inmediato()
-				if randf() < ia_prob_patada + 0.12:
+				if randf() < clampf(_ia_prob_patada_actual() + 0.08, 0.0, 0.68):
 					intentar_patada()
 				else:
 					intentar_punetazo()
@@ -3707,27 +8191,47 @@ func _comportamiento_ia_basico(delta: float, vel_actual: float, distancia_ataque
 		ia_retrocediendo = false
 		ia_mantener_distancia = false
 
-		if en_zona_corta:
-			ia_cooldown_decision = randf_range(0.20, 0.39) * factor_decision
+		if en_zona_corta or en_zona_rafaga_dificil:
+			ia_cooldown_decision = (
+				randf_range(0.025, 0.055)
+				if dificultad_ia == DificultadIA.DIFICIL
+				else randf_range(0.20, 0.39) * factor_decision
+			)
 		elif en_zona_media:
-			ia_cooldown_decision = randf_range(0.27, 0.50) * factor_decision
+			ia_cooldown_decision = (
+				randf_range(0.045, 0.085)
+				if dificultad_ia == DificultadIA.DIFICIL
+				else randf_range(0.27, 0.50) * factor_decision
+			)
 		else:
-			ia_cooldown_decision = randf_range(0.32, 0.58) * factor_decision
+			ia_cooldown_decision = (
+				randf_range(0.055, 0.095)
+				if dificultad_ia == DificultadIA.DIFICIL
+				else randf_range(0.32, 0.58) * factor_decision
+			)
 
 		# Defensa reactiva: en corto importa bastante; en media sólo se anticipa
 		# si el rival está atacando. Nunca leemos el input del jugador de forma
 		# perfecta, preservando una CPU justa y con personalidad.
 		var prob_bloqueo_efectiva: float = clampf(ia_prob_bloqueo * (0.78 if rival_atacando else 0.10) * factor_bloqueo, 0.0, 0.82)
-		if distancia_abs <= rango_presion and not bloqueando and randf() < prob_bloqueo_efectiva:
+		var rafaga_dificil_activa: bool = (
+			dificultad_ia == DificultadIA.DIFICIL
+			and ia_rafaga_dificil_restante > 0
+		)
+		if not rafaga_dificil_activa and distancia_abs <= rango_presion and not bloqueando and randf() < prob_bloqueo_efectiva:
 			_iniciar_bloqueo(randf_range(0.20, 0.42))
 			return
 
 		# En corto la CPU decide entre intercambio, pequeño retroceso o una pausa
 		# mínima de lectura. El ataque ocurre AQUÍ, una vez por decisión, no frame
 		# a frame. Esto es el corazón del nuevo ritmo de IA.
-		if en_zona_corta:
-			var prob_retroceso_corto: float = ia_prob_retroceso * (1.25 if rival_atacando else 0.62)
-			if randf() < prob_retroceso_corto:
+		if en_zona_corta or en_zona_rafaga_dificil:
+			var prob_retroceso_corto: float = (
+				ia_prob_retroceso * 0.34 * (1.0 if rival_atacando else 0.12)
+				if dificultad_ia == DificultadIA.DIFICIL
+				else ia_prob_retroceso * _ia_factor_backdash() * (1.25 if rival_atacando else 0.62)
+			)
+			if not rafaga_dificil_activa and randf() < prob_retroceso_corto:
 				ia_retrocediendo = true
 				if ia_dash_cooldown <= 0.0 and randf() < ia_prob_dash_atras:
 					_iniciar_carrera(-direccion_rival)
@@ -3737,25 +8241,48 @@ func _comportamiento_ia_basico(delta: float, vel_actual: float, distancia_ataque
 			# Un porcentaje pequeño de decisiones no ataca: produce amague/neutral
 			# sin hacer pasiva a la CPU. Si el rival ya está pegando, se reduce aún
 			# más esa pausa para que responda con mayor urgencia.
-			var prob_ataque_corto: float = clampf((0.88 if rival_atacando else 0.80) * factor_ataque, 0.0, 0.96)
+			var prob_ataque_corto: float = (
+				1.0
+				if dificultad_ia == DificultadIA.DIFICIL
+				else clampf((0.88 if rival_atacando else 0.80) * factor_ataque, 0.0, 0.96)
+			)
 			if randf() < prob_ataque_corto:
 				mover(0.0, vel_actual)
 				mirando = direccion_rival
-				if randf() < ia_prob_patada:
-					intentar_patada()
+				if dificultad_ia == DificultadIA.DIFICIL:
+					_ia_dificil_asegurar_rafaga()
+					if _ia_dificil_elegir_patada_rafaga():
+						intentar_patada()
+						_ia_dificil_registrar_golpe_rafaga("patada")
+					else:
+						intentar_punetazo()
+						_ia_dificil_registrar_golpe_rafaga("punetazo")
+					# Mientras queden golpes de la tanda, la siguiente decisión queda
+					# lista en 0.0. Fighter igualmente obliga a terminar startup/activo/
+					# recovery del ataque vigente antes de aceptar el siguiente.
+					if ia_rafaga_dificil_restante > 0:
+						ia_cooldown_decision = 0.0
+					else:
+						# Micro-respiro entre tandas, mucho menor que en MEDIO.
+						ia_cooldown_decision = randf_range(0.035, 0.065)
 				else:
-					intentar_punetazo()
-				# El timer no corre mientras la CPU está dentro de una fase de ataque.
-				# Dejamos sólo una respiración mínima al terminar el recovery.
-				ia_cooldown_decision = randf_range(0.07, 0.16) * factor_decision
+					if randf() < _ia_prob_patada_actual():
+						intentar_patada()
+					else:
+						intentar_punetazo()
+					ia_cooldown_decision = randf_range(0.07, 0.16) * factor_decision
 				return
-			ia_mantener_distancia = true
+			ia_mantener_distancia = dificultad_ia != DificultadIA.DIFICIL
 
 		# Zona media: es el espacio de intención. Puede saltar, entrar con dash,
 		# caminar o sostener brevemente la distancia. Así no todo encuentro termina
 		# inmediatamente en dos sprites empujándose en el centro.
 		elif en_zona_media:
-			var prob_retroceso_media: float = ia_prob_retroceso * (0.82 if rival_atacando else 0.28)
+			var prob_retroceso_media: float = (
+				ia_prob_retroceso * 0.22 * (0.8 if rival_atacando else 0.08)
+				if dificultad_ia == DificultadIA.DIFICIL
+				else ia_prob_retroceso * _ia_factor_backdash() * (0.82 if rival_atacando else 0.28)
+			)
 			if randf() < prob_retroceso_media:
 				ia_retrocediendo = true
 				if ia_dash_cooldown <= 0.0 and randf() < ia_prob_dash_atras * 0.82:
@@ -3763,32 +8290,68 @@ func _comportamiento_ia_basico(delta: float, vel_actual: float, distancia_ataque
 					ia_dash_cooldown = randf_range(0.70, 1.10)
 				return
 
-			var prob_salto_efectiva: float = ia_prob_salto + (0.06 if not objetivo.is_on_floor() else 0.0)
+			var prob_salto_efectiva: float = clampf(
+				(ia_prob_salto + (0.06 if not objetivo.is_on_floor() else 0.0)) * _ia_factor_salto(),
+				0.0,
+				0.16 if dificultad_ia == DificultadIA.DIFICIL else 0.54
+			)
 			if randf() < prob_salto_efectiva:
 				saltar()
 				velocity.x = direccion_rival * vel_actual * 0.84
-				ia_doble_salto_pendiente = randf() < ia_prob_doble_salto
-				ia_doble_salto_timer = randf_range(0.15, 0.27)
-				ia_ataque_aereo_pendiente = randf() < ia_prob_ataque_aereo
-				ia_ataque_aereo_timer = randf_range(0.18, 0.34)
+				ia_doble_salto_pendiente = randf() < clampf(
+					ia_prob_doble_salto * _ia_factor_doble_salto(), 0.0, 0.90
+				)
+				ia_doble_salto_timer = (
+					randf_range(0.10, 0.20)
+					if dificultad_ia == DificultadIA.DIFICIL
+					else randf_range(0.15, 0.27)
+				)
+				ia_ataque_aereo_pendiente = randf() < clampf(
+					ia_prob_ataque_aereo * _ia_factor_ataque_aereo(), 0.0, 0.92
+				)
+				ia_ataque_aereo_timer = (
+					randf_range(0.10, 0.22)
+					if dificultad_ia == DificultadIA.DIFICIL
+					else randf_range(0.18, 0.34)
+				)
 				return
 
 			# Entrada explosiva desde media distancia, pero no en cada decisión.
-			if ia_dash_cooldown <= 0.0 and randf() < clampf(ia_prob_dash_adelante * 0.86 * factor_movilidad, 0.0, 0.72):
+			var prob_dash_media: float = clampf(
+				ia_prob_dash_adelante * 0.86 * factor_movilidad *
+				(1.18 if dificultad_ia == DificultadIA.DIFICIL else 1.0),
+				0.0,
+				0.96 if dificultad_ia == DificultadIA.DIFICIL else 0.72
+			)
+			if ia_dash_cooldown <= 0.0 and randf() < prob_dash_media:
 				_iniciar_carrera(direccion_rival)
-				ia_dash_cooldown = randf_range(0.55, 0.92)
+				ia_dash_cooldown = (
+					randf_range(0.18, 0.34)
+					if dificultad_ia == DificultadIA.DIFICIL
+					else randf_range(0.55, 0.92)
+				)
 				return
 
 			# Aproximadamente una de cada cuatro decisiones de zona media sostiene
 			# la distancia; las demás avanzan a velocidad moderada.
-			ia_mantener_distancia = randf() < 0.25
+			ia_mantener_distancia = randf() < _ia_prob_mantener_distancia()
 
 		# Lejos: perseguir sigue siendo la prioridad. Conservamos el dash para que
 		# la pelea no pierda velocidad ni se convierta en dos CPUs esperando.
 		else:
-			if distancia_abs < distancia_perseguir and ia_dash_cooldown <= 0.0 and randf() < clampf(ia_prob_dash_adelante * factor_movilidad, 0.0, 0.78):
+			# 91.02.40 — fuera del antiguo radio de persecución la CPU ya no entra
+			# en una zona muerta. La prioridad siempre es volver al combate.
+			var prob_dash_lejos: float = clampf(
+				ia_prob_dash_adelante * factor_movilidad * (1.18 if dificultad_ia == DificultadIA.DIFICIL else 1.0),
+				0.0,
+				0.94
+			)
+			if ia_dash_cooldown <= 0.0 and randf() < prob_dash_lejos:
 				_iniciar_carrera(direccion_rival)
-				ia_dash_cooldown = randf_range(0.55, 0.95)
+				ia_dash_cooldown = randf_range(
+					0.18 if dificultad_ia == DificultadIA.DIFICIL else 0.52,
+					0.36 if dificultad_ia == DificultadIA.DIFICIL else 0.90
+				)
 				return
 
 	# --- Ejecución continua de la intención elegida ---
@@ -3814,11 +8377,10 @@ func _comportamiento_ia_basico(delta: float, vel_actual: float, distancia_ataque
 			mover(direccion_rival, vel_actual * 0.82)
 		return
 
-	# Zona lejana: persecución clara hasta volver a entrar en el espacio de juego.
-	if distancia_abs < distancia_perseguir:
-		mover(direccion_rival, vel_actual)
-	else:
-		mover(0.0, vel_actual)
+	# 91.02.40 — Zona lejana: persecución SIEMPRE. `distancia_perseguir` deja de
+	# ser un muro invisible que apagaba la IA. Difícil usa la misma velocidad
+	# legal del Fighter; sólo decide acercarse con mayor constancia.
+	mover(direccion_rival, vel_actual)
 
 func _mult_cuerpo_actual() -> float:
 	# Fase Absoluta ya NO agranda a los personajes -- solo cambia color.
@@ -3842,16 +8404,16 @@ func _altura_visible_objetivo() -> float:
 # sienta una estampita pegada, sino algo con vida. Al terminar, vuelve a
 # mostrar al personaje. Se usa con "await" para que quien la llama pueda
 # esperar a que termine antes de seguir con el combo.
-func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_deseado: float, aplicar_impacto: bool = false, multiplicador_dano: float = 2.4) -> void:
+func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_deseado: float, aplicar_impacto: bool = false, multiplicador_dano: float = 2.4, solo_presentacion: bool = false) -> void:
 	if not tex or not sprite:
 		return
 
-	# El personaje permanece visible y bloqueado en la pose final del golpe.
-	# La ilustración grande vive detrás como apoyo cinematográfico; nunca
-	# reemplaza al cuerpo del luchador.
-	bloqueo_cinematico = true
-	velocity = Vector2.ZERO
-	_pose_final_especial(tiempo_visible + 0.25)
+	# H8.5: CORE I puede usar esta rutina como PRESENTACIÓN PURA. CORE II/III
+	# conservan el comportamiento histórico porque solo_presentacion=false.
+	if not solo_presentacion:
+		bloqueo_cinematico = true
+		velocity = Vector2.ZERO
+		_pose_final_especial(tiempo_visible + 0.25)
 	var img := Sprite2D.new()
 	img.texture = tex
 	img.centered = true
@@ -3859,7 +8421,10 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 
 	var es_absoluto: bool = tex == textura_absoluto
 	var es_rematador: bool = tex == textura_rematador
+	var es_core1_exclusivo: bool = solo_presentacion and tex == textura_core2_entrada
 	var mult_altura: float = float(PODER_CINEMA_ALTURA_MULT.get(nombre_luchador, 1.0))
+	if es_core1_exclusivo:
+		mult_altura *= float(CORE1_POSTER_EXCLUSIVO_ALTURA_MULT.get(nombre_luchador, 1.0))
 	var alto_final: float = alto_deseado * mult_altura
 
 	# 90.10.26: escalar por el área VISIBLE del PNG, no por todo el lienzo.
@@ -3879,6 +8444,8 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 	var fraccion_max: float = 0.60 if es_absoluto else (0.56 if es_rematador else 0.52)
 	if nombre_luchador in ["Jester", "Kali"]:
 		fraccion_max -= 0.035
+	if es_core1_exclusivo:
+		fraccion_max += float(CORE1_POSTER_EXCLUSIVO_FRACCION_ANCHO_EXTRA.get(nombre_luchador, 0.0))
 	var ancho_arte: float = rect_visible.size.x * esc
 	var ancho_maximo: float = ancho_visible_mundo * fraccion_max
 	if ancho_arte > ancho_maximo and ancho_arte > 1.0:
@@ -3904,6 +8471,9 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 		separacion_poster += 48.0
 	elif nombre_luchador == "Kali":
 		separacion_poster += 22.0
+	if es_core1_exclusivo:
+		separacion_poster += CORE1_POSTER_EXCLUSIVO_SEPARACION_GLOBAL
+		separacion_poster += float(CORE1_POSTER_EXCLUSIVO_SEPARACION_EXTRA.get(nombre_luchador, 0.0))
 	var centro_local_deseado: float = -mirando * separacion_poster
 	var pos_base := Vector2(centro_local_deseado - offset_centro_x, -18.0 - offset_fondo_y)
 
@@ -4004,7 +8574,8 @@ func _mostrar_poder_reemplazando(tex: Texture2D, tiempo_visible: float, alto_des
 	img.queue_free()
 	if impacto_pendiente:
 		_aplicar_impacto_especial(multiplicador_dano)
-	velocity = Vector2.ZERO
+	if not solo_presentacion:
+		velocity = Vector2.ZERO
 
 
 func _elipse_poder_poligono(rx: float, ry: float) -> PackedVector2Array:
@@ -4178,11 +8749,21 @@ func _actualizar_sombra() -> void:
 	sombra.scale = Vector2(1.0 + (1.0 - factor) * 0.25, factor)
 	sombra.modulate.a = 0.34 * factor
 
+func _mantener_reaccion_visual_congelada() -> bool:
+	if not congelado_por_rival or not objetivo or not is_instance_valid(objetivo):
+		return false
+
+	# 91.02.21 — PASS 9.1. La captura visual pertenece a TODA secuencia CORE,
+	# no solamente a la ráfaga CORE II/III. Esto evita que CORE I vuelva a idle
+	# mientras el atacante todavía conserva su pose/póster final.
+	return objetivo.en_secuencia_especial
+
+
 func _actualizar_sensacion_fisica(delta: float) -> void:
 	if not sprite:
 		return
 
-	asentamiento_aterrizaje = move_toward(asentamiento_aterrizaje, 0.0, 5.0 * delta)
+	asentamiento_aterrizaje = move_toward(asentamiento_aterrizaje, 0.0, 7.5 * delta)
 	impacto_visual_y = move_toward(impacto_visual_y, 0.0, 28.0 * delta)
 	seguimiento_ataque_x = move_toward(seguimiento_ataque_x, 0.0, 34.0 * delta)
 	anticipacion_ataque_x = move_toward(anticipacion_ataque_x, 0.0, 30.0 * delta)
@@ -4539,12 +9120,12 @@ func _efecto_golpe_suelo(fuerza: float) -> void:
 func _efecto_aterrizaje() -> void:
 	var peso_aterrizaje: float = _peso_visual_aterrizaje()
 	aterrizaje_hecho.emit(120.0 * peso_aterrizaje, false)
-	impulso_visual = 0.72 + peso_aterrizaje * 0.18
-	impulso_visual_vel = -1.25 - peso_aterrizaje * 0.55
-	asentamiento_aterrizaje = 0.72 + peso_aterrizaje * 0.28
-	# El cuerpo NO cambia de escala al aterrizar. El peso se vende con una
-	# microcaída visual, la sombra y el polvo para conservar proporciones.
-	impacto_visual_y = maxf(impacto_visual_y, 1.4 + peso_aterrizaje * 0.9)
+	impulso_visual = 0.76 + peso_aterrizaje * 0.20
+	impulso_visual_vel = -1.35 - peso_aterrizaje * 0.60
+	# 91.02.16 — PASS 4: contacto más firme pero recuperación visual más corta.
+	# La escala sigue bloqueada; sólo reforzamos microcaída/rotación/sombra.
+	asentamiento_aterrizaje = 0.84 + peso_aterrizaje * 0.32
+	impacto_visual_y = maxf(impacto_visual_y, 1.8 + peso_aterrizaje * 1.0)
 	if sombra:
 		var tw_sombra := create_tween()
 		tw_sombra.set_parallel(true)
@@ -4582,6 +9163,24 @@ func _set_color(c: Color) -> void:
 func _actualizar_textura(tex: Texture2D) -> void:
 	if not sprite or not tex:
 		return
+
+	# 91.02.27 — PASS 9.3C / CONTINUIDAD VISUAL CORE.
+	# La rafaga automatica ya usa una cadencia logica uniforme, pero entre el fin
+	# visual de un golpe y el siguiente pueden existir unos milisegundos de
+	# RECOVERY/microacercamiento. Antes, en ese hueco, el updater general podia
+	# insertar _tex_reposo() y algunos overrides (Aethel/Varkhos) podian insertar
+	# aceleracion_combo. Dax se percibia mas limpio porque esa sustitucion era
+	# mucho menos visible.
+	#
+	# Regla nueva: si durante CORE II/III el sprite ACTUAL ya es un golpe del
+	# repertorio, RECOVERY/NINGUNA conserva ese golpe hasta que el siguiente
+	# ataque entra a STARTUP y lo reemplaza. No cambia pose_timer, hitbox, timing,
+	# daño, hitstun, recovery real ni posicion.
+	if en_combo_auto_visual 		and (fase_ataque == FaseAtaque.RECOVERY or fase_ataque == FaseAtaque.NINGUNA):
+		var textura_actual_combo: Texture2D = sprite.texture
+		if _es_textura_ataque_repertorio(textura_actual_combo) 			and not _es_textura_ataque_repertorio(tex):
+			return
+
 	sprite.texture = tex
 
 	# NORMALIZACIÓN VISUAL POR POSE: cada PNG tiene un lienzo distinto.
@@ -4631,12 +9230,36 @@ func _escala_normalizada_por_pose(tex: Texture2D, rect: Rect2) -> float:
 	var metrica_ref: float = sqrt(maxf(ref_rect.size.x * ref_rect.size.y, 1.0))
 	var metrica_pose: float = sqrt(maxf(rect.size.x * rect.size.y, 1.0))
 	var escala_pose: float = escala_parado * (metrica_ref / metrica_pose)
+	if tex == textura_recarga and RECARGA_REDRAW_MULT.has(nombre_luchador):
+		escala_pose *= float(RECARGA_REDRAW_MULT[nombre_luchador])
+	if tex == textura_proyectil_pose:
+		escala_pose *= proyectil_pose_escala_mult
 	return clampf(escala_pose, 0.08, 2.0)
 
 func _textura_en_lista(tex: Texture2D, lista: Array[Texture2D]) -> bool:
 	for item in lista:
 		if item == tex:
 			return true
+	return false
+
+# 91.02.27 — reconoce cualquier sprite ofensivo NORMAL o FURIA del roster.
+# Se usa únicamente como guardia visual de la rafaga CORE; no participa en
+# hitboxes, daño, selección de repertorio ni lógica de combate.
+func _es_textura_ataque_repertorio(tex: Texture2D) -> bool:
+	if not tex:
+		return false
+	if tex == textura_punetazo or tex == textura_patada:
+		return true
+	if tex == textura_furia_punetazo or tex == textura_furia_patada:
+		return true
+	if _textura_en_lista(tex, texturas_punetazo_extra):
+		return true
+	if _textura_en_lista(tex, texturas_patada_extra):
+		return true
+	if _textura_en_lista(tex, texturas_furia_punetazo_extra):
+		return true
+	if _textura_en_lista(tex, texturas_furia_patada_extra):
+		return true
 	return false
 
 func _factor_compensacion_pose(tex: Texture2D) -> float:
@@ -5204,10 +9827,18 @@ func _aplicar_separacion_fisica() -> void:
 		and hitstun_timer <= 0.0 and objetivo.hitstun_timer <= 0.0 \
 		and not bloqueando and not objetivo.bloqueando
 	if neutral_puro:
-		var distancia_neutral: float = DISTANCIA_MINIMA_LUCHADORES
-		if dist <= 0.01 or dist >= distancia_neutral:
+		# 91.02.22 — el neutral conserva roce cercano, pero ya no permite que
+		# los centros entren hasta 62 px. Usamos el mismo mínimo compacto de
+		# precontacto que visualmente ya funciona durante los golpes normales.
+		var distancia_neutral: float = maxf(DISTANCIA_MINIMA_LUCHADORES, PUSHBOX_NEUTRAL_DISTANCIA_MIN)
+		if dist >= distancia_neutral:
 			return
 		var dir_neutral: float = signf(dx)
+		# Resguardo extremadamente raro: si ambos centros coincidieron exactamente,
+		# usamos la orientación para recuperar un lado estable en vez de dejar la
+		# superposición congelada para siempre.
+		if absf(dir_neutral) < 0.5:
+			dir_neutral = mirando if mirando != 0.0 else 1.0
 		var penetracion_neutral: float = distancia_neutral - dist
 		var yo_hacia_rival_neutral: bool = (carrera_activa and carrera_direccion * dir_neutral > 0.0) \
 			or velocity.x * dir_neutral > VELOCIDAD_NEUTRAL_EMPUJE_UMBRAL
@@ -5236,7 +9867,23 @@ func _aplicar_separacion_fisica() -> void:
 				_detener_carrera()
 			if objetivo.carrera_activa:
 				objetivo._detener_carrera()
-		# Si ninguno está cerrando distancia, no se corrige nada.
+		else:
+			# 91.02.22 — RESCATE DE SOLAPAMIENTO RESIDUAL.
+			# Antes, si un ataque/dash/cruce dejaba a los dos demasiado juntos y luego
+			# ambos quedaban quietos, neutral retornaba sin corregir nada. El personaje
+			# de menor z podía permanecer casi oculto detrás del otro indefinidamente.
+			# Repartimos SOLO la penetración ilegal según masa; no empuja si ya existe
+			# la distancia válida y no introduce una pared visual adicional.
+			var masa_yo_neutral: float = maxf(_masa_corporal(), 0.55)
+			var masa_otro_neutral: float = maxf(objetivo._masa_corporal(), 0.55)
+			var suma_masa_neutral: float = masa_yo_neutral + masa_otro_neutral
+			var factor_yo_neutral: float = masa_otro_neutral / suma_masa_neutral
+			var factor_otro_neutral: float = masa_yo_neutral / suma_masa_neutral
+			global_position.x -= dir_neutral * penetracion_neutral * factor_yo_neutral
+			objetivo.global_position.x += dir_neutral * penetracion_neutral * factor_otro_neutral
+
+		_aplicar_limites_arena()
+		objetivo._aplicar_limites_arena()
 		return
 
 	var distancia_minima: float = _distancia_combo_auto_adaptativa(objetivo) if combo_core_activo else _distancia_minima_contextual(objetivo)
@@ -5257,21 +9904,36 @@ func _aplicar_separacion_fisica() -> void:
 		if yo_atacando != otro_atacando:
 			var atacante: Fighter = self if yo_atacando else objetivo
 			if not atacante._atk_ya_conecto:
+				# El hitbox de este frame YA tuvo prioridad. Recién después sostenemos
+				# un precontacto de 80 px para que el lunge no funda ambos torsos.
 				distancia_minima = minf(distancia_minima, _distancia_precontacto_adaptativa(objetivo, atacante))
+				distancia_minima = maxf(distancia_minima, PUSHBOX_COMBATE_PRECONTACTO_MIN)
 		elif yo_atacando and otro_atacando:
-			# Dos ataques simultáneos antes se saltaban TODA separación y eran una de
-			# las fuentes más visibles de torso dentro de torso. Como los hitboxes ya
-			# fueron evaluados en este frame, podemos conservar un colchón compacto sin
-			# impedir trades. Nunca supera 88 px.
+			# Dos ataques simultáneos conservan posibilidad de trade, pero no pueden
+			# seguir penetrando por debajo del colchón compacto una vez evaluados sus
+			# hitboxes del frame.
 			if not _atk_ya_conecto and not objetivo._atk_ya_conecto:
 				distancia_minima = minf(
 					distancia_minima,
 					minf(_distancia_precontacto_adaptativa(objetivo, self), PRECONTACTO_DOBLE_ATAQUE_MAX)
 				)
+				distancia_minima = maxf(distancia_minima, PUSHBOX_COMBATE_PRECONTACTO_MIN)
 
-	if dist <= 0.01 or dist >= distancia_minima:
+		# Después de un contacto real, durante hitstun o bloqueo, el rango ya no
+		# necesita ganar al pushbox: aquí manda la legibilidad del torso.
+		var contacto_corporal_confirmado: bool = _atk_ya_conecto or objetivo._atk_ya_conecto \
+			or hitstun_timer > 0.0 or objetivo.hitstun_timer > 0.0 \
+			or bloqueando or objetivo.bloqueando
+		if contacto_corporal_confirmado:
+			distancia_minima = maxf(distancia_minima, PUSHBOX_COMBATE_TORSO_MIN)
+
+	if dist >= distancia_minima:
 		return
 	var dir: float = signf(dx)
+	# 91.02.23 — si ambos centros llegaron exactamente al mismo X, no dejamos
+	# congelada la fusión. Recuperamos un lado estable usando la orientación.
+	if absf(dir) < 0.5:
+		dir = mirando if mirando != 0.0 else 1.0
 	var penetracion := distancia_minima - dist
 	# Separación según masa real: el cuerpo liviano cede más y el pesado se
 	# planta. Si alguien está aturdido o golpeando, todavía cede una porción adicional.
@@ -5351,6 +10013,49 @@ func _aplicar_separacion_fisica() -> void:
 
 	global_position.x -= dir * penetracion * factor_yo
 	objetivo.global_position.x += dir * penetracion * factor_objetivo
+
+	# 91.02.23 — un defensor contra el borde puede no tener espacio para absorber
+	# el 100 % de la separación. Primero respetamos arena y luego trasladamos el
+	# residuo al otro cuerpo. Así el atacante tampoco puede enterrarse en el torso
+	# de un rival acorralado.
+	_aplicar_limites_arena()
+	objetivo._aplicar_limites_arena()
+	var dx_post: float = objetivo.global_position.x - global_position.x
+	var dist_post: float = absf(dx_post)
+	if dist_post < distancia_minima - 0.01:
+		var dir_post: float = signf(dx_post)
+		if absf(dir_post) < 0.5:
+			dir_post = dir
+		var faltante: float = distancia_minima - dist_post
+		var limites_yo_post: Vector2 = _limites_arena_x_pose_actual()
+		var limites_otro_post: Vector2 = objetivo._limites_arena_x_pose_actual()
+		var capacidad_yo: float
+		var capacidad_otro: float
+		if dir_post > 0.0:
+			capacidad_yo = maxf(0.0, global_position.x - limites_yo_post.x)
+			capacidad_otro = maxf(0.0, limites_otro_post.y - objetivo.global_position.x)
+		else:
+			capacidad_yo = maxf(0.0, limites_yo_post.y - global_position.x)
+			capacidad_otro = maxf(0.0, objetivo.global_position.x - limites_otro_post.x)
+
+		var mover_yo: float = minf(faltante * factor_yo, capacidad_yo)
+		var mover_otro: float = minf(faltante * factor_objetivo, capacidad_otro)
+		var restante: float = maxf(0.0, faltante - mover_yo - mover_otro)
+
+		# Si la prioridad original apuntaba al luchador que ya no tiene espacio,
+		# el lado libre absorbe el resto sin alterar knockback ni velocidades.
+		if restante > 0.0:
+			var extra_otro: float = minf(restante, maxf(0.0, capacidad_otro - mover_otro))
+			mover_otro += extra_otro
+			restante -= extra_otro
+		if restante > 0.0:
+			var extra_yo: float = minf(restante, maxf(0.0, capacidad_yo - mover_yo))
+			mover_yo += extra_yo
+
+		global_position.x -= dir_post * mover_yo
+		objetivo.global_position.x += dir_post * mover_otro
+		_aplicar_limites_arena()
+		objetivo._aplicar_limites_arena()
 
 # ¿Esta textura es uno de los puñetazos/patadas (normales o furia) de
 # este personaje? Se usa solo para la compensación de tamaño de arriba.

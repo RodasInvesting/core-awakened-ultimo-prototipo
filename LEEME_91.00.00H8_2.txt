@@ -1,0 +1,75 @@
+CORE AWAKENED 91.00.00-H8.2 — CORE I SAFE ENTRY / PARSE FIX
+
+ERROR H8.1
+----------
+Godot reportó:
+  main.gd:2070 — Identifier "esperado" not declared
+  main.gd:2071 — Identifier "esperado" not declared
+
+CAUSA
+-----
+Dentro de:
+  _h1_probe_pretick(...)
+
+el snapshot histórico se llama:
+  snap
+
+El bloque diagnóstico CORE I referenciaba por error:
+  esperado.get(...)
+
+CORRECCIÓN H8.2
+---------------
+Único cambio lógico respecto de H8.1:
+
+ANTES:
+  var cj1 = esperado.get("j1", {})
+  var cj2 = esperado.get("j2", {})
+
+AHORA:
+  var cj1 = snap.get("j1", {})
+  var cj2 = snap.get("j2", {})
+
+NO SE TOCA
+----------
+- fighter.gd
+- Combat Feel
+- daño
+- CORE
+- velocidad
+- inputs
+- rollback H6.1
+- safety gate
+- arte
+
+PRUEBA 1 — ARRANQUE
+-------------------
+1. Reemplazar archivos H8.2.
+2. Abrir Godot.
+3. Confirmar que NO aparezca Parse Error.
+4. Entrar Versus Local.
+5. Confirmar VS -> READY -> FIGHT -> pelea normal.
+
+Si hay otro Parse Error:
+- NO probar CORE.
+- copiar Output completo.
+
+PRUEBA 2 — CORE I
+-----------------
+Si la pelea inicia correctamente:
+
+J1:
+- llenar primer CORE;
+- activarlo;
+- esperar "CORE I EVENT MARCADO";
+- presionar F11 apenas arranca;
+- repetir 2 veces.
+
+J2:
+- igual, 2 veces.
+
+Esperado:
+  CORE I EVENT LOCALIZADO
+  TACTICAL ROLLBACK — CORE I ENTRY
+  y luego OK o DESYNC diagnóstico.
+
+No usar CORE II/III en esta build.

@@ -1,0 +1,100 @@
+CORE AWAKENED 91.00.00-H9.6 — CORE II FIRST BEAT END
+
+RESULTADO H9.5
+--------------
+CORE II RECARGA END:
+- J1 OK
+- J2 OK
+- J2 OK
+- J1 OK
+
+CORE II COMBO ENTRY:
+- J1 OK
+- J2 OK
+- J2 OK
+- J1 OK
+
+Resultado:
+- desapareció el Tween fantasma por beat;
+- async epoch invalidó correctamente la coroutine LIVE vieja;
+- el borde stage 2 -> 3 es determinista en ambos lados.
+
+OBJETIVO H9.6
+-------------
+Entrar por primera vez DENTRO de stage 3.
+
+La prueba automática espera:
+
+  stage 3
+  + primer golpe activo
+      ->
+  fase_ataque vuelve a NINGUNA
+
+Ese es el FIN DEL PRIMER BEAT.
+
+Luego restaura el snapshot inmediatamente anterior y:
+- invalida la coroutine LIVE con async epoch;
+- exige que el estado restaurado reconstruya por sí solo la continuación.
+
+H9.6 ES DIAGNÓSTICO PURO
+------------------------
+fighter.gd no cambia respecto de H9.5 salvo etiqueta de versión.
+rollback_snapshot.gd no cambia.
+Sólo main.gd agrega detector/localizador FIRST BEAT END.
+
+POR QUÉ ESTA PRUEBA ES IMPORTANTE
+---------------------------------
+En COMBO ENTRY, el rollback cruza stage 2 -> 3 y esa transición vuelve a
+llamar _core2_continuar_combo_async(), por eso puede crear una coroutine nueva.
+
+Pero si restauramos YA DENTRO de stage 3:
+- core2_secuencia_etapa ya vale 3;
+- no hay transición 2 -> 3;
+- un snapshot no puede restaurar el instruction pointer de una coroutine.
+
+Al invalidar la coroutine LIVE, sabremos si el combo tiene una verdadera
+representación lógica snapshotable o si depende todavía de la continuación
+interna del await.
+
+PRUEBA
+------
+NO usar F11.
+
+J1:
+1. CORE I.
+2. Llenar CORE II.
+3. Alejarse >350 px.
+4. Activar CORE II.
+5. No tocar nada.
+6. Se ejecutarán auto-tests:
+   a) RECARGA END
+   b) COMBO ENTRY
+   c) FIRST BEAT END
+7. Repetir 2 veces.
+
+J2:
+Igual, 2 veces.
+
+BUSCAMOS
+--------
+  CORE II FIRST BEAT END AUTO MARCADO
+  CORE II FIRST BEAT END LOCALIZADO
+  CORE II ASYNC EPOCH INVALIDADO
+  TACTICAL ROLLBACK — CORE II FIRST BEAT END
+
+Puede terminar:
+
+A) OK
+   Excelente: el tramo interno se reconstruye por otra vía.
+
+B) DESYNC
+   Es el resultado estructural esperado.
+   Si la siguiente patada/puño no aparece en replay, significa que stage 3
+   necesita convertirse en una FSM explícita con:
+   - índice de coreografía;
+   - subfase WAIT_ATTACK / APPROACH / START_ATTACK / WAIT_ATTACK_END;
+   - timers físicos snapshotables.
+
+Si B ocurre, H9.7 hará esa conversión.
+
+NO usar CORE III.

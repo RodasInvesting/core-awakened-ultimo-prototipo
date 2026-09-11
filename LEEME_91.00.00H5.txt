@@ -1,0 +1,103 @@
+CORE AWAKENED 91.00.00-H5 — BACK DASH ROLLBACK
+
+BASE H4 CERTIFICADA
+-------------------
+H4:
+- 4 Counters probados
+- J2 puño + patada
+- J1 puño + patada
+- 4/4 TACTICAL ROLLBACK OK
+- Tactical Physics Clock esperado == actual en todos los subticks
+- 0 ROLLBACK DESYNC
+
+OBJETIVO H5
+-----------
+Certificar Back Dash real bajo rollback.
+
+Back Dash es importante porque:
+- nace en PerfectBlock90_1;
+- usa doble toque;
+- tiene cooldown + invulnerabilidad;
+- mueve global_position.x directamente desde la capa táctica;
+- Fighter también puede interpretar el doble toque como carrera.
+
+CAMBIO H5
+---------
+Se agrega un marcador diagnóstico inerte:
+- _rollback_backdash_event_serial
+- _rollback_backdash_event_fighter_id
+- _rollback_backdash_event_direccion
+
+Sólo cambia cuando _iniciar_backdash() fue REALMENTE aceptado.
+
+NO cambia:
+- duración Back Dash
+- velocidad
+- invulnerabilidad
+- cooldown
+- controles
+- Fighter
+- Combat Feel
+
+F11 localiza el Back Dash real dentro del ring y rebobina 8 ticks alrededor
+del segundo toque.
+
+PROTECCIÓN IMPORTANTE
+---------------------
+Durante una prueba clasificada BACK DASH:
+Historical-X Guard se DESACTIVA.
+
+Motivo:
+Back Dash mueve X desde PerfectBlock90_1. Si el guard corrigiera X usando
+la posición histórica, podría ocultar un fallo real del Back Dash.
+
+Por eso H5 exige que el movimiento táctico reproduzca su propia X.
+
+CÓMO HACER BACK DASH
+--------------------
+Doble toque HACIA ATRÁS / ALEJÁNDOTE del rival.
+
+Si el rival está a tu DERECHA:
+  doble toque IZQUIERDA
+
+Si el rival está a tu IZQUIERDA:
+  doble toque DERECHA
+
+El doble toque HACIA el rival sigue siendo carrera normal y NO cuenta.
+
+PRUEBA
+------
+A) J1 — 3 Back Dash
+1. J1 neutral y en suelo.
+2. Doble toque alejándose del rival.
+3. Debe aparecer en Output:
+   BACKDASH EVENT MARCADO — serial=...
+4. Presionar F11 inmediatamente durante/después de la evasión.
+5. Meta:
+   TACTICAL ROLLBACK OK — BACK DASH — 8 ticks; estado presente idéntico
+
+B) J2 — 3 Back Dash
+Mismo procedimiento con J2.
+
+Ideal:
+- probar al menos una vez con alejamiento hacia izquierda;
+- cambiar posiciones y probar alejamiento hacia derecha.
+
+PRETICK H5
+----------
+Además del Tactical Clock muestra:
+- BACKDASH MARK esperado/actual
+- BACKDASH STATE J1/J2 timer + dirección
+
+META DE CERTIFICACIÓN
+---------------------
+6/6 BACK DASH OK
+0 ROLLBACK CAUSAL DESYNC
+0 TACTICAL TEMPORAL DESYNC
+0 TACTICAL ROLLBACK DESYNC
+
+SIGUIENTE SI H5 PASA
+--------------------
+H6 — Quick Recovery rollback.
+
+fighter.gd NO se modifica.

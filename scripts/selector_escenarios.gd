@@ -1,12 +1,10 @@
 extends Control
 
-# CORE AWAKENED 90.10.10
-# Selector de escenarios exclusivo de Versus/Batalla Rápida.
-# Arcade NO entra aquí: conserva escenario automático según rival.
-
+# CORE AWAKENED 91.02.00 — selector de escenarios con KROVAN + NEKHAR.
+# Arcade conserva escenario automático según rival.
 const ESCENARIOS: Array[String] = [
 	"Kai", "Cibor-X", "Fang", "Kali", "Aethel", "Magnus",
-	"Helena", "Jester", "Xenoid", "Dax", "Varkhos"
+	"Helena", "Jester", "Xenoid", "Dax", "Varkhos", "Krovan", "Nekhar"
 ]
 
 const NOMBRES := {
@@ -21,6 +19,8 @@ const NOMBRES := {
 	"Xenoid": "NEXO XENOID",
 	"Dax": "COLISEO ROJO",
 	"Varkhos": "TRONO DEL NÚCLEO",
+	"Krovan": "CAMPO DE LA ÚLTIMA COSECHA",
+	"Nekhar": "SEPULCRO DE KHEMET",
 }
 
 const RUTAS := {
@@ -35,6 +35,8 @@ const RUTAS := {
 	"Xenoid": "res://assets/fondos/xenoid.png",
 	"Dax": "res://assets/fondos/dax.png",
 	"Varkhos": "res://assets/fondos/varkhos.png",
+	"Krovan": "res://assets/fondos/krovan.png",
+	"Nekhar": "res://assets/fondos/nekhar.png",
 }
 
 const COLORES := {
@@ -49,6 +51,8 @@ const COLORES := {
 	"Xenoid": Color(0.42, 1.0, 0.08),
 	"Dax": Color(0.96, 0.18, 0.08),
 	"Varkhos": Color(0.62, 0.18, 1.0),
+	"Krovan": Color(1.0, 0.62, 0.12),
+	"Nekhar": Color(1.0, 0.38, 0.08),
 }
 
 const COLUMNAS := 6
@@ -66,17 +70,29 @@ var confirmando := false
 var musica: AudioStreamPlayer
 var titulo_seleccion: Label
 
+func _es_online() -> bool:
+	var estado := get_node_or_null("/root/GameState")
+	return estado != null and str(estado.modo) == "online"
+
+func _network() -> Node:
+	return get_node_or_null("/root/NetworkManager")
+
 func _ready() -> void:
 	var estado = get_node("/root/GameState")
 	if estado.modo == "arcade":
 		get_tree().change_scene_to_file("res://scenes/PresentacionVS.tscn")
 		return
-
 	_crear_fondo()
 	_crear_titulo()
 	_crear_tarjetas()
 	_crear_ayuda()
 	_crear_audio()
+	if _es_online():
+		var red := _network()
+		if red != null:
+			indice = clampi(int(red.escenario_preview_indice), 0, ESCENARIOS.size() - 1)
+			if not red.escenario_preview_cambiado.is_connected(_al_preview_online):
+				red.escenario_preview_cambiado.connect(_al_preview_online)
 	_actualizar_seleccion()
 
 func _crear_fondo() -> void:
@@ -86,11 +102,9 @@ func _crear_fondo() -> void:
 	bg.size = Vector2(1280, 720)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
-
-	# Veladura violeta muy suave para mantener identidad visual del juego.
 	var halo := ColorRect.new()
 	halo.color = Color(0.12, 0.02, 0.22, 0.42)
-	halo.position = Vector2(0, 0)
+	halo.position = Vector2.ZERO
 	halo.size = Vector2(1280, 720)
 	halo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(halo)
@@ -106,8 +120,8 @@ func _crear_titulo() -> void:
 	add_child(titulo)
 
 	titulo_seleccion = Label.new()
-	titulo_seleccion.position = Vector2(300, 60)
-	titulo_seleccion.size = Vector2(680, 28)
+	titulo_seleccion.position = Vector2(250, 60)
+	titulo_seleccion.size = Vector2(780, 28)
 	titulo_seleccion.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	titulo_seleccion.add_theme_font_size_override("font_size", 18)
 	titulo_seleccion.add_theme_color_override("font_color", Color(0.82, 0.72, 1.0))
@@ -116,8 +130,8 @@ func _crear_titulo() -> void:
 func _crear_tarjetas() -> void:
 	for i in range(ESCENARIOS.size()):
 		var escenario: String = ESCENARIOS[i]
-		var fila := i / COLUMNAS
-		var columna := i % COLUMNAS
+		var fila: int = int(i / COLUMNAS)
+		var columna: int = i % COLUMNAS
 		var pos := Vector2(
 			INICIO_X + float(columna) * (TARJETA_W + GAP_X),
 			INICIO_Y + float(fila) * (TARJETA_H + GAP_Y)
@@ -154,7 +168,7 @@ func _crear_tarjetas() -> void:
 		nombre.size = Vector2(TARJETA_W - 16.0, 22.0)
 		nombre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nombre.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		nombre.add_theme_font_size_override("font_size", 12)
+		nombre.add_theme_font_size_override("font_size", 11 if escenario in ["Krovan", "Nekhar"] else 12)
 		nombre.add_theme_color_override("font_color", Color.WHITE)
 		nombre.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(nombre)
@@ -182,7 +196,7 @@ func _crear_ayuda() -> void:
 
 	var modo := Label.new()
 	var estado = get_node("/root/GameState")
-	modo.text = "VERSUS LOCAL" if estado.modo == "versus_local" else "MODO VERSUS"
+	modo.text = "ONLINE — HOST ELIGE" if estado.modo == "online" else ("VERSUS LOCAL" if estado.modo == "versus_local" else "MODO VERSUS")
 	modo.position = Vector2(28, 676)
 	modo.size = Vector2(200, 24)
 	modo.add_theme_font_size_override("font_size", 16)
@@ -205,20 +219,30 @@ func _sonido_navegacion() -> void:
 func _seleccionar_indice(idx: int) -> void:
 	if confirmando:
 		return
+	if _es_online():
+		var red := _network()
+		if red == null or not red.es_host():
+			return
 	if idx != indice:
 		indice = idx
 		_sonido_navegacion()
 		_actualizar_seleccion()
+		_publicar_preview_online()
 
 func _click_indice(idx: int) -> void:
 	if confirmando:
 		return
+	if _es_online():
+		var red := _network()
+		if red == null or not red.es_host():
+			return
 	if indice == idx:
 		_confirmar()
 	else:
 		indice = idx
 		_sonido_navegacion()
 		_actualizar_seleccion()
+		_publicar_preview_online()
 
 func _actualizar_seleccion() -> void:
 	indice = wrapi(indice, 0, ESCENARIOS.size())
@@ -248,25 +272,55 @@ func _actualizar_seleccion() -> void:
 	titulo_seleccion.text = NOMBRES[actual]
 	titulo_seleccion.add_theme_color_override("font_color", COLORES[actual].lerp(Color.WHITE, 0.32))
 
+func _al_preview_online(nuevo_indice: int) -> void:
+	if not _es_online():
+		return
+	indice = clampi(nuevo_indice, 0, ESCENARIOS.size() - 1)
+	_actualizar_seleccion()
+
+func _publicar_preview_online() -> void:
+	if not _es_online():
+		return
+	var red := _network()
+	if red != null and red.es_host():
+		red.actualizar_preview_escenario(indice)
+
 func _unhandled_input(event: InputEvent) -> void:
 	if confirmando:
 		return
+	if _es_online():
+		var red := _network()
+		if red == null:
+			return
+		if event.is_action_pressed("ui_cancel"):
+			red.cerrar_conexion()
+			get_node("/root/GameState").volver_al_menu()
+			get_tree().change_scene_to_file("res://scenes/MenuPrincipal.tscn")
+			return
+		# El Cliente observa; la autoridad de escenario es exclusivamente el Host.
+		if not red.es_host():
+			return
+
 	if event.is_action_pressed("ui_left"):
 		indice -= 1
 		_sonido_navegacion()
 		_actualizar_seleccion()
+		_publicar_preview_online()
 	elif event.is_action_pressed("ui_right"):
 		indice += 1
 		_sonido_navegacion()
 		_actualizar_seleccion()
+		_publicar_preview_online()
 	elif event.is_action_pressed("ui_up"):
 		indice -= COLUMNAS
 		_sonido_navegacion()
 		_actualizar_seleccion()
+		_publicar_preview_online()
 	elif event.is_action_pressed("ui_down"):
 		indice += COLUMNAS
 		_sonido_navegacion()
 		_actualizar_seleccion()
+		_publicar_preview_online()
 	elif event.is_action_pressed("ui_accept"):
 		_confirmar()
 	elif event.is_action_pressed("ui_cancel"):
@@ -275,8 +329,15 @@ func _unhandled_input(event: InputEvent) -> void:
 func _confirmar() -> void:
 	if confirmando:
 		return
-	confirmando = true
 	var estado = get_node("/root/GameState")
+	if _es_online():
+		var red := _network()
+		if red == null or not red.es_host():
+			return
+		confirmando = true
+		red.confirmar_escenario_online(ESCENARIOS[indice])
+		return
+	confirmando = true
 	estado.seleccionar_escenario(ESCENARIOS[indice])
 	await get_tree().create_timer(0.18).timeout
 	get_tree().change_scene_to_file("res://scenes/PresentacionVS.tscn")

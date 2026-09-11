@@ -98,6 +98,25 @@ func _init() -> void:
 	textura_furia_golpe_recibido = load("res://assets/dax/furia_golpe_recibido.png")
 	textura_furia_derribado = load("res://assets/dax/furia_derribado.png")
 
+	# 91.02.53 — PASS 12J / PROYECTIL TANDA 3 — DAX.
+	proyectil_especial_habilitado = true
+	textura_proyectil_pose = load("res://assets/dax/poder_proyectil.png")
+	textura_proyectil_nucleo = load("res://assets/dax/proyectil_oficial.png")
+	# 91.02.57 — nuevo sprite oficial de lanzamiento Dax.
+	# El nuevo arte tiene una proporción cuerpo/VFX mucho más equilibrada,
+	# por eso ya no necesita la compensación agresiva 1.27 del sprite anterior.
+	proyectil_pose_escala_mult = 1.10
+	color_proyectil_primario = Color(1.0, 0.06, 0.08, 1.0)
+	color_proyectil_secundario = Color(1.0, 0.82, 0.82, 1.0)
+	proyectil_velocidad = 805.0
+	proyectil_dano_mult = 0.86
+	proyectil_empuje = 148.0
+	proyectil_hitstun = 0.22
+	proyectil_startup = 0.16
+	proyectil_recovery = 0.30
+	proyectil_cooldown = 0.62
+	sonido_proyectil_impacto = load("res://assets/helena/proyectil_impacto.wav")
+
 # 90.11.14 — El dash aéreo ya retenía su pose mediante pose_timer, pero el dash
 # terrestre podía ser reemplazado por la caminata en el mismo ciclo visual.
 # Esta corrección es EXCLUSIVA DE DAX: conserva la física base y fija sólo la

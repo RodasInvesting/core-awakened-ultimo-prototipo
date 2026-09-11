@@ -1,0 +1,111 @@
+CORE AWAKENED 91.00.00-H9.10 — CORE II REMATADOR FSM
+
+RESULTADO H9.9
+--------------
+J1:
+- REMATADOR ENTRY -> OK
+- REMATADOR POSTER END -> DESYNC causal
+
+J2:
+- REMATADOR ENTRY -> OK
+- REMATADOR POSTER END -> DESYNC causal
+
+El fallo fue simétrico.
+
+Al anular la continuation LIVE después del await del póster, el catch-up no
+reprodujo:
+- hitstun 0.9
+- knockback/velocity
+- descongelar rival
+- derribo_especial_activo
+- reacción de impacto
+- temporizadores de caída/deslizamiento
+
+Conclusión:
+stage 4 dependía del instruction pointer de la coroutine.
+
+H9.10
+-----
+El rematador CORE II pasa a FSM explícita.
+
+Stage 4:
+  POSTER
+    timer lógico 2.06 s
+      ->
+  aplicar impacto/derribo exactamente una vez
+      ->
+  ESPERA_FINAL
+    timer lógico 0.10 s
+      ->
+  rematador_conectado
+      ->
+  desbloquear + devolver control
+
+Estado nuevo snapshotable:
+- core2_rematador_subfase
+- core2_rematador_timer
+- core2_rematador_duracion
+- core2_rematador_puede_conectar
+- core2_rematador_bloqueado
+- core2_rematador_direccion
+
+PRESENTACIÓN
+------------
+La gigantografía real sigue existiendo con los mismos Tweens/VFX, pero es
+presentación pura. Ya no decide cuándo ocurre el daño.
+
+Durante catch-up se suprime la creación duplicada del póster CORE II.
+
+SE CONSERVA EXACTO
+------------------
+- rango de conexión
+- dano_patada * MULT_DANO_GLOBAL * mult_dano_fase * 2.4
+- recibir_dano(... 520, 0.75, "rematador")
+- derribo:
+  1045 / 505 / 0.95 sin bloqueo
+  570 / 310 / 0.45 bloqueado
+- preparar_impacto_cinematico(1.35)
+- espera final 0.10
+- CORE I intacto
+- CORE III intacto
+
+PRUEBA
+------
+NO usar F11.
+
+J1:
+1. CORE I.
+2. Cargar CORE II.
+3. Activar CORE II.
+4. Dejar hacer combo + rematador completo.
+5. La prueba REMATADOR POSTER END se dispara sola.
+6. Verificar que después del rollback:
+   - rival sale despedido/derribado;
+   - CORE II termina;
+   - vuelve el control.
+7. Repetir 1 vez.
+
+J2:
+Igual, 1 vez.
+
+BUSCAMOS
+--------
+  CORE II REMATADOR ENTRY -> OK
+
+Luego:
+  CORE II REMATADOR POSTER END MARCADO
+  CORE II REMATADOR POSTER END LOCALIZADO
+  TACTICAL ROLLBACK — CORE II REMATADOR POSTER END
+  CORE II REMATADOR POSTER END RESIM
+  TACTICAL ROLLBACK OK — CORE II REMATADOR POSTER END — 8 ticks
+
+Ya NO debe aparecer:
+- ROLLBACK CAUSAL DESYNC
+- derribo esperado=true actual=false
+- velocity/hitstun esperados y actual cero
+
+Si H9.10 pasa J1 + J2:
+el único borde restante para cerrar CORE II de punta a punta será
+ESPERA_FINAL 0.10 -> stage 0 / devolución de control.
+
+CORE III sigue intacto.

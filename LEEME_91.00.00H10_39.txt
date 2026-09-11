@@ -1,0 +1,38 @@
+CORE AWAKENED 91.00.00-H10.39
+CORE III — TWELFTH BEAT END DIAGNOSTIC
+
+Objetivo único:
+- Diagnosticar rollback de 8 ticks en CORE III TWELFTH BEAT END.
+- Frontera exacta: stage 14 -> stage 15.
+- stage 14 = duodécimo beat físico snapshotable.
+- stage 15 = continuación histórica desde el decimotercer beat.
+
+Estado certificado:
+- CORE I completo certificado.
+- CORE II completo certificado.
+- CORE III ENTRY, RECARGA END, APPROACH END y FIRST..ELEVENTH BEAT END certificados J1/J2.
+- H10.38 revalidó ELEVENTH BEAT END stage 13->14 en J1/J2 con 8 ticks idénticos.
+
+Cambio de esta build:
+- Diagnóstico puro en main.gd para detectar/localizar stage 14 -> 15.
+- fighter.gd queda byte por byte igual a H10.38.
+- Beats 1-12 CORE III siguen físicos/snapshotables; resto histórico desde beat 13.
+- Snapshot, PerfectBlock, GameState, Input Recorder/Replay, Ring Buffer, Motion Guard y Resultado sin cambios.
+
+Prueba:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar naturalmente.
+5. Repetir CORE III completo con J2 y dejar terminar naturalmente.
+6. Enviar el runtime completo.
+
+Marcadores esperados:
+CORE III TWELFTH BEAT END AUTO MARCADO
+CORE III TWELFTH BEAT END LOCALIZADO — stage 14->15
+
+Resultado objetivo en ambos lados:
+TACTICAL ROLLBACK OK — CORE III TWELFTH BEAT END — 8 ticks; estado presente idéntico
+
+Si el runtime demuestra DESYNC en el primer subtick por desplazamiento externo del beat 13 histórico,
+la siguiente build convertirá únicamente el beat 13 a FSM física/snapshotable.

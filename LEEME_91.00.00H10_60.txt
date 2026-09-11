@@ -1,0 +1,37 @@
+CORE AWAKENED 91.00.00-H10.60 — CORE III ABSOLUTE REVEAL END TARGET-ONLY
+
+BASE:
+- H10.58 certificó CORE III ABSOLUTE FINISHER ENTRY J1/J2 (8 ticks idénticos).
+- Fighter y módulos deterministas permanecen byte-identical respecto de H10.58.
+
+OBJETIVO ÚNICO H10.60:
+- Diagnosticar el primer límite cinematográfico posterior a la entrada absoluta.
+- Main mantiene time_scale=0.18 durante 3.15 s y luego cruza a 0.42.
+- Target exacto: ronda_activa=false, CORE III stage 21, time_scale 0.18 -> 0.42.
+- El timer actual es SceneTreeTimer histórico/no snapshotable. H10.60 NO lo modifica: sólo prueba si se reconstruye al restaurar un tick antes del cruce.
+
+PRUEBA:
+1) Kai vs Dax: completar CORE I, CORE II y CORE III con Kai/J1.
+2) Dax vs Kai: completar CORE I, CORE II y CORE III con Kai/J2.
+3) NO usar F11.
+
+RESULTADO ESPERADO:
+- CORE III ABSOLUTE REVEAL END AUTO MARCADO
+- CORE III ABSOLUTE REVEAL END LOCALIZADO
+- Luego TACTICAL ROLLBACK OK o DESYNC con primer subtick causal.
+
+NO MODIFICADO:
+- fighter.gd
+- PerfectBlock
+- rollback_snapshot.gd
+- rollback_ring_buffer.gd
+- gameplay/arte/audio
+
+
+H10.60 CAMBIO PROBADO POR RUNTIME
+- H10.59 falló J1 y J2 en ABSOLUTE REVEAL END porque SceneTreeTimer(3.15) no se rebobina.
+- Sólo ese reveal pasa a contador physics snapshotable en Main.
+- rollback_snapshot.gd captura/restaura activo/timer/lado de esa fase.
+- Fighter, PerfectBlock y gameplay de los 18 beats permanecen congelados.
+- J1 conserva para J2 el delta pre-transición 0.003000 en 0.18->0.42, probado por H10.59.
+- Objetivo de esta build: revalidar la MISMA frontera CORE III ABSOLUTE REVEAL END J1/J2.

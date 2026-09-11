@@ -1,0 +1,50 @@
+CORE AWAKENED 91.00.00-H1 — ATTACK GATE TRACE
+
+RESULTADO H
+-----------
+WHIFF/FASE:
+- Puño: OK
+- Patada: OK
+- Patada: OK
+
+Primer IMPACTO:
+- DESYNC exacto de 1 physics tick (~16.666 ms)
+- indice_patada esperado 3 / actual 4
+- timer_fase_ataque actual adelantado 1 tick
+- hitstun/empuje/contacto del defensor también adelantados 1 tick
+
+HIPÓTESIS A AISLAR
+------------------
+El input de ataque está atravesando una frontera de hitstop.
+Necesitamos saber si:
+A) el hitstop al COMIENZO del tick no se restaura igual, o
+B) el frame de input está asociado a la frontera equivocada.
+
+CAMBIO H1
+---------
+NO corrige nada.
+NO modifica fighter.gd.
+NO cambia combate.
+
+Antes de cada tick histórico relevante imprime PRETICK:
+- input histórico
+- hitstop esperado/actual
+- fase y timer esperado/actual
+- índice de puño/patada
+- puno_estaba_presionado / patada_estaba_presionada
+- ataque_buffer_tipo/timer
+- input_externo_disponible
+- hitstun del defensor
+
+PRUEBA
+------
+1. Confirmar gameplay normal.
+2. Hacer 1 o 2 WHIFF si querés validar.
+3. Hacer UN impacto real con J1 sobre J2 neutral.
+4. Presionar F11 inmediatamente.
+5. Enviar desde:
+   [91.00.00-H1] NORMAL ATTACK ROLLBACK — IMPACTO
+   incluyendo todos los PRETICK
+   hasta NORMAL ATTACK ROLLBACK DESYNC.
+
+Con H1 debemos poder decidir la corrección sin tocar a ciegas el Combat Feel.

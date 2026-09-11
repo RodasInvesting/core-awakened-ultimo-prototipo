@@ -1,0 +1,30 @@
+CORE AWAKENED — 91.00.00-H10.25
+CORE III SIXTH BEAT END DIAGNOSTIC
+
+OBJETIVO
+- Diagnóstico puro de la frontera CORE III SIXTH BEAT END.
+- Detecta stage 8 -> 9: fin del SEXTO beat físico snapshotable y entrega al SÉPTIMO beat histórico/async.
+- H10.24 certificó FIFTH BEAT END 7->8 en J1 y J2.
+
+QUÉ CAMBIA
+- Sólo scripts/main.gd: instrumentación, localización de ventana y clasificación rollback para SIXTH BEAT END.
+- No cambia fighter.gd.
+- No cambia rollback_snapshot.gd.
+- No cambia perfect_block_90_1.gd.
+- No cambia gameplay.
+
+PRUEBA
+1. NO presionar F11.
+2. Ejecutar CORE III completo con J1 y dejar terminar naturalmente.
+3. Ejecutar CORE III completo con J2 y dejar terminar naturalmente.
+4. Enviar el runtime log completo.
+
+LÍNEAS ESPERADAS
+- CORE III SIXTH BEAT END AUTO MARCADO
+- CORE III SIXTH BEAT END LOCALIZADO — stage 8->9
+- TACTICAL ROLLBACK — CORE III SIXTH BEAT END
+- Luego OK o DESYNC.
+
+CRITERIO DE APROBACIÓN
+TACTICAL ROLLBACK OK — CORE III SIXTH BEAT END — 8 ticks; estado presente idéntico
+para J1 y J2.

@@ -1,0 +1,63 @@
+CORE AWAKENED 91.02.65 — PASS 14D1B / CONTROL LOCAL POR INSTANCIA
+===================================================================
+
+DIAGNÓSTICO DE 91.02.64
+El transporte ENet y la barrera MAIN sí funcionaron. El problema de control
+era local:
+
+- _router_frame_online_local() elegía automáticamente MANDO si detectaba uno.
+- Con Xbox conectado, el TECLADO quedaba ignorado.
+- Dos instancias en la misma PC ven el mismo Xbox físico.
+- Por eso ambas instancias capturaban el mismo mando y los dos personajes
+  terminaban respondiendo al mismo dispositivo.
+
+91.02.65 CORRIGE ESO
+Cada instancia tiene ahora un CONTROL LOCAL explícito:
+- TECLADO
+- MANDO
+
+El lobby muestra un botón CONTROL LOCAL que alterna entre ambos.
+La presencia de un mando YA NO anula automáticamente al teclado.
+
+PRUEBA EN LA MISMA PC
+INSTANCIA HOST:
+1. ONLINE
+2. dejar CONTROL LOCAL: TECLADO
+3. HOST
+
+INSTANCIA CLIENTE:
+1. ONLINE
+2. pulsar CONTROL LOCAL hasta MANDO
+3. IP 127.0.0.1 / puerto 7777
+4. CONECTAR
+
+Luego entrar a la pelea.
+
+ESPERADO
+- Flechas/X/C/Z controlan sólo J1 desde la instancia HOST.
+- Xbox controla sólo J2 desde la instancia CLIENTE.
+- Xbox NO debe mover J1.
+- Teclado NO debe mover J2.
+
+LOG ESPERADO
+HOST:
+[91.02.65-P14D1B] INPUT ONLINE ACTIVO — control=TECLADO ...
+CLIENTE:
+[91.02.65-P14D1B] INPUT ONLINE ACTIVO — control=MANDO ...
+
+IMPORTANTE SOBRE EL LOG ANTERIOR
+También observamos REMOTE INPUT LATE. Eso NO se oculta ni se toca en este
+hotfix. Primero certificamos ownership de controles; después PASS 14D2
+resolverá input tardío/rollback remoto con evidencia limpia.
+
+ARCHIVOS MODIFICADOS
+- scripts/main.gd
+- scripts/network_manager.gd
+- scripts/online_lobby.gd
+
+NO TOCADO
+- fighter.gd
+- rollback_snapshot.gd 91.02.60
+- rollback_ring_buffer.gd
+- proyectil_energia.gd
+- gameplay / CORE / IA / balance

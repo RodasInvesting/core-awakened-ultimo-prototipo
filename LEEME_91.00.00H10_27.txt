@@ -1,0 +1,20 @@
+CORE AWAKENED 91.00.00-H10.27 — CORE III SEVENTH BEAT END DIAGNOSTIC
+
+Objetivo único:
+- Diagnosticar la frontera CORE III SEVENTH BEAT END (stage 9 -> 10).
+- Stage 9 sigue siendo el séptimo beat FSM físico snapshotable certificado por la revalidación H10.26 del borde 8 -> 9.
+- Stage 10 sigue siendo la continuación histórica/async desde coreografia[7] (octavo beat).
+- No se modifica gameplay en este build.
+
+Congelado:
+- CORE I y CORE II certificados.
+- CORE III ENTRY, RECARGA END, APPROACH END, FIRST/SECOND/THIRD/FOURTH/FIFTH/SIXTH BEAT END.
+- Beats 1-7 físicos sin Tween/coroutine.
+- fighter.gd, rollback_snapshot.gd, PerfectBlock y game_state.gd sin cambios respecto de H10.26.
+
+Prueba automática:
+- No presionar F11.
+- Ejecutar CORE III completo con J1 y luego J2.
+- Buscar: CORE III SEVENTH BEAT END AUTO MARCADO.
+- Buscar: CORE III SEVENTH BEAT END LOCALIZADO — stage 9->10.
+- Resultado esperado si la frontera es determinista: TACTICAL ROLLBACK OK — CORE III SEVENTH BEAT END — 8 ticks.

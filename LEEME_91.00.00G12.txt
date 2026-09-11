@@ -1,0 +1,52 @@
+CORE AWAKENED 91.00.00-G12 — ABSOLUTE HISTORICAL X
+
+RESULTADO G11
+-------------
+- Combat Feel normal.
+- Gran mayoría de F11 = LOCAL ROLLBACK OK.
+- Un caso mostró duplicación:
+  histórico externo = -10.0329 px
+  actual externo     = -20.0659 px
+
+CAMBIO G12
+----------
+El ring buffer ya contiene la posición exacta del tick siguiente.
+
+Durante catch-up G12 deja de reconstruir X desde estimaciones nativas.
+Ahora usa directamente:
+    X_objetivo = snapshot_siguiente.position.x
+
+PROTECCIÓN CONTRA ENMASCARAR BUGS
+---------------------------------
+La X sólo se corrige si el resultado lógico YA coincide:
+- velocity X/Y
+- position Y
+- carrera activa/dirección
+- air dash activo/dirección
+- en_el_aire
+- saltos_usados
+- fase_ataque
+- hitstun
+- bloqueo
+
+Si cualquiera difiere:
+- G12 NO corrige X
+- el checksum reporta el DESYNC real
+
+LIVE sigue pasivo:
+    if not activo:
+        return
+
+PRUEBA
+------
+1. Pelea nueva.
+2. Confirmar velocidad, dash y backdash normales.
+3. Hacer 15-20 F11 con caminar, dash/backdash, salto, doble salto y air dash.
+4. Puede aparecer:
+   X NATIVA HISTÓRICA RESTAURADA J1/J2
+5. Meta:
+   LOCAL ROLLBACK OK en toda la tanda.
+6. No debe aparecer ROLLBACK CAUSAL DESYNC.
+
+NO modifica fighter.gd.
+NO cambia Combat Feel.

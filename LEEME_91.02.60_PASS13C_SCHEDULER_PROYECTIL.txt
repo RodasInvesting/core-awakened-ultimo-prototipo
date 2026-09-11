@@ -1,0 +1,52 @@
+CORE AWAKENED 91.02.60 — PASS 13C / SCHEDULER ALIGN PROYECTIL
+===============================================================
+
+DIAGNÓSTICO CONFIRMADO POR EL LOG 91.02.59
+- PROYECTIL VUELO: posición quedó 13.4167 px atrás.
+- Velocidad certificada = 805 px/s.
+- 805 / 60 = 13.4167 px EXACTOS.
+- vida_restante quedó +0.0166667 s = 1 physics tick EXACTO.
+
+Eso demuestra que el proyectil reconstruido por rollback no recibió el
+primer _physics_process del frame donde fue recreado. Los Fighter sí lo
+recibieron, por eso vuelo, impacto, CORE y bloqueo quedaron un tick corridos.
+
+CORRECCIÓN 91.02.60
+Sólo modifica scripts/rollback_snapshot.gd.
+
+Cuando F11 está probando una clasificación PROYECTIL y el snapshot debe
+reconstruir el nodo:
+1. restaura posición/vida/dirección exactas;
+2. programa por call_deferred el único physics tick que Godot omitió;
+3. ese tick ocurre después de los Fighter y antes del próximo Main, igual
+   que el orden LIVE del proyectil;
+4. desde el physics frame siguiente el nodo vuelve al scheduler normal.
+
+NO TOCADO
+- fighter.gd
+- proyectil_energia.gd
+- main.gd 91.02.59
+- ring buffer / input replay / recorder
+- PerfectBlock
+- gameplay / IA / CORE
+- daño, velocidad, hitbox, sonido, VFX o balance
+- rollback certificado anterior fuera de la clasificación PROYECTIL
+- F9/F10
+
+PRUEBA
+Repetir exactamente las 3 pruebas de 91.02.59:
+
+A) PROYECTIL VUELO + F11
+Esperado: TACTICAL ROLLBACK OK — PROYECTIL VUELO
+
+B) IMPACTO LIMPIO + CORE + F11
+Esperado: TACTICAL ROLLBACK OK — PROYECTIL IMPACTO CORE
+CORE debe quedar exactamente igual al presente LIVE, sin doble suma.
+
+C) BLOQUEO + F11
+Esperado: TACTICAL ROLLBACK OK — PROYECTIL BLOQUEO
+CORE debe permanecer sin aumento.
+
+Si aparece DESYNC, copiar desde PROYECTIL ... LOCALIZADO hasta la lista
+de diferencias. La corrección debería eliminar primero el desfase causal
+de 1 tick; cualquier diferencia restante quedará aislada para el siguiente PASS.

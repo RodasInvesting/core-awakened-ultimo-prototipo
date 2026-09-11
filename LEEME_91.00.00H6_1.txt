@@ -1,0 +1,98 @@
+CORE AWAKENED 91.00.00-H6.1 — EVENT TICK LOCATOR
+
+RESULTADO H6
+------------
+Log: Xenoid vs Dax, seed 51343828.
+
+Confirmado:
+- AIR HIT: 6 ROLLBACK OK, todos J2.
+  Incluye AIR x1, AIR x2 y AIR x3.
+- LAUNCHER: 4 ROLLBACK OK visibles.
+- 0 ROLLBACK CAUSAL DESYNC.
+- 0 TACTICAL TEMPORAL DESYNC.
+- 0 TACTICAL ROLLBACK DESYNC.
+
+Dos pruebas Launcher adicionales no quedaron certificables:
+- una fue cortada por Godot "output overflow";
+- la última terminó el log antes de imprimir el resultado final.
+
+PROBLEMA DEL TESTER H6
+----------------------
+Los marcadores:
+  _rollback_launcher_event_serial
+  _rollback_airhit_event_serial
+
+forman parte del snapshot para poder comparar estado histórico.
+
+Eso implica que F11 también los rebobina.
+
+Ejemplo observado:
+- J2 había llegado a AIR HIT serial=10.
+- luego de otra prueba/rewind, J1 produjo un AIR HIT nuevo con serial=9.
+- el viejo localizador usaba "serial <= serial_ya_probado" y descartó
+  incorrectamente ese AIR HIT nuevo.
+- por eso F11 localizó el LAUNCHER de J1 y no el AIR HIT.
+
+CORRECCIÓN H6.1
+---------------
+La identidad de evento para el probador pasa a ser:
+  TICK DEL RING
+
+El tick del ring es monotónico aunque el estado de combate se rebobine.
+
+El serial se conserva en snapshot/checksum porque sigue siendo útil para
+verificar que la re-simulación reproduce el mismo evento, pero YA NO decide
+si el evento es "nuevo".
+
+También se reduce la impresión PRETICK para LAUNCHER/AIR HIT:
+- subtick 1
+- subtick 2
+- subtick 8
+
+Todos los subticks siguen siendo comparados internamente.
+Esto evita "ERROR: [output overflow, print less text!]".
+
+NO CAMBIA GAMEPLAY
+------------------
+- fighter.gd NO se modifica.
+- no cambia Launcher.
+- no cambia Air Combo.
+- no cambia daño.
+- no cambia física.
+- no cambia input.
+- no cambia Tactical Physics Clock.
+- no cambia Back Dash.
+- no cambia Counter/Perfect.
+
+PRUEBA QUE FALTA
+----------------
+Esta build es para completar simetría, no para repetir todo.
+
+A) J1 AIR HIT — prioridad
+1. J1 hace Launcher.
+2. J1 conecta AIR x1.
+3. F11 inmediatamente después de AIR x1.
+4. Repetir con AIR x2 si sale cómodo.
+5. Hacer 3 pruebas.
+
+Queremos:
+  AIR HIT EVENT LOCALIZADO — ... J1 AIR xN
+  TACTICAL ROLLBACK OK — AIR HIT — 8 ticks; estado presente idéntico
+
+B) J2 LAUNCHER — una confirmación limpia
+1. J2 hace Launcher.
+2. F11 apenas aparece LAUNCH!.
+3. Hacer 1 o 2 pruebas.
+
+Queremos:
+  LAUNCHER EVENT LOCALIZADO — ... J2
+  TACTICAL ROLLBACK OK — LAUNCHER — 8 ticks; estado presente idéntico
+
+META FINAL H6
+-------------
+Con:
+- 3 J1 AIR HIT OK
+- 1+ J2 LAUNCHER OK limpio
+- 0 DESYNC
+
+podemos certificar Launcher + Air Combo simétrico J1/J2 en 8 ticks.

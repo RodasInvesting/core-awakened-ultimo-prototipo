@@ -1,0 +1,83 @@
+CORE AWAKENED 91.00.00-H9.4 — CORE II COMBO ENTRY AUTO
+
+RESULTADO H9.3
+--------------
+4/4 pruebas limpias:
+- J1 OK
+- J2 OK
+- J1 OK
+- J2 OK
+
+Queda certificado para rollback de 8 ticks:
+CORE II activación
+  -> recarga physics 1.05 s
+  -> fin de recarga
+  -> primer acercamiento physics
+
+Ya no aparecen:
+- en_pose_recarga pegado en true
+- desplazamientos de Tween LIVE
+
+OBJETIVO H9.4
+-------------
+Cruzar exactamente:
+
+  CORE2_ETAPA_ACERCAMIENTO = 2
+      ->
+  termina primer acercamiento
+      ->
+  CORE2_ETAPA_COMBO_ASYNC = 3
+      ->
+  _core2_continuar_combo_async()
+      ->
+  _racha_combo_auto()
+
+H9.4 NO cambia Fighter ni snapshot.
+Es diagnóstico puro sobre H9.3.
+
+AUTO CAPTURE
+------------
+No usar F11.
+
+El tester observa automáticamente stage 2 -> 3.
+Cuando ocurre:
+  CORE II COMBO ENTRY AUTO MARCADO
+y dispara rollback en el siguiente physics tick.
+
+PRUEBA
+------
+J1:
+1. Usar CORE I.
+2. Llenar CORE II.
+3. Separarse >350 px.
+4. Activar CORE II.
+5. No tocar F11.
+6. La primera prueba automática seguirá siendo RECARGA END.
+7. Después, al terminar el primer acercamiento, debe ejecutarse una segunda
+   prueba automática: COMBO ENTRY.
+8. Repetir 2 veces.
+
+J2:
+Igual, 2 veces.
+
+BUSCAMOS
+--------
+  CORE II COMBO ENTRY AUTO MARCADO
+  CORE II COMBO ENTRY LOCALIZADO
+  TACTICAL ROLLBACK — CORE II COMBO ENTRY
+
+y:
+  TACTICAL ROLLBACK OK — CORE II COMBO ENTRY — 8 ticks
+o un DESYNC causal real.
+
+INTERPRETACIÓN
+--------------
+Si pasa:
+el ARRANQUE de _racha_combo_auto() es reconstruible al cruzar desde stage 2,
+porque el rollback vuelve a ejecutar _core2_continuar_combo_async().
+
+El siguiente test será ya DENTRO del combo, después del primer golpe/timer,
+donde esperamos que los await internos de _racha_combo_auto() sean el
+siguiente límite real.
+
+NO usar CORE III.

@@ -1,0 +1,56 @@
+CORE AWAKENED 91.02.66 — PASS 14D1C / QA MISMA PC
+====================================================
+
+QUÉ DEMOSTRÓ EL LOG 91.02.65
+- HOST llegó a combate con control=TECLADO.
+- CLIENTE llegó a combate con control=MANDO.
+- ENet intercambió frames con late=0 durante la segunda prueba.
+- Incluso apareció CORE I de J2 en ambas simulaciones.
+
+Por lo tanto el transporte ya estaba funcionando. El problema restante es el
+entorno de prueba: dos procesos de Godot en una misma PC compiten por el foco
+y por los dispositivos físicos. El mando puede seguir navegando UI de la
+ventana enfocada aunque esa instancia esté marcada TECLADO, y la otra ventana
+puede no recibir de forma útil el control físico para jugar.
+
+SOLUCIÓN 91.02.66
+Sólo cuando la conexión es localhost (127.0.0.1 / localhost):
+- la ventana HOST captura los dos dispositivos;
+- J1 = TECLADO (flechas + X/C/Z);
+- J2 = PRIMER MANDO XBOX/GAMEPAD;
+- HOST transmite a CLIENTE el par de Input Frames de cada tick;
+- CLIENTE no lee hardware: sólo replica exactamente J1/J2.
+
+IMPORTANTE
+Este harness NO sustituye el online real. Con una IP de otra PC queda apagado
+y continúa el flujo normal bidireccional por peer.
+
+PRUEBA
+1. Cerrá las dos instancias.
+2. Instalá este ZIP ROOT.
+3. Abrí dos instancias.
+4. HOST en una.
+5. 127.0.0.1 + CONECTAR en la otra.
+6. Entrá a la pelea.
+7. DEJÁ enfocada la ventana HOST.
+8. En esa misma ventana:
+   - flechas/X/C/Z deben mover SOLO J1;
+   - Xbox debe mover SOLO J2.
+9. Mirá la otra ventana: debe reproducir exactamente ambos movimientos.
+
+LOG ESPERADO
+HOST: QA MISMA PC — HOST captura J1=TECLADO + J2=PRIMER MANDO
+CLIENTE: QA MISMA PC — CLIENTE replica los 2 frames del HOST
+Cada 60 ticks: LOOPBACK INPUT ... J1mask=... J2mask=...
+
+NO TOCADO
+- fighter.gd
+- rollback_snapshot.gd 91.02.60
+- rollback_ring_buffer.gd
+- proyectil_energia.gd
+- gameplay / CORE / IA / balance
+
+ARCHIVOS MODIFICADOS
+- scripts/main.gd
+- scripts/network_manager.gd
+- scripts/online_lobby.gd

@@ -1,0 +1,33 @@
+CORE AWAKENED 91.02.03 — KROVAN REACTION SCALE FIX
+===================================================
+BASE: 91.02.02 NEKHAR POSTE IMPORT FIX
+
+CAMBIO FUNCIONAL ÚNICO
+- scripts/krovan.gd
+- Se fija la escala visual de golpe_recibido + extras en 0.2053.
+- Se fija la escala visual de derribado en 0.2200.
+- La calibración es exclusivamente visual y local a Krovan.
+- NO se modifica física, daño, hitstun, pushback, hitboxes, timers ni rollback.
+
+MOTIVO
+El fallback geométrico de Fighter normaliza por área visible. Las poses encorvadas
+y el derribado horizontal de Krovan tienen una geometría muy distinta a parado.png,
+por lo que el fallback las agrandaba aproximadamente 20–30% al recibir golpes y
+casi 90% al quedar derribado.
+
+FRONTERA ROLLBACK CONGELADA
+- scripts/fighter.gd: SIN CAMBIOS
+- scripts/perfect_block_90_1.gd: SIN CAMBIOS
+- scripts/rollback_snapshot.gd: SIN CAMBIOS
+
+BACK DASH — AUDITORÍA INICIADA
+Dax ya contiene una corrección exclusiva que fija la textura de dash/evasión durante
+DASH_DURACION + 0.02. Esa retención visual explica por qué Dax muestra correctamente
+el back dash y otros personajes pueden volver visualmente a caminata en el mismo ciclo.
+No se mezcla ese cambio en esta build para mantener una sola causa por versión.
+
+PRUEBA DE ESTA BUILD
+1) Krovan recibe varios puños/patadas normales: no debe crecer.
+2) Launcher / AIR: mientras vuela con reacción, no debe crecer.
+3) Derribo y cuerpo en suelo: no debe aparecer gigante.
+4) Confirmar que el resto del gameplay se comporta igual que 91.02.02.

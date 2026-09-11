@@ -1,0 +1,49 @@
+CORE AWAKENED 91.00.00-B — REPLAY LOCAL / PRIMER TEST DE DETERMINISMO
+=====================================================================
+
+BASE REQUERIDA
+- CORE AWAKENED 91.00.00-A funcionando (Input Recorder probado).
+
+OBJETIVO
+- Reproducir una pelea Versus Local usando EXCLUSIVAMENTE los Input Frames guardados.
+- No se restauran posiciones, vida, CORE ni animaciones a la fuerza.
+- Fighter sigue recibiendo exactamente la misma estructura de input externo.
+
+QUÉ AGREGA
+- scripts/input_replay.gd
+- botón VER REPLAY en Resultado de Versus Local.
+- Main puede consumir last_input_recording.json sin leer teclado/mando durante el replay.
+- Validación de tick exacto al inicio de cada ronda.
+- Validación de ganador, rondas y tick final.
+- Grabaciones nuevas 91.00.00-B también guardan un estado final mínimo:
+  posición, velocidad, vida, CORE, cargas, bloqueo y Furia de ambos luchadores.
+- Los archivos 91.00.00-A siguen siendo compatibles; simplemente no tienen ese estado final adicional.
+
+PRUEBA
+1. Copiar este paquete sobre el proyecto actual y Reemplazar archivos.
+2. Abrir Godot y jugar una partida Versus Local completa.
+3. En Resultado debe aparecer VER REPLAY.
+4. Pulsar VER REPLAY.
+5. No tocar controles durante la reproducción (aunque Main los ignora).
+6. Observar si los personajes repiten la pelea y el mismo ganador.
+7. Al terminar, mirar Output.
+
+SALIDA ESPERADA
+[91.00.00-B] Input Recorder ACTIVO — ...
+[91.00.00-B] Input Recorder GUARDADO — ...
+[91.00.00-B] REPLAY ACTIVO — ... — N ticks
+[91.00.00-B] RONDA 1 sincronizada — tick 0
+[91.00.00-B] RONDA 2 sincronizada — tick ...
+[91.00.00-B] REPLAY OK — N/N ticks — resultado idéntico
+
+Si aparece REPLAY DESYNC, NO significa que el combate local esté roto.
+Significa que encontramos una fuente no determinista que hay que aislar antes del rollback.
+Ese es precisamente el objetivo de esta etapa.
+
+NO MODIFICADO
+- fighter.gd
+- daño / hitstun / knockback
+- CORE I-II-III
+- Combo Cancel / Perfect Block / Counter
+- dash terrestre / air dash / guardia de esquina
+- IA / física de combate

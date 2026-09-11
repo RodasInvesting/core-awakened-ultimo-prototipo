@@ -1,0 +1,56 @@
+CORE AWAKENED 91.00.00-H10.1 — CORE III EXACT ENTRY
+
+H10 NO AISLÓ CORE III CORRECTAMENTE
+-----------------------------------
+J1:
+- CORE III event tick = 2712
+- rollback arrancó tick = 2706
+- había Back Dash serial 3/4/5 inmediatamente antes
+- primer DESYNC ocurrió subtick 1, causado por tick 2706
+
+J2:
+- CORE III event tick = 2559
+- rollback arrancó tick = 2553
+- había Back Dash serial 7/8 inmediatamente antes
+- primer DESYNC ocurrió subtick 1, causado por tick 2553
+
+La causa fue el locator:
+cuando sólo existía 1 snapshot posterior al evento, necesitaba completar una
+ventana de 8 ticks y la desplazaba 6 ticks hacia atrás.
+
+H10.1
+-----
+Main-only diagnostic.
+
+NO cambia:
+- fighter.gd
+- rollback_snapshot.gd
+- CORE I
+- CORE II
+- CORE III
+
+Ahora:
+1. se marca CORE III;
+2. se esperan 6 ticks POSTERIORES;
+3. la ventana es obligatoriamente:
+      [evento-1, evento, evento+1 ... evento+6]
+4. jamás se desplaza hacia atrás.
+
+PRUEBA
+------
+NO usar F11.
+
+Una vez J1 y una vez J2:
+CORE I -> CORE II completo -> cargar tercera vez -> activar CORE III.
+
+Verás:
+  CORE III EVENT MARCADO
+  CORE III EXACT ENTRY AUTO — historial post-evento 0/6 ... 5/6
+  CORE III EXACT ENTRY LOCALIZADO — ventana=[evento-1..evento+6]
+  TACTICAL ROLLBACK — CORE III ENTRY
+  CORE III ENTRY RESIM
+
+Buscamos:
+  TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks
+
+Si ahora aparece DESYNC, ya sí pertenecerá al borde exacto CORE III.

@@ -1,0 +1,31 @@
+CORE AWAKENED 91.02.17 — PASS 5 CADENCIA DE COMBATE NORMAL
+
+CAMBIO ÚNICO DEL PASS 5
+- Startup de ataques normales: x0.90.
+- Recovery de puñetazo normal: x0.78.
+- Recovery de patada normal: x0.72.
+- La ventana ACTIVA permanece EXACTAMENTE igual.
+
+NO TOCA
+- daño
+- hitstun / hitstop
+- knockback / empuje
+- rangos / lunge
+- dash / backdash
+- salto / doble salto / caída PASS 1–4
+- launcher / air combo
+- CORE I / II / III
+- rollback / snapshots / input frames
+
+PRUEBA RECOMENDADA
+1) Intercambio de puños normales a corta distancia.
+2) Alternar puño -> patada varias veces.
+3) Probar atacar, volver a mover y volver a atacar.
+4) Probar contra IA para evaluar si la pelea respira pero ya no se siente demorada.
+
+Qué mirar en video:
+- respuesta entre pulsación y aparición del golpe
+- tiempo que tarda en volver a neutral después del golpe
+- que la patada todavía se sienta más pesada que el puño
+- que no aparezcan cortes bruscos de sprite
+- que no cambie el contacto ni el alcance que ya estaban aprobados

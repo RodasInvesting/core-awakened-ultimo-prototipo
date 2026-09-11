@@ -1,0 +1,20 @@
+CORE AWAKENED 91.00.00-H10.73 — LAUNCHER AUTO REVALIDATION
+
+BASELINE:
+- CORE I/II/III certificado y congelado.
+- COUNTER certificado J1/J2 en H10.71.
+- PERFECT BLOCK certificado J1/J2 en H10.72 (4 pruebas OK en total).
+- Fighter, PerfectBlock y RollbackSnapshot no se modifican.
+
+OBJETIVO H10.73:
+Revalidar el LAUNCHER normal usando el serial snapshotable ya existente.
+El arnés detecta LAUNCH!, espera 7 snapshots post-evento y ejecuta rollback de 8 ticks automáticamente.
+
+PRUEBA:
+1) Kai vs Dax, Kai/J1.
+2) Ejecutar ARRIBA/SALTO + PUÑO hasta conectar y ver LAUNCH!.
+3) Después de LAUNCH! no atacar; NO usar F11.
+4) Esperar TACTICAL ROLLBACK OK — LAUNCHER — 8 ticks; estado presente idéntico.
+5) Repetir Dax vs Kai, Kai/J2.
+
+Si ambos lados dan OK, LAUNCHER queda certificado y el siguiente target será AIR HIT x1/x2/x3.

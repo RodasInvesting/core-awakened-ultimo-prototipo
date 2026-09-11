@@ -1,0 +1,46 @@
+CORE AWAKENED 91.02.42 — PASS 11D / IA DIFÍCIL MODO ASALTO
+==============================================================
+
+BASE
+- 91.02.40 MEDIO queda CERTIFICADO y NO se recalibra.
+- 91.02.41 mostró demasiado salto/bloqueo.
+- Este PASS ajusta EXCLUSIVAMENTE el perfil DIFÍCIL.
+
+OBJETIVO DEL DIFÍCIL
+- perseguir casi sin pausas;
+- cerrar distancia con dash;
+- repartir muchos más puños y patadas;
+- reducir salto y doble salto;
+- reducir bloqueo y backdash;
+- contraatacar rápido;
+- usar CORE en cuanto la barra REAL ya esté completa.
+
+IMPORTANTE SOBRE CORE
+- NO se regala energía.
+- NO cambia poder_por_golpe.
+- NO cambia la velocidad global de carga.
+- La CPU difícil simplemente prioriza disparar el CORE inmediatamente
+  cuando su barra legítimamente llegó al máximo.
+- Al conectar más golpes, naturalmente debería alcanzar CORE I/II/III más seguido.
+
+NO SE TOCA
+- daño
+- hitstun base
+- knockback
+- recovery
+- hit-stop
+- rango/hitbox
+- velocidad máxima del personaje
+- pushbox
+- CORE I/II/III internos
+- Versus Local
+- rollback/snapshots/RPC/serialización
+
+PRUEBA
+1. Media/lejana distancia: tiene que acelerar hacia vos con dash/carrera.
+2. Corto alcance: tiene que enlazar muchos más puños/patadas con muy poca pausa.
+3. Debe saltar claramente MENOS que 91.02.41.
+4. Debe bloquear claramente MENOS que 91.02.41.
+5. Debe usar defensa corta y volver a atacar enseguida.
+6. Si llena CORE, debe lanzarlo con prioridad.
+7. Hacer 2-3 peleas completas y evaluar si realmente cuesta pensar/respirar.

@@ -1,0 +1,28 @@
+CORE AWAKENED 91.00.00-H10.79 — NORMAL PUNCH IMPACT AUTO REVALIDATION
+
+BASELINE CONGELADO:
+- CORE I / CORE II / CORE III completos certificados.
+- PERFECT BLOCK certificado H10.72.
+- COUNTER certificado H10.71.
+- LAUNCHER certificado H10.73.
+- AIR x1/x2/x3 certificados H10.74/H10.75/H10.76.
+- BACKDASH certificado H10.77.
+- FORWARD DASH/CARRERA certificado H10.78.
+
+OBJETIVO H10.79:
+Revalidar un impacto normal limpio de PUÑO en suelo. El arnés detecta exclusivamente la transición snapshotable _atk_ya_conecto false->true con ambos luchadores en suelo, sin bloqueo, sin dash y sin eventos Launcher/AIR.
+
+PRUEBA:
+1) Kai vs Dax — Kai/J1. Acercarse en neutral y conectar UN puño normal limpio. No usar F11.
+2) Después de que termine el rollback automático, repetir Dax vs Kai — Kai/J2 y conectar UN puño normal limpio. No usar F11.
+3) Esperar TACTICAL ROLLBACK OK — NORMAL IMPACT — 8 ticks en ambos lados.
+
+IMPORTANTE:
+- No saltar.
+- No hacer doble toque/dash.
+- No bloquear ni hacer Perfect/Counter.
+- No usar CORE.
+- El rival debe recibir el puño limpio.
+
+ALCANCE:
+Sólo scripts/main.gd cambia funcionalmente para instrumentación target-only. Fighter, PerfectBlock y RollbackSnapshot permanecen byte-a-byte congelados.

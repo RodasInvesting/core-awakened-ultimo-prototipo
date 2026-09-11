@@ -1,0 +1,43 @@
+CORE AWAKENED 91.02.44 — PASS 12A / PROTOTIPO PROYECTIL HELENA
+================================================================
+
+project.godot auditado: NO necesita modificación. CORE AWAKENED lee los controles
+desde Fighter/Input Frame, así que el nuevo comando entra por el mismo flujo.
+
+COMANDO
+- Hacia derecha: ABAJO → DERECHA → PUÑO.
+- Hacia izquierda: ABAJO → IZQUIERDA → PUÑO.
+- J1 teclado: ↓ → + X.
+- J2 teclado: S → A/D hacia el rival + F.
+- Mando: abajo → adelante + botón de puño.
+
+PROTOTIPO
+- Sólo Helena.
+- Sólo en suelo.
+- Un proyectil activo a la vez.
+- Startup castigable.
+- Pose oficial nueva.
+- Energía rosa sale desde las manos, viaja y puede bloquearse.
+- No consume CORE ni modifica golpes normales.
+
+NO TOCADO
+- IA 91.02.43.
+- PerfectBlock / Combo Cancel.
+- main.gd / game_state.gd / project.godot.
+- pushbox / hitstop / recovery normal.
+- CORE I / II / III.
+- rollback / snapshots / RPC / serialización.
+
+ONLINE
+Este PASS es deliberadamente una prueba LOCAL. No abrimos rollback todavía.
+Primero certificamos comando, pose, velocidad, impacto y balance; después se decide
+la integración determinista para online.
+
+PRUEBA
+1. Helena vs CPU.
+2. Media distancia: ↓ → + X.
+3. Probar mirando a derecha e izquierda.
+4. Probar contra bloqueo.
+5. Confirmar que no salen dos proyectiles simultáneos.
+6. Golpear a Helena durante startup: debe cancelar el lanzamiento.
+7. Verificar X/C normales, dash, salto, bloqueo y CORE.

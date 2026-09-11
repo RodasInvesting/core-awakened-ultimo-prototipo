@@ -1,0 +1,28 @@
+CORE AWAKENED 91.00.00-H10.80 — NORMAL KICK IMPACT AUTO REVALIDATION
+
+BASE: H10.79 certificado para PUÑO normal J1/J2.
+OBJETIVO ÚNICO: revalidar PATADA normal limpia en suelo con rollback de 8 ticks.
+
+PRUEBA J1:
+- Kai vs Dax.
+- Acercarse en suelo y conectar UNA PATADA normal limpia.
+- No bloquear, no saltar, no hacer dash, no usar CORE, no usar F11.
+- El rollback se dispara automáticamente.
+
+PRUEBA J2:
+- Dax vs Kai.
+- Con Kai/J2, conectar UNA PATADA normal limpia.
+- Mismas exclusiones; no usar F11.
+
+ÉXITO:
+TACTICAL ROLLBACK OK — NORMAL IMPACT — 8 ticks; estado presente idéntico
+
+CONGELADO:
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- scripts/rollback_snapshot.gd
+- CORE I/II/III
+- Perfect Block / Counter
+- Launcher / AIR x1/x2/x3
+- Backdash / Forward Dash
+- Normal Punch Impact (H10.79)

@@ -1,0 +1,43 @@
+CORE AWAKENED 91.02.24 — PASS 9.2C CALIBRACION ROCE CORPORAL
+=============================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar VS LOCAL.
+
+OBJETIVO
+Buscar el punto medio entre:
+- 91.02.22: demasiado solapamiento de torsos.
+- 91.02.23: separacion perceptible durante algunos golpes.
+
+CALIBRACION
+- Neutral: 78 px (sin cambios).
+- Precontacto durante golpes normales: 80 px.
+- Torso despues de contacto / hitstun / bloqueo: 84 px.
+- Se conserva el rescate de superposicion residual.
+- Se conserva la correccion contra limites de arena.
+- El hitbox del golpe sigue teniendo prioridad antes del pushbox.
+
+NO TOCA
+- rollback / netcode / snapshots / RPC / serializacion
+- CORE I / II / III, auto-combo, posters o Absoluto
+- dano, hitstun, hitstop o knockback
+- gravedad, salto, dash o backdash
+- KO final / derrotado
+- timings de ataques o Combo Cancel
+
+VIDEO DE PRUEBA
+A) Golpes muy cerca: puños y patadas repetidas.
+B) Ambos caminar uno contra otro.
+C) Trades: atacar casi al mismo tiempo.
+D) Presion contra el borde.
+E) Soltar controles estando muy cerca.
+F) Probar ambos sentidos J1->J2 y J2->J1.
+G) CORE II rapido al final para revalidar PASS 9.1.
+
+OBJETIVO VISUAL
+Extremidades pueden cruzarse y los cuerpos pueden rozarse mucho,
+pero pecho/cadera no deben desaparecer dentro del rival.
+No debe sentirse una pared invisible entre ambos.

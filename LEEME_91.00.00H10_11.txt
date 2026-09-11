@@ -1,0 +1,14 @@
+CORE AWAKENED 91.00.00-H10.11
+
+CORE III RECARGA END — J1 SAFETY CLOCK MIRROR
+
+Cambio funcional único respecto de H10.10:
+- Cuando J1 cruza una transición CORE III de time_scale (incluyendo RECARGA END 0.32 -> 1.0),
+  J2 usa el delta posterior para su callback general pero reloj_seguridad_secuencia conserva one-shot
+  el delta pre-transición.
+- ENTRY mantiene exactamente la semántica certificada de H10.8.
+- J2 RECARGA END ya era OK en H10.10 y no recibe override nuevo.
+- FSM CORE III recarga/acercamiento, CORE I, CORE II, PerfectBlock y snapshot no cambian funcionalmente.
+
+Prueba: sin F11, activar CORE III una vez con J1 y una vez con J2.
+Esperado: TACTICAL ROLLBACK OK — CORE III RECARGA END — 8 ticks en ambos lados.

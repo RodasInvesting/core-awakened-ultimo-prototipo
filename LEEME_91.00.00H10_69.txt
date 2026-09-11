@@ -1,0 +1,70 @@
+CORE AWAKENED — 91.00.00-H10.69
+CORE III ABSOLUTE VICTORY HOLD — TARGET-ONLY REVALIDATION
+
+BASELINE
+- H10.66 ABSOLUTE VICTORY ENTRY: CERTIFICADO J1/J2, 8 ticks idénticos.
+- CORE I: congelado/certificado.
+- CORE II: congelado/certificado.
+- CORE III Entry + beats 1-18: congelados/certificados.
+- ABSOLUTE FINISHER ENTRY H10.58: certificado.
+- ABSOLUTE REVEAL END H10.60: certificado.
+- ABSOLUTE KO ENTRY H10.62: certificado.
+- ABSOLUTE VICTORY ENTRY H10.66: certificado.
+
+OBJETIVO H10.69
+Probar únicamente el estado estable posterior a ABSOLUTE VICTORY ENTRY.
+El arnés espera 9 snapshots estables de victoria:
+- 8 ticks completos a re-simular.
+- 1 snapshot histórico posterior usado como presente esperado.
+
+La ventana NO cruza la entrada 0.42 -> 1.0 y queda muy lejos del timer LIVE de salida de 9.20 s.
+No modifica gameplay.
+
+CONGELADO
+- scripts/fighter.gd: sin cambios respecto H10.66.
+- scripts/perfect_block_90_1.gd: sin cambios respecto H10.66.
+- scripts/rollback_snapshot.gd: sin cambios respecto H10.66.
+- FSM ABSOLUTE VICTORY de H10.65/H10.66: sin cambios.
+- Fix delta J1 H10.66: intacto.
+
+CAMBIO H10.69
+Sólo scripts/main.gd:
+- nuevo observador TARGET-ONLY ABSOLUTE VICTORY HOLD;
+- espera una ventana de 8 ticks enteramente dentro de victoria estable;
+- añade clasificación CORE III ABSOLUTE VICTORY HOLD al arnés histórico;
+- no crea ni cambia timers de gameplay, posiciones, inputs, Fighter o PerfectBlock.
+
+PRUEBA — NO USAR F11
+1) Kai vs Dax -> Kai/J1 -> CORE I, CORE II, CORE III completo.
+2) Dax vs Kai -> Kai/J2 -> CORE I, CORE II, CORE III completo.
+
+LOGS ESPERADOS
+CORE III ABSOLUTE VICTORY HOLD ARMADO
+CORE III ABSOLUTE VICTORY HOLD AUTO MARCADO
+CORE III ABSOLUTE VICTORY HOLD LOCALIZADO
+TACTICAL ROLLBACK — CORE III ABSOLUTE VICTORY HOLD
+
+ÉXITO
+TACTICAL ROLLBACK OK — CORE III ABSOLUTE VICTORY HOLD — 8 ticks; estado presente idéntico
+
+Si falla, conservar todo el runtime H10.69. El diagnóstico debe seguir únicamente el primer ROLLBACK CAUSAL DESYNC.
+
+
+H10.69 FIX DEL ARNÉS
+---------------------
+H10.67 armaba correctamente VICTORY HOLD, pero el safety gate genérico
+rechazaba el estado post-KO antes de alcanzar el localizador especial.
+Resultado: AUTO MARCADO -> TACTICAL TEST CANCELADO en bucle.
+
+H10.69 añade únicamente core3_absolute_victory_hold_pendiente como excepción
+específica al gate. No abre otros KO/cinemáticas y no modifica gameplay.
+La prueba debe ejecutarse una sola vez y producir LOCALIZADO -> TACTICAL ROLLBACK.
+
+
+H10.69 — CORE III ABSOLUTE MATCH RESET ENTRY TARGET-ONLY
+- H10.68 VICTORY HOLD queda certificado/congelado.
+- No cambia gameplay, Fighter, PerfectBlock ni rollback_snapshot.
+- Observa el vencimiento LIVE del SceneTreeTimer(9.20) de victoria absoluta.
+- En Versus local espera 7 snapshots post-reset y rebobina 8 ticks cruzando victoria->partida nueva.
+- Objetivo: localizar el primer causal si el callback de 9.20 s no puede reproducirse durante catch-up.
+- Prueba J1 y J2, CORE I/II/III completo, sin F11.

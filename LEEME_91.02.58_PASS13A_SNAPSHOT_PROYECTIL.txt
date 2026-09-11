@@ -1,0 +1,94 @@
+CORE AWAKENED 91.02.58 — PASS 13A / SNAPSHOT DEL PROYECTIL
+=============================================================
+
+OBJETIVO
+Primera extensión mínima del rollback certificado para la nueva mecánica
+de proyectiles. Este PASS NO agrega red real y NO modifica gameplay.
+
+AUDITORÍA
+El Input Frame ya era suficiente:
+- ABAJO está representado por el bit "bloqueo".
+- ADELANTE usa izquierda/derecha.
+- PUÑO ya está grabado.
+Por eso input_recorder.gd, input_replay.gd y rollback_ring_buffer.gd NO cambian.
+
+El hueco estaba en el snapshot:
+Fighter no guardaba:
+- comando_proyectil_etapa
+- comando_proyectil_timer
+- en_lanzamiento_proyectil
+- proyectil_lanzamiento_timer
+- proyectil_spawn_timer
+- proyectil_disparo_pendiente
+- proyectil_cooldown_timer
+
+Además, el nodo del proyectil en vuelo no formaba parte de la fotografía.
+Eso permitiría restaurar Fighter al pasado dejando el proyectil en una
+posición futura, o incluso ya destruido.
+
+91.02.58 SOLUCIONA ESO
+1. Guarda el FSM de lanzamiento/cooldown dentro del Fighter.
+2. Guarda por cada lado:
+   - activo/no activo
+   - global_position
+   - dirección
+   - velocidad
+   - daño
+   - empuje
+   - hitstun
+   - vida_restante
+3. Al restaurar:
+   - retira cualquier proyectil perteneciente al futuro;
+   - reconstruye exactamente el proyectil histórico si debía existir;
+   - NO reproduce audio durante el restore.
+4. El checksum lógico ahora también compara proyectil_j1/proyectil_j2.
+
+NO TOCADO
+- fighter.gd
+- proyectil_energia.gd
+- main.gd
+- rollback_ring_buffer.gd
+- rollback_neutral_motion_guard.gd
+- input_replay.gd
+- input_recorder.gd
+- PerfectBlock
+- gameplay/IA/CORE
+- daño, velocidad, hitbox o balance del proyectil
+- Varkhos
+
+PRUEBA PASS 13A — F9/F10
+Usar VERSUS LOCAL.
+
+PRUEBA A — PROYECTIL EN VUELO
+1. Separar los luchadores.
+2. Lanzar proyectil.
+3. Mientras esté claramente en vuelo, pulsar F9.
+4. Dejar que siga varios cuadros o impacte.
+5. Pulsar F10.
+RESULTADO:
+- el proyectil debe reaparecer EXACTAMENTE cerca del lugar guardado;
+- no debe sonar de nuevo al restaurar;
+- consola debe indicar SNAPSHOT RESTORE OK, sin desync.
+
+PRUEBA B — STARTUP
+1. Ejecutar ↓ → + PUÑO.
+2. Pulsar F9 durante la pose, antes de que aparezca el proyectil.
+3. Esperar a que salga.
+4. Pulsar F10.
+RESULTADO:
+- el proyectil futuro desaparece;
+- vuelve la fase histórica de lanzamiento;
+- después del tiempo restante debe nacer otra vez normalmente.
+
+PRUEBA C — DESPUÉS DE IMPACTO
+1. Dejar que un proyectil impacte y sume CORE.
+2. Pulsar F9 ya sin proyectil.
+3. Continuar unos segundos y F10.
+RESULTADO:
+- poder/CORE vuelve al valor guardado;
+- no aparece un proyectil fantasma.
+
+SI PASA
+PASS 13A queda certificado.
+El siguiente PASS será 13B: resimulación/catch-up del proyectil, incluyendo
+vuelo -> impacto limpio -> CORE y bloqueo -> cero CORE.

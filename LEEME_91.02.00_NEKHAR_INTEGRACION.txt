@@ -1,0 +1,44 @@
+CORE AWAKENED 91.02.00 — NEKHAR INTEGRATION V1
+
+BASE:
+- Parte de 91.01.00 KROVAN INTEGRATION V1 sobre H10.88 rollback certified clean baseline.
+- Fighter / Perfect Block / Rollback Snapshot permanecen sin cambios.
+
+NEKHAR INTEGRADO:
+- Jugable en Arcade, Batalla Rápida y Versus Local.
+- Escenario propio: SEPULCRO DE KHEMET.
+- VS poster/gigantografía.
+- Pose inicial, 2 caminatas, 5 puños, 5 patadas/rodillazo.
+- Bloqueo, dash, backdash, salto, doble salto y descenso.
+- 4 reacciones de golpe, derrotado y victoria.
+- Recarga de energía.
+- 6 beats de Combo Furia.
+- CORE I / CORE II / CORE III.
+- Remate corporal de Combo Furia.
+- Biografía incluida.
+
+PERFIL INICIAL:
+- Pesado/técnico.
+- Potencia y defensa altas.
+- Velocidad media y movilidad baja.
+- Alcance de puño/patada ligeramente superior por concepto de vendajes.
+
+SELECTOR:
+- Se añadió tarjeta procedural TEMPORAL de Nekhar junto a Krovan.
+- El usuario está preparando la nueva ilustración definitiva del roster; cuando llegue,
+  debe reemplazarse esta solución temporal sin alterar la lógica de selección.
+
+PRUEBA RECOMENDADA:
+1. Versus Local: Nekhar vs Kai.
+2. Elegir SEPULCRO DE KHEMET.
+3. Probar caminar, puños, patadas, bloqueo, dash/backdash, salto/doble/descenso.
+4. Recibir golpes y derrotado.
+5. Recarga + CORE I + CORE II + CORE III.
+6. Victoria.
+7. Repetir espejo Kai vs Nekhar para orientación/escala.
+
+PENDIENTE PARA ETAPA DE PULIDO GENERAL:
+- Calibración fina de escalas/offsets por pose si aparece cualquier salto visual.
+- Limpieza de excedentes/alfa de sprites que lo requieran.
+- Balance final de daño/velocidad/alcance.
+- Sustitución del selector temporal por el roster definitivo del usuario.

@@ -1,0 +1,39 @@
+CORE AWAKENED 91.00.00-H10.21
+CORE III — FOURTH BEAT END DIAGNOSTIC (stage 6 -> 7)
+
+BASE
+- H10.20 aprobado por runtime J1/J2.
+- CORE III THIRD BEAT END stage 5->6: 8 ticks idénticos en J1 y J2.
+- El cuarto beat físico/snapshotable de H10.20 queda congelado.
+
+OBJETIVO H10.21
+- Diagnóstico puro de CORE III FOURTH BEAT END.
+- Detecta exactamente core3_secuencia_etapa 6 -> 7.
+- stage 6 = cuarto beat físico snapshotable.
+- stage 7 = continuación histórica desde el quinto beat, todavía async/Tween.
+- No convierte el quinto beat.
+- No cambia gameplay.
+
+CAMBIOS
+- scripts/main.gd: observador/localizador AUTO de stage 6->7 y clasificación de rollback
+  "CORE III FOURTH BEAT END".
+- El delta histórico explícito CORE III se habilita también para esta clasificación.
+- scripts/fighter.gd: SIN CAMBIOS respecto de H10.20.
+- scripts/rollback_snapshot.gd: SIN CAMBIOS.
+- scripts/perfect_block_90_1.gd: SIN CAMBIOS.
+
+PRUEBA
+1) Versus Local.
+2) NO presionar F11.
+3) Completar CORE I y CORE II normalmente.
+4) Activar CORE III con J1 y dejar terminar la secuencia.
+5) Repetir con J2.
+6) Enviar el log completo.
+
+RESULTADO BUSCADO
+[91.00.00-H10.21] CORE III FOURTH BEAT END AUTO MARCADO
+[91.00.00-H10.21] CORE III FOURTH BEAT END LOCALIZADO — stage 6->7
+[91.00.00-H10.21] TACTICAL ROLLBACK OK — CORE III FOURTH BEAT END — 8 ticks
+
+o, si falla, el primer ROLLBACK CAUSAL DESYNC indicará si el quinto beat histórico
+repite el patrón Tween/coroutine ya observado en beats anteriores.

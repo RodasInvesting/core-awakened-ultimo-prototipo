@@ -1,0 +1,76 @@
+CORE AWAKENED 91.00.00-H9.2 — CORE II RECARGA END AUTO
+
+RESULTADO H9.1
+--------------
+H9.1 fue INCONCLUSO, no falló rollback.
+
+En cuatro intentos:
+- CORE II se activó correctamente.
+- F11 se ejecutó.
+- Pero no apareció:
+    CORE II RECARGA END LOCALIZADO
+- El tester cayó a:
+    TACTICAL TEST — no hay ataque normal dentro de los últimos 8 ticks
+
+Causa práctica:
+el borde exacto recarga=true -> recarga=false es muy corto para acertarlo
+manualmente mirando la animación, y cuando F11 llega tarde la transición ya
+no está en la ventana útil del ring.
+
+H9.2
+----
+NO cambia gameplay.
+
+Main observa automáticamente:
+  en_pose_recarga true
+      ->
+  en_pose_recarga false
+
+sólo cuando:
+- veces_fase_absoluta == 2
+- en_secuencia_especial == true
+
+El observador corre DESPUÉS de registrar el snapshot del tick.
+Cuando encuentra el borde:
+1. imprime:
+   CORE II RECARGA END AUTO MARCADO
+2. arma rollback_test_solicitado
+3. el rollback empieza automáticamente en el physics tick siguiente.
+
+NO HAY QUE APRETAR F11.
+
+PRUEBA
+------
+J1:
+1. Usar CORE I.
+2. Llenar CORE II.
+3. Activar CORE II.
+4. NO tocar F11.
+5. Dejar que termine la recarga.
+6. El tester debe ejecutarse SOLO.
+
+Repetir 2 veces J1.
+
+J2:
+Mismo procedimiento.
+Repetir 2 veces J2.
+
+BUSCAMOS
+--------
+  CORE II RECARGA END AUTO MARCADO — ...
+  CORE II RECARGA END LOCALIZADO — ...
+  TACTICAL ROLLBACK — CORE II RECARGA END — ...
+
+Luego:
+- OK, o
+- DESYNC causal real.
+
+IMPORTANTE
+----------
+No usar F11 manualmente en H9.2.
+No usar CORE III.
+
+H9.2 sigue siendo diagnóstico puro:
+- fighter.gd intacto respecto H9.1
+- rollback_snapshot.gd intacto
+- sólo main.gd agrega auto-captura

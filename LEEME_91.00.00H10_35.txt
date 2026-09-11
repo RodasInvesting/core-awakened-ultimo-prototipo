@@ -1,0 +1,24 @@
+CORE AWAKENED 91.00.00-H10.35
+CORE III — TENTH BEAT END DIAGNOSTIC
+
+Objetivo único:
+- Validar rollback de 8 ticks en CORE III TENTH BEAT END.
+- Frontera exacta: stage 12 -> stage 13.
+- stage 12 = décimo beat físico snapshotable (certificado como futuro de NINTH BEAT END en H10.34).
+- stage 13 = continuación histórica desde el undécimo beat.
+
+No cambia gameplay en este build:
+- fighter.gd idéntico a H10.34.
+- Snapshot, PerfectBlock, GameState, Input Recorder/Replay, Ring Buffer, Motion Guard y Resultado sin cambios.
+- Sólo main.gd contiene instrumentación del nuevo límite.
+
+Prueba:
+1. Versus Local.
+2. NO presionar F11.
+3. Completar CORE I y CORE II normalmente.
+4. Ejecutar CORE III completo con J1 y dejar terminar la pelea.
+5. Repetir CORE III completo con J2 y dejar terminar la pelea.
+6. Enviar el runtime completo.
+
+Resultado objetivo en ambos lados:
+TACTICAL ROLLBACK OK — CORE III TENTH BEAT END — 8 ticks; estado presente idéntico

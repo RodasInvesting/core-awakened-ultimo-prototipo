@@ -1,0 +1,27 @@
+CORE AWAKENED — 91.00.00-H10.77
+BACKDASH AUTO REVALIDATION
+
+Base: H10.76 AIR x3 certificado J1/J2.
+
+Objetivo único:
+- Revalidar BACK DASH en J1 y J2 con rollback automático de 8 ticks.
+- El evento ya existente de PerfectBlock (_rollback_backdash_event_serial) arma el test.
+- No cambia la mecánica del Back Dash.
+
+Prueba:
+1) Kai vs Dax, Kai/J1: doble toque alejándose del rival (normalmente IZQUIERDA).
+2) No pulsar F11. Esperar TACTICAL ROLLBACK OK — BACK DASH.
+3) Dax vs Kai, Kai/J2: doble toque alejándose del rival (normalmente DERECHA).
+4) No pulsar F11. Esperar TACTICAL ROLLBACK OK — BACK DASH.
+
+Congelado:
+- CORE I/II/III
+- Perfect Block H10.72
+- Counter H10.71
+- Launcher H10.73
+- AIR x1 H10.74
+- AIR x2 H10.75
+- AIR x3 H10.76
+- fighter.gd
+- perfect_block_90_1.gd
+- rollback_snapshot.gd

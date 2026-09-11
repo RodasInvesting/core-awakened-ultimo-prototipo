@@ -1,0 +1,15 @@
+CORE AWAKENED 91.00.00-H10.81 — NORMAL PUNCH BLOCK AUTO REVALIDATION
+
+Objetivo: certificar rollback de BLOQUEO NORMAL contra un PUÑO de suelo, separado de Perfect Block.
+
+Prueba espejo:
+1) Kai vs Dax — Kai/J1: mantener BLOQUEO con anticipación (no tocar justo al impacto) y esperar un PUÑO de Dax.
+2) Dax vs Kai — Kai/J2: repetir manteniendo BLOQUEO con anticipación.
+3) NO usar F11. El arnés detecta impacto de punetazo con guardia normal y hace rollback automático.
+
+Esperado:
+TACTICAL ROLLBACK OK — NORMAL BLOCK — 8 ticks; estado presente idéntico
+
+Importante: si aparece PERFECT!, esa interacción se ignora porque pertenece a H10.72. Mantener bloqueo antes del ataque para producir guardia normal.
+
+Congelados: fighter.gd, perfect_block_90_1.gd, rollback_snapshot.gd y todas las fronteras ya certificadas hasta H10.80.

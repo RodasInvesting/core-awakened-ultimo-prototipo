@@ -1,0 +1,92 @@
+CORE AWAKENED 91.00.00-H6 — LAUNCHER + AIR COMBO ROLLBACK
+
+BASE
+----
+H5.1 Back Dash ya quedó certificado en la batería anterior.
+Quick Recovery queda FUERA de esta fase porque no es una mecánica práctica/visible
+que estemos usando en el combate actual.
+
+OBJETIVO H6
+-----------
+Certificar las mecánicas reales:
+- Launcher
+- persecución aérea
+- Air Combo
+- rollback 8 ticks (~133 ms) en plena secuencia aérea
+
+NO SE TOCA
+----------
+- fighter.gd
+- daño normal
+- velocidad Launcher
+- fuerza vertical
+- duración Air Combo
+- máximo de golpes aéreos
+- controles
+- CORE
+- arte/sprites
+
+MARCADORES H6
+-------------
+LAUNCHER EVENT MARCADO:
+  sólo aparece cuando el puño Launcher CONECTÓ de verdad y lanzó al rival.
+
+AIR HIT EVENT MARCADO:
+  sólo aparece cuando un golpe posterior del Air Combo CONECTÓ de verdad.
+
+Historical-X Guard está DESACTIVADO para LAUNCHER/AIR HIT.
+Un OK exige reproducir posición y velocidades aéreas sin corrección externa.
+
+CÓMO HACER EL LAUNCHER
+----------------------
+1. Acercate al rival.
+2. Mantené SALTO/ARRIBA y tocá PUÑO.
+3. El personaje debe saltar con el puño.
+4. Si conecta correctamente aparece:
+       LAUNCH!
+   y en Output:
+       LAUNCHER EVENT MARCADO — serial=...
+5. Apenas veas LAUNCH!, presioná F11.
+
+Resultado esperado:
+  LAUNCHER EVENT LOCALIZADO — ...
+  TACTICAL ROLLBACK — LAUNCHER — ...
+  TACTICAL ROLLBACK OK — LAUNCHER — 8 ticks; estado presente idéntico
+
+Hacer 2 Launcher con J1 y 2 con J2.
+
+CÓMO HACER AIR COMBO
+--------------------
+1. Hacé Launcher.
+2. Ya en el aire, tocá otro PUÑO o PATADA durante la ventana de combo.
+3. Si conecta aparece:
+       AIR x1
+   luego puede aparecer AIR x2 / AIR x3.
+4. Cuando veas AIR x1 o AIR x2, presioná F11 inmediatamente.
+
+Output esperado:
+  AIR HIT EVENT MARCADO — serial=... air_x=1/2/3
+  AIR HIT EVENT LOCALIZADO — ...
+  TACTICAL ROLLBACK — AIR HIT — ...
+  TACTICAL ROLLBACK OK — AIR HIT — 8 ticks; estado presente idéntico
+
+Hacer al menos:
+- 2 AIR HIT con J1
+- 2 AIR HIT con J2
+
+IMPORTANTE
+----------
+No apretar F11 si sólo saltaste o si el Launcher falló.
+Esperar siempre a ver LAUNCH! o AIR xN.
+
+No usar CORE ni terminar la ronda durante estas pruebas.
+
+META H6
+-------
+- 4 Launcher OK (2 por lado)
+- 4 Air Hit OK (2 por lado)
+- 0 ROLLBACK CAUSAL DESYNC
+- 0 TACTICAL TEMPORAL DESYNC
+- 0 TACTICAL ROLLBACK DESYNC
+
+Si aparece un DESYNC, copiar TODO el bloque causal y detener esa variante.

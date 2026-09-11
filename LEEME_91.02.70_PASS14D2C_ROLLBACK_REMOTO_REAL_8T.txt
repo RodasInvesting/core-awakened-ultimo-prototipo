@@ -1,0 +1,59 @@
+CORE AWAKENED 91.02.70 — PASS 14D2C / ROLLBACK REMOTO REAL 8T
+======================================================================
+
+EVIDENCIA QUE MOTIVA ESTE PASS
+91.02.69 confirmó ring perfecto en ambos peers (new = sim-1, alineado=true),
+pero seguía sin corregir predicciones incorrectas. En la prueba real el HOST
+acumuló 10 ROLLBACK NECESARIO con edad máxima 2 antes de CORE II; luego HOST
+y CLIENTE entraron a CORE II/III en momentos distintos y terminaron la pelea
+en tiempos distintos.
+
+QUÉ HACE 14D2C
+- Cuando un input remoto tardío es DISTINTO de lo predicho, agenda rollback.
+- Sólo corrige una ventana corta de hasta 8 ticks.
+- Restaura el snapshot exacto del primer tick afectado.
+- Sustituye el input remoto predicho por el input REAL ya recibido.
+- Re-simula la historia con el scheduler real de Godot, un tick histórico por
+  physics frame. Mientras tanto NO avanza online_tick_simulacion.
+- Reescribe los snapshots posteriores del ring con la historia corregida.
+- Corrige también el frame histórico del Input Recorder.
+- Suprime presentación duplicada de CORE I/II durante catch-up.
+- Si el snapshot tiene proyectil activo, reutiliza la compensación certificada
+  de 91.02.60 sin modificar rollback_snapshot.gd.
+
+SEGURIDADES
+- rollback_snapshot.gd 91.02.60 NO se modifica.
+- rollback_ring_buffer.gd NO se modifica.
+- Fighter / PerfectBlock / NetworkManager NO se modifican.
+- F11 y arneses históricos quedan excluidos explícitamente del modo ONLINE.
+- Ventanas > 8 ticks NO se restauran; se registran como FUERA DE VENTANA.
+- Este primer pase no intenta rollback dentro de snapshots con time_scale != 1.0
+  (CORE III slow-motion); esos casos se registran y se tratarán sólo si aparecen
+  durante una entrada relevante.
+
+LOGS NUEVOS
+[91.02.70-P14D2C] ROLLBACK START — desde=... presente=... ticks=...
+[91.02.70-P14D2C] ROLLBACK END — presente=...
+[91.02.70-P14D2C] ROLLBACK REAL — resumen cada 60 ticks
+[91.02.70-P14D2C] ROLLBACK FUERA DE VENTANA — ...
+[91.02.70-P14D2C] ROLLBACK OMITIDO TIMESCALE — ...
+
+PRUEBA RECOMENDADA
+1. Instalar ZIP ROOT sobre 91.02.69.
+2. Reexportar 91.02.70 y copiar la MISMA build a PC1 y PC2.
+3. ONLINE LAN real; NO usar PAUSE.
+4. Jugar hasta que J1 o J2 ejecute CORE II.
+5. Confirmar visualmente que la MISMA secuencia CORE II aparece en ambas PCs.
+6. Si sigue sincronizado, continuar un poco más, pero NO hace falta forzar CORE III.
+7. Pasar log HOST y CLIENTE.
+
+CRITERIO DE ÉXITO
+- aparecen ROLLBACK START/END sólo cuando pred != real;
+- ring sigue alineado=true;
+- CORE I/II se observan en los mismos tick_hint en ambos peers;
+- ninguna PC queda una carga de CORE adelantada;
+- PC2 sigue jugable.
+
+IMPORTANTE
+La pantalla Resultado/Repetir todavía NO se declara certificada online. Primero
+se corrige la historia de combate. Después se sincroniza el cierre de partida.

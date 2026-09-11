@@ -1,0 +1,33 @@
+CORE AWAKENED 91.02.05 — DASH / BACK DASH VISUAL CONSISTENCY
+
+OBJETIVO ÚNICO DE ESTA BUILD
+- Mantener visible la pose dedicada de carrera/dash mientras dura un dash hacia delante.
+- Mantener visible la pose de evasión/back dash mientras dura un dash hacia atrás.
+- Durante el acercamiento automático de CORE II y CORE III, mostrar el sprite de dash hacia delante en vez de parado/caminata.
+
+IMPLEMENTACIÓN
+- Sólo se modifica scripts/main.gd.
+- Se crea en runtime un Sprite2D gemelo de PRESENTACIÓN por Fighter cuando hace falta.
+- El sprite real sigue siendo actualizado normalmente por Fighter y no se modifica su texture/scale/position.
+- El gemelo se apaga al terminar el dash o comenzar un ataque/reacción.
+- Durante CORE II/III el guard fuerza visualmente CARRERA hacia el rival; no reutiliza un posible estado histórico de back dash.
+- El guard queda apagado durante catch-up rollback.
+
+NO TOCADO
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- scripts/rollback_snapshot.gd
+- física, velocidad, duración de dash, hitbox, pushbox, daño, hitstun, CORE FSM.
+- superposición corporal/contact spacing: queda deliberadamente para el siguiente pase.
+
+PRUEBA SUGERIDA
+1) Dax: dash delante y back dash (referencia visual conocida).
+2) Kai: dash delante y back dash.
+3) Krovan: dash delante y back dash.
+4) Nekhar: dash delante y back dash.
+5) Un legacy adicional: Helena/Fang/Cibor-X.
+6) CORE II: observar el acercamiento automático previo al combo; debe usar dash delante.
+7) CORE III: repetir; debe usar dash delante.
+
+ESTADO
+- Estructuralmente verificado; requiere validación visual/runtime en Godot 4.7.1 del usuario.

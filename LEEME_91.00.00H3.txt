@@ -1,0 +1,80 @@
+CORE AWAKENED 91.00.00-H3 — PERFECT BLOCK + COUNTER ROLLBACK
+
+BASE CERTIFICADA
+----------------
+H2 pasó una batería de 10 impactos reales consecutivos:
+- J1: 3 puños + 3 patadas
+- J2: 2 puños + 2 patadas
+- 10/10 NORMAL ATTACK ROLLBACK OK
+- 0 DESYNC
+
+ALCANCE H3
+----------
+H3 mantiene exactamente la arquitectura de H2 y amplía la ventana segura para:
+- bloqueo normal;
+- Perfect Block;
+- Counter posterior a Perfect Block;
+- ataque normal / hitstop / hitstun / contacto.
+
+SIGUE EXCLUIDO
+--------------
+- CORE I/II/III
+- combo automático / Furia
+- derribos especiales
+- KO / victoria
+- cinemáticas
+
+IMPORTANTE
+----------
+H3 NO modifica:
+- fighter.gd
+- perfect_block_90_1.gd
+- velocidades
+- daño
+- ventanas de Perfect/Counter
+- Combo Cancel
+- Combat Feel
+
+El objetivo es VALIDAR primero que el estado táctico ya incluido por H2
+puede rebobinar Perfect Block y Counter.
+
+PRUEBA A — PERFECT BLOCK
+------------------------
+1. J1 ataca con UN puño o patada.
+2. J2 hace Perfect Block con el timing normal.
+3. Cuando aparezca PERFECT!, presionar F11 inmediatamente.
+4. Repetir 4-6 veces alternando puño/patada.
+5. Meta:
+   [91.00.00-H3] TACTICAL ROLLBACK OK — PERFECT BLOCK — 8 ticks; estado presente idéntico
+
+PRUEBA B — COUNTER
+------------------
+1. J1 ataca.
+2. J2 consigue PERFECT!
+3. Dentro de la ventana Counter, J2 responde con puño o patada.
+4. Presionar F11 inmediatamente al iniciar/conectar el Counter.
+5. Repetir 4-6 veces.
+6. Meta:
+   [91.00.00-H3] TACTICAL ROLLBACK OK — COUNTER — 8 ticks; estado presente idéntico
+
+PRETICK H3
+----------
+Ahora imprime por Fighter:
+- input previo
+- ventana Perfect activa
+- counter disponible
+- Combo Cancel disponible
+- cadena Combo Cancel
+
+SI FALLA
+--------
+Enviar desde:
+[91.00.00-H3] TACTICAL ROLLBACK ...
+incluyendo PRETICK
+hasta:
+TACTICAL ROLLBACK DESYNC
+
+SIGUIENTE ETAPA SI H3 PASA
+--------------------------
+Migrar PerfectBlock90_1 de Time.get_ticks_msec() a reloj determinista de
+simulación/physics ticks. Después: Back Dash y Quick Recovery.

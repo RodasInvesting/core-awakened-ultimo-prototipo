@@ -1,9 +1,9 @@
 extends Control
 
 const FONDOS := {
-	"Kai":"kai.jpg", "Cibor-X":"cibor-x.jpg", "Fang":"fang.jpg", "Kali":"kali.jpg",
-	"Aethel":"aethel.jpg", "Magnus":"magnus.jpg", "Helena":"helena.jpg",
-	"Jester":"jester.png", "Xenoid":"xenoid.png", "Varkhos":"varkhos.png"
+	"Kai":"kai.jpg", "Cibor-X":"cibor-x.png", "Fang":"fang.jpg", "Kali":"kali.png",
+	"Aethel":"aethel.png", "Magnus":"magnus.jpg", "Helena":"helena.png",
+	"Jester":"jester.png", "Xenoid":"xenoid.png", "Dax":"dax.png", "Krovan":"krovan.png", "Nekhar":"nekhar.png", "Varkhos":"varkhos.png"
 }
 const AUTO_CONTINUAR_ARCADE := 5.5
 var estado
@@ -11,12 +11,16 @@ var transicion_en_curso := false
 
 func _ready() -> void:
 	estado = get_node("/root/GameState")
-	crear_fondo(estado.ultimo_rival if estado.ultimo_rival != "" else estado.rival_actual)
+	# 90.12.00 — en Versus Local el fondo de resultado debe ser el escenario
+	# que realmente eligieron los jugadores, no el escenario local del rival.
+	var fondo_resultado: String = estado.escenario_actual if estado.modo == "versus_local" else (estado.ultimo_rival if estado.ultimo_rival != "" else estado.rival_actual)
+	crear_fondo(fondo_resultado)
 	match estado.ultimo_resultado:
 		"siguiente": await mostrar_siguiente()
 		"campeon": mostrar_campeon()
 		"derrota": mostrar_derrota()
 		"victoria": mostrar_victoria_rapida()
+		"versus_local": mostrar_resultado_versus_local()
 		_: mostrar_victoria_rapida()
 
 func crear_fondo(nombre: String) -> void:
@@ -121,6 +125,19 @@ func mostrar_derrota() -> void:
 	boton("VOLVER AL MENÚ", Vector2(660,470), _menu)
 	b1.grab_focus()
 
+func mostrar_resultado_versus_local() -> void:
+	var ganador: String = estado.ultimo_ganador
+	if ganador == "":
+		ganador = estado.personaje_jugador
+	etiqueta("¡VICTORIA!", 180, 70, Color(1.0,0.58,0.10))
+	etiqueta(ganador.to_upper() + " GANA LA BATALLA", 290, 30)
+	var b1 := boton("REVANCHA", Vector2(340,470), _reintentar)
+	boton("SELECCIÓN", Vector2(660,470), _selector)
+	var b_replay := boton("VER REPLAY", Vector2(340,555), _replay_ultima_partida)
+	b_replay.disabled = not FileAccess.file_exists("user://replays/last_input_recording.json")
+	boton("MENÚ PRINCIPAL", Vector2(660,555), _menu)
+	b1.grab_focus()
+
 func mostrar_victoria_rapida() -> void:
 	etiqueta("¡VICTORIA!", 180, 70, Color(1.0,0.58,0.10))
 	etiqueta(estado.personaje_jugador.to_upper() + " GANA LA BATALLA", 290, 30)
@@ -133,6 +150,15 @@ func _continuar_arcade() -> void:
 	if transicion_en_curso:
 		return
 	transicion_en_curso = true
+	get_tree().change_scene_to_file("res://scenes/PresentacionVS.tscn")
+
+func _replay_ultima_partida() -> void:
+	if transicion_en_curso:
+		return
+	if not FileAccess.file_exists("user://replays/last_input_recording.json"):
+		return
+	transicion_en_curso = true
+	estado.solicitar_replay_ultima_partida()
 	get_tree().change_scene_to_file("res://scenes/PresentacionVS.tscn")
 
 func _reintentar() -> void:

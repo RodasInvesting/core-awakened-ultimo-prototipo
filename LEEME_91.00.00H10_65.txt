@@ -1,0 +1,35 @@
+CORE AWAKENED 91.00.00-H10.65
+CORE III — ABSOLUTE VICTORY WAIT PHYSICS REVALIDATION
+
+Objetivo único:
+- Revalidar ABSOLUTE VICTORY ENTRY en J1 y J2.
+- H10.64 corrigió la contaminación del restore visual y probó el siguiente causal real: el SceneTreeTimer(0.65) post-KO no existe durante catch-up.
+- Primer DESYNC H10.64 apareció recién en subtick 7/8: esperado time_scale=1.0, actual=0.42, simétrico J1/J2.
+
+Cambio funcional respecto de H10.64:
+- scripts/main.gd: la espera post-KO de 0.65 s pasa a FSM physics snapshotable.
+- El contador VICTORY se actualiza ANTES que KO para no consumir un tick el mismo frame en que KO lo arma.
+- ABSOLUTE VICTORY ENTRY (time_scale=1.0, congelando_ko=false, pose_victoria, marcador y limpieza CORE III) se ejecuta también durante catch-up.
+- Cámara/audio/tweens/grabación/timer de salida siguen siendo presentación LIVE y NO se duplican durante catch-up.
+- scripts/rollback_snapshot.gd: captura/restaura core3_absolute_victory_fsm_activo/timer/lado.
+
+Congelado / NO tocado:
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- CORE I certificado
+- CORE II certificado
+- CORE III beats 1-18 certificados
+- ABSOLUTE FINISHER ENTRY H10.58
+- ABSOLUTE REVEAL END H10.60
+- ABSOLUTE KO ENTRY H10.62
+- fix restore visual H10.64
+
+Prueba:
+1) Kai vs Dax — Kai/J1: CORE I -> CORE II -> CORE III completo.
+2) Dax vs Kai — Kai/J2: CORE I -> CORE II -> CORE III completo.
+3) NO usar F11.
+4) Enviar runtime completo.
+
+Esperado:
+- ABSOLUTE VICTORY ENTRY debe producir TACTICAL ROLLBACK OK — 8 ticks idénticos en J1 y J2.
+- Si todavía falla, analizar únicamente el PRIMER subtick causal nuevo.

@@ -1,0 +1,55 @@
+CORE AWAKENED 91.02.72 — PASS 14D3B / RE-PAUSA DESDE CLIENTE
+================================================================
+
+RESULTADO 91.02.71
+- Primera pausa: EXACTA.
+- Host y Client pausaron en tick 2735.
+- Barrera: exacta=true.
+- Reanudación: host=2735 client=2735 delta=0.
+- La pelea siguió sincronizada.
+
+BUG AISLADO
+Después de reanudar, PC2 intentó pausar de nuevo (ticks 3051 y 3159),
+pero NetworkManager del Client seguía creyendo que el ciclo anterior estaba
+activo. 91.02.71 limpiaba el estado de pausa solamente en el Host al cerrar
+la barrera de reanudación.
+
+FIX 91.02.72
+- Cuando Host recibe los dos ACK de reanudación, envía un cierre fiable
+  del ciclo al Client.
+- Client limpia pausa_online_tick_objetivo, ACKs y flags de barrera.
+- La siguiente pausa puede volver a ser solicitada desde PC1 o PC2.
+- No se toca el mecanismo de pausa exacta ya certificado.
+
+ARCHIVO ÚNICO
+- scripts/network_manager.gd
+
+NO TOCADO
+- project.godot
+- pause_manager_online.gd
+- main.gd 91.02.70
+- rollback_snapshot.gd 91.02.60
+- Fighter / PerfectBlock
+- CORE I/II/III
+- proyectiles / físicas / gameplay
+- PERF-1
+
+PRUEBA
+1. Instalar ZIP ROOT sobre 91.02.71.
+2. Exportar 91.02.72 y usar la misma build en ambas PCs.
+3. PC1 pausa -> CONTINUAR.
+4. Esperar 1 segundo.
+5. PC2 pausa -> debe pausar AMBAS PCs.
+6. CONTINUAR desde PC2 o PC1.
+7. Repetir una tercera pausa desde PC1 si querés.
+8. Pasar ambos logs.
+
+LOG NUEVO ESPERADO DESPUÉS DE CADA REANUDACIÓN:
+[91.02.72-P14D3B] PAUSA CICLO CERRADO — ... rol=host ...
+[91.02.72-P14D3B] PAUSA CICLO CERRADO — ... rol=client ...
+
+Luego, al pedir PC2 una nueva pausa, debe aparecer en Host:
+PAUSA REQUEST ... epoch=2
+y en ambos:
+PAUSA APLICADA ... epoch=2
+PAUSA BARRERA OK ... exacta=true epoch=2

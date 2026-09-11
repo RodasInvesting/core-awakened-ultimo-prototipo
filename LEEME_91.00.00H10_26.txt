@@ -1,0 +1,17 @@
+CORE AWAKENED 91.00.00-H10.26 — CORE III SEVENTH BEAT PHYSICS
+
+Objetivo único:
+- Corregir la frontera CORE III SIXTH BEAT END (stage 8 -> 9) demostrada no determinista en H10.25.
+- Stage 9 pasa a ejecutar el séptimo beat mediante FSM física snapshotable.
+- La continuación histórica/async se desplaza a stage 10 y comienza desde coreografia[7] (octavo beat).
+
+Congelado:
+- CORE I y CORE II certificados.
+- CORE III ENTRY, RECARGA END, APPROACH END, FIRST/SECOND/THIRD/FOURTH/FIFTH BEAT END.
+- Beats 1-6 físicos previamente certificados.
+- rollback_snapshot.gd, PerfectBlock y game_state.gd sin cambios.
+
+Prueba automática:
+- No presionar F11.
+- Ejecutar CORE III completo con J1 y luego J2.
+- Buscar: TACTICAL ROLLBACK OK — CORE III SIXTH BEAT END — 8 ticks.

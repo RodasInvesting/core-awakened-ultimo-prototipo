@@ -1,0 +1,15 @@
+CORE AWAKENED 91.00.00-H10.86 — NORMAL ATTACK RECOVERY AUTO REVALIDATION
+
+OBJETIVO
+- Certificar la recuperación ofensiva después de una PATADA normal limpia.
+- H10.80 ya certificó el impacto; H10.86 observa fase_ataque RECOVERY(3) -> NINGUNA(0).
+- Sólo cambia scripts/main.gd diagnóstico.
+- fighter.gd, perfect_block_90_1.gd y rollback_snapshot.gd permanecen congelados.
+
+PRUEBA
+1) Kai vs Dax — Kai/J1.
+2) Conectar UNA PATADA normal limpia en suelo.
+3) Soltar PATADA y no hacer otra acción. NO usar F11.
+4) Esperar NORMAL ATTACK RECOVERY EVENT OBSERVADO -> AUTO MARCADO -> rollback.
+5) Resultado buscado: TACTICAL ROLLBACK OK — NORMAL ATTACK RECOVERY — 8 ticks; estado presente idéntico.
+6) Repetir Dax vs Kai — Kai/J2.

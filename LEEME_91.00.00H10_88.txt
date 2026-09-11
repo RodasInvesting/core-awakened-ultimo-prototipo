@@ -1,0 +1,26 @@
+CORE AWAKENED — 91.00.00 H10.88
+ROLLBACK CERTIFIED CLEAN BASELINE
+
+ESTADO OFICIAL
+- CORE I / CORE II / CORE III: CERTIFICADOS Y CONGELADOS.
+- Perfect Block / Counter: CERTIFICADOS Y CONGELADOS.
+- Launcher + AIR x1/x2/x3: CERTIFICADOS Y CONGELADOS.
+- Backdash / Forward Dash: CERTIFICADOS Y CONGELADOS.
+- Normal Punch Impact / Normal Kick Impact: CERTIFICADOS Y CONGELADOS.
+- Normal Punch Block / Normal Kick Block: CERTIFICADOS Y CONGELADOS.
+- Normal Block Recovery: CERTIFICADO Y CONGELADO.
+- Normal Attack Recovery: CERTIFICADO Y CONGELADO.
+- NORMAL COMBAT INTEGRAL: H10.87 J1/J2 6/6 CHECKPOINTS CERTIFICADOS.
+
+H10.88
+- Desactiva el arnés automático de regresión integral H10.87.
+- No modifica gameplay.
+- F11 local de diagnóstico permanece disponible.
+- Resultado.tscn sigue fuera del dominio rollback.
+
+ARCHIVOS DE PRODUCCIÓN CONGELADOS
+- scripts/fighter.gd
+- scripts/perfect_block_90_1.gd
+- scripts/rollback_snapshot.gd
+
+No requiere una nueva secuencia de certificación: H10.88 es la baseline limpia posterior a H10.87.

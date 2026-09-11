@@ -1,0 +1,36 @@
+CORE AWAKENED — 91.00.00-H10.40
+CORE III — THIRTEENTH BEAT PHYSICS / TWELFTH BEAT END REVALIDATION
+
+OBJETIVO
+- Revalidar exclusivamente CORE III TWELFTH BEAT END: stage 14 -> 15.
+- H10.39 demostró DESYNC causal en subtick 1/8 al entregar al beat 13 histórico.
+- H10.40 convierte únicamente el beat 13 a FSM física/snapshotable.
+
+ARQUITECTURA H10.40
+- stage 14 = beat 12 físico.
+- stage 15 = beat 13 físico.
+- stage 16 = continuación histórica desde beat 14.
+- Beats 1-13 ya no dependen de Tween/coroutine histórico.
+
+CONGELADO / NO MODIFICADO
+- CORE I certificado.
+- CORE II certificado.
+- CORE III ENTRY, RECARGA END, APPROACH END y BEAT END 1-11 certificados.
+- Snapshot, PerfectBlock, GameState, Input Recorder/Replay, Ring Buffer,
+  Neutral Motion Guard y Resultado no fueron modificados.
+
+PRUEBA
+1. NO presionar F11. La captura es automática.
+2. Completar CORE I normalmente.
+3. Completar CORE II normalmente.
+4. Completar CORE III completo con J1 y dejar terminar naturalmente.
+5. Repetir CORE III completo con J2 y dejar terminar naturalmente.
+6. Enviar el runtime completo.
+
+RESULTADO ESPERADO EN J1 Y J2
+TACTICAL ROLLBACK OK — CORE III TWELFTH BEAT END — 8 ticks; estado presente idéntico
+
+NOTA
+- H10.40 NO diagnostica todavía THIRTEENTH BEAT END stage 15 -> 16.
+- Si TWELFTH BEAT END pasa J1/J2, esa frontera se certifica y la siguiente
+  build será diagnóstico puro de THIRTEENTH BEAT END 15 -> 16.

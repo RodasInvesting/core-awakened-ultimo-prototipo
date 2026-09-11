@@ -1,0 +1,44 @@
+CORE AWAKENED 91.02.23 — PASS 9.2B CONTACTO CORPORAL EN COMBATE
+================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar VS LOCAL.
+
+OBJETIVO
+Corregir la superposicion profunda que aun aparecia durante ataques, trades,
+hitstun y bloqueo, sin volver a una pared invisible grande.
+
+CAMBIOS
+- Neutral de 91.02.22 se conserva en 78 px.
+- Durante precontacto de golpes normales: minimo compacto de 84 px.
+- Una vez confirmado contacto / hitstun / bloqueo: torso minimo de 88 px.
+- Si un luchador esta contra el limite de arena y no puede absorber la correccion,
+  el otro absorbe solamente la distancia residual necesaria.
+- Si los centros coinciden exactamente, ya no se deja la fusion congelada.
+
+IMPORTANTE
+El hitbox del golpe conserva prioridad: el pushbox se resuelve despues de la
+evaluacion de impacto. No se cambia alcance, dano ni knockback del ataque.
+
+NO TOCA
+- rollback / netcode / snapshots / RPC / serializacion
+- CORE I / II / III, auto-combo, posters o Absoluto
+- hitstun, hitstop, dano o knockback
+- gravedad, salto, dash o backdash
+- KO final / derrotado
+- timings de ataques o Combo Cancel
+
+VIDEO DE PRUEBA
+A) Caminar ambos uno contra otro y mantener direccion.
+B) Atacar repetidamente a quemarropa con puños y patadas.
+C) Hacer trades: ambos atacan casi al mismo tiempo.
+D) Presionar al rival contra el borde con golpes normales.
+E) Soltar los controles estando muy juntos: no debe quedar un torso dentro del otro.
+F) Probar ambos sentidos J1->J2 y J2->J1.
+G) CORE II rapido al final para revalidar PASS 9.1.
+
+OBJETIVO VISUAL
+roce cercano + extremidades que pueden cruzarse + torsos siempre legibles.

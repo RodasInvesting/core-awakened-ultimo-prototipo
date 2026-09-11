@@ -1,0 +1,28 @@
+CORE AWAKENED 91.00.00-H10.59 — CORE III ABSOLUTE REVEAL END TARGET-ONLY
+
+BASE:
+- H10.58 certificó CORE III ABSOLUTE FINISHER ENTRY J1/J2 (8 ticks idénticos).
+- Fighter y módulos deterministas permanecen byte-identical respecto de H10.58.
+
+OBJETIVO ÚNICO H10.59:
+- Diagnosticar el primer límite cinematográfico posterior a la entrada absoluta.
+- Main mantiene time_scale=0.18 durante 3.15 s y luego cruza a 0.42.
+- Target exacto: ronda_activa=false, CORE III stage 21, time_scale 0.18 -> 0.42.
+- El timer actual es SceneTreeTimer histórico/no snapshotable. H10.59 NO lo modifica: sólo prueba si se reconstruye al restaurar un tick antes del cruce.
+
+PRUEBA:
+1) Kai vs Dax: completar CORE I, CORE II y CORE III con Kai/J1.
+2) Dax vs Kai: completar CORE I, CORE II y CORE III con Kai/J2.
+3) NO usar F11.
+
+RESULTADO ESPERADO:
+- CORE III ABSOLUTE REVEAL END AUTO MARCADO
+- CORE III ABSOLUTE REVEAL END LOCALIZADO
+- Luego TACTICAL ROLLBACK OK o DESYNC con primer subtick causal.
+
+NO MODIFICADO:
+- fighter.gd
+- PerfectBlock
+- rollback_snapshot.gd
+- rollback_ring_buffer.gd
+- gameplay/arte/audio

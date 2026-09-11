@@ -1,0 +1,32 @@
+CORE AWAKENED 91.00.00-H10.71
+PERFECT BLOCK + COUNTER REVALIDATION
+
+BASELINE: H10.70 CORE I/II/III certificado y congelado.
+
+ALCANCE H10.71
+- Diagnóstico/revalidación solamente.
+- NO modifica Fighter.gd.
+- NO modifica perfect_block_90_1.gd.
+- NO modifica rollback_snapshot.gd.
+- NO modifica gameplay de Perfect Block ni Counter.
+- main.gd sólo cambia etiquetas de log H10.70->H10.71 y agrega banner diagnóstico.
+
+PRUEBA A — KAI/J1
+1. Kai vs Dax.
+2. Hacer un PERFECT BLOCK con Kai/J1: ABAJO justo antes del puño/patada de Dax.
+3. Cuando aparezca PERFECT!, presionar F11 inmediatamente, SIN hacer Counter.
+   Esperado: TACTICAL ROLLBACK OK — PERFECT BLOCK — 8 ticks; estado presente idéntico
+4. Volver a hacer PERFECT con Kai/J1.
+5. Soltar ABAJO y, dentro de la ventana, ejecutar X o C para COUNTER.
+6. Cuando aparezca COUNTER!, presionar F11 inmediatamente.
+   Esperado: TACTICAL ROLLBACK OK — COUNTER — 8 ticks; estado presente idéntico
+
+PRUEBA B — KAI/J2
+1. Dax vs Kai.
+2. Repetir PERFECT BLOCK con Kai/J2 y F11 inmediatamente al aparecer PERFECT!.
+3. Repetir PERFECT -> COUNTER con Kai/J2 y F11 inmediatamente al aparecer COUNTER!.
+
+IMPORTANTE
+- En esta revalidación SÍ se usa F11, sólo después de PERFECT! o COUNTER!.
+- No activar CORE durante estas ventanas.
+- Si falla, guardar el runtime completo; se busca únicamente el primer causal.

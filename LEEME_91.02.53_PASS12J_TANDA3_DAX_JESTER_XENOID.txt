@@ -1,0 +1,82 @@
+CORE AWAKENED 91.02.53 — PASS 12J / PROYECTILES TANDA 3
+===========================================================
+
+BASE
+Instalar sobre la base actual donde:
+- Helena está cerrada.
+- Tanda 1 Kai/Fang/Cibor-X está cerrada.
+- Tanda 2 Aethel/Magnus/Kali está cerrada con FIX 91.02.52.
+
+PERSONAJES
+- Dax
+- Jester
+- Xenoid
+
+COMANDO
+ABAJO -> ADELANTE -> PUÑO
+Adelante = hacia el rival.
+
+MOTOR COMÚN
+- Sólo suelo.
+- Un proyectil activo por personaje.
+- Startup castigable.
+- Sonido al NACER/SALIR.
+- Velocidad 805 px/s.
+- Evasión por salto/doble salto a distancia.
+- Orientación izquierda/derecha automática.
+- Misma hitbox/balance aprobado.
+
+IDENTIDAD VISUAL
+DAX
+- Onda/cono rojo de energía.
+- Aura roja.
+- Compensación visual de pose 1.14 por el VFX ancho.
+
+JESTER
+- Proyectil alquímico púrpura/magenta.
+- Aura púrpura/rosa.
+- Compensación visual 1.10.
+
+XENOID
+- Núcleo alien azul/verde.
+- Aura verde/celeste.
+- Compensación visual 1.08.
+
+SONIDO
+Los tres reutilizan el sonido aprobado de Helena:
+res://assets/helena/proyectil_impacto.wav
+El motor lo reproduce al SALIR el proyectil.
+
+ARCHIVOS MODIFICADOS
+- scripts/dax.gd
+- scripts/jester.gd
+- scripts/xenoid.gd
+
+ASSETS NUEVOS
+- assets/dax/poder_proyectil.png
+- assets/dax/proyectil_oficial.png
+- assets/jester/poder_proyectil.png
+- assets/jester/proyectil_oficial.png
+- assets/xenoid/poder_proyectil.png
+- assets/xenoid/proyectil_oficial.png
+
+NO SE TOCA
+- fighter.gd
+- proyectil_energia.gd
+- main.gd
+- game_state.gd
+- perfect_block_90_1.gd
+- project.godot
+- IA
+- CORE
+- rollback/netcode
+
+PRUEBA
+1. Dax: revisar tamaño de la pose y lectura del cono rojo.
+2. Jester: revisar tamaño de pose y proyectil alquímico.
+3. Xenoid: revisar tamaño de pose, impacto y lectura azul/verde.
+4. En los tres: probar derecha/izquierda, bloqueo y doble salto.
+5. Confirmar movimiento, golpes normales, IA y CORE sin regresiones.
+
+Si algo queda fuera de escala o altura, se calibra por personaje sin tocar
+el motor común certificado.

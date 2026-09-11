@@ -1,0 +1,41 @@
+CORE AWAKENED 91.02.41 — PASS 11C / IA DIFÍCIL AGRESIVA — QA
+================================================================
+
+ESTADO
+- MEDIO de 91.02.40: CERTIFICADO y valores preservados.
+- Esta build arranca TEMPORALMENTE en DIFÍCIL para probar el perfil difícil.
+- El selector visual Fácil/Medio/Difícil se integra después de certificarlo.
+
+DIFÍCIL — CAMBIOS EXCLUSIVOS
+- Decide mucho más rápido.
+- Ataque corto casi continuo cuando obtiene rango legal.
+- Movilidad y persecución más insistentes.
+- Cero intención de quedarse leyendo distancia en zona media.
+- Dash ofensivo más frecuente y cooldown menor.
+- Saltos más frecuentes.
+- Doble salto más probable.
+- Ataque aéreo más probable y sale antes.
+- Back dash sigue existiendo pero se usa tácticamente, no como modo tortuga.
+- Bloqueo dura menos.
+- Después de bloquear, busca castigo mucho más rápido.
+- Reacción táctica más rápida.
+- NO lee inputs.
+- NO aumenta daño, velocidad máxima, hitbox, hitstun, knockback ni alcance.
+
+PRESERVADO
+- MEDIO 91.02.40
+- COMBO x2/x3 ya corregido
+- CORE I / II / III
+- pushbox
+- recovery/hit-stop
+- sprites
+- rollback/snapshots/RPC/serialización
+
+PRUEBA
+1) Alejarse: DIFÍCIL debe perseguir inmediatamente.
+2) Media distancia: debe entrar con caminata/dash/salto, no esperar.
+3) Corto: debe presionar con muy pocas pausas.
+4) Observar salto/doble salto/ataque aéreo.
+5) Presionarlo: debe poder bloquear/backdashear y volver a atacar.
+6) Probar COMBO x2/x3: debe seguir entrando limpio.
+7) Hacer 2-3 peleas completas para verificar que sea difícil pero vencible.

@@ -1,0 +1,34 @@
+CORE AWAKENED 91.00.00-G5 — LOGICAL TRACE CLEAN
+
+Qué demostró G4
+----------------
+1. __last_motion y __real_velocity cambian inevitablemente al rehidratar el
+   CharacterBody2D. Muchas veces diferían en subtick 0 y aun así el presente
+   final era idéntico. Eran falsos positivos de diagnóstico.
+2. Sí existen algunos DESYNC reales donde la posición final difiere.
+
+Problema de G4
+--------------
+El falso positivo nativo del subtick 0 ocupaba rollback_subtrace_primer_error.
+Cuando la posición divergía realmente en subtick 1, 2, etc., ya no se imprimía
+el primer estado lógico que causó el problema.
+
+Cambio G5
+---------
+- Campos __on_floor/__last_motion/__real_velocity/__floor_normal permanecen
+  guardados como telemetría, pero se excluyen del checksum lógico.
+- El primer DESYNC reportado ahora es el PRIMER estado jugable realmente distinto.
+- Imprime el input histórico exacto de J1/J2.
+- Imprime posición, velocidad, dash terrestre, air dash, timers, aire/saltos,
+  estados previos de izquierda/derecha y el input previo.
+- No modifica fighter.gd.
+- No cambia Combat Feel ni ninguna mecánica.
+
+PRUEBA
+------
+Repetir 15-20 F11 con caminata, dash/backdash, salto, doble salto, air dash y
+aterrizaje, sin golpes.
+
+Si todos dan LOCAL ROLLBACK OK, movilidad queda certificada.
+Si aparece ROLLBACK LOGICAL DESYNC, copiar desde esa línea hasta
+LOCAL ROLLBACK DESYNC. Ese bloque ya identifica la causa lógica real.

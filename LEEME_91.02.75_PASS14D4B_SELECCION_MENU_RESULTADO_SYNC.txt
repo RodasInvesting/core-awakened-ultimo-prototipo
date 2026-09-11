@@ -1,0 +1,71 @@
+CORE AWAKENED 91.02.75 — PASS 14D4B / SELECCIÓN + MENÚ SINCRONIZADOS
+============================================================================
+
+91.02.74 — RESULTADO
+APROBADO funcionalmente:
+- un voto de revancha NO inició la pelea;
+- segundo voto inició la revancha;
+- nueva seed aplicada;
+- misma configuración Kali|Dax|Krovan;
+- VS/Main/COMBATE GO reiniciaron;
+- segunda pelea sostuvo ring alineado=true y jugabilidad normal.
+
+DETALLE TÉCNICO DETECTADO
+Al abandonar Main hacia Resultado llegó un Input Frame que ya estaba en vuelo
+y el Main viejo recibió un callback fuera del árbol:
+"Can't use get_node() with absolute paths from outside the active scene tree."
+91.02.75 lo limpia en NetworkManager: fuera de Main no despacha Input Frames
+al callback de gameplay.
+
+PASS 14D4B
+En Resultado ONLINE:
+- REVANCHA sigue requiriendo aceptación de ambos (91.02.74).
+- SELECCIÓN puede pedirla cualquiera: Host arbitra y AMBAS PCs vuelven juntas
+  a SelectorPersonajes, conservando la conexión ENet.
+- MENÚ PRINCIPAL puede pedirlo cualquiera: Host arbitra, AMBAS PCs reciben la
+  orden, cierran la sesión y vuelven juntas al menú.
+- Primera orden válida gana si ambas PCs pulsan cosas distintas casi al mismo tiempo.
+
+ARCHIVOS
+- scripts/network_manager.gd
+- scripts/online_flow_manager.gd
+
+NO TOCADO
+- project.godot / autoload ya instalado en 91.02.74
+- main.gd 91.02.70
+- pause_manager_online.gd 91.02.73
+- rollback_snapshot.gd 91.02.60
+- Fighter / PerfectBlock / CORE / proyectiles / físicas
+- resultado.gd original
+
+PRUEBA A — SELECCIÓN
+1. Instalar sobre 91.02.74 y exportar 91.02.75 en ambas PCs.
+2. Terminar una pelea.
+3. Pulsar SELECCIÓN sólo en PC2.
+4. Las DOS PCs deben ir a SelectorPersonajes.
+5. Elegir personajes nuevos en ambas.
+6. Host elige escenario.
+7. Jugar 30-60 s y verificar sincronía.
+
+PRUEBA B — MENÚ
+8. Terminar esa pelea o iniciar otra corta y llegar a Resultado.
+9. Pulsar MENÚ PRINCIPAL sólo en PC1.
+10. Ambas PCs deben volver al menú y cerrar la sesión online.
+11. Verificar que el Host ya no tenga rival conectado.
+
+LOGS CLAVE
+RESULTADO SALIDA LOCAL REQUEST
+RESULTADO SALIDA GO
+RESULTADO SALIDA RECIBIDA
+RESULTADO SALIDA APLICAR
+Luego, para SELECCIÓN:
+BARRERA VS / CONFIG / COMBATE GO con nueva selección.
+Para MENÚ:
+cierre de sesión sin ERROR de Main fuera del árbol.
+
+CRITERIO
+- ningún peer cambia de Resultado solo;
+- SELECCIÓN mueve ambos y permite una nueva configuración;
+- MENÚ saca ambos de la sesión;
+- no reaparece el ERROR get_node() de transición;
+- combate posterior sigue alineado.

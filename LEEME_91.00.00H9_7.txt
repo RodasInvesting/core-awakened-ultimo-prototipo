@@ -1,0 +1,88 @@
+CORE AWAKENED 91.00.00-H9.7 — CORE II COMBO FSM
+
+IMPORTANTE — CORRECCIÓN DEL CONGELAMIENTO H9.6
+-----------------------------------------------
+H9.6 era una prueba destructiva a propósito:
+
+FIRST BEAT END
+  -> invalidaba la coroutine LIVE
+  -> restauraba dentro de stage 3
+  -> no existía instruction pointer snapshotable
+  -> CORE II pegaba una vez y luego quedaba congelado hasta expirar el safety timer.
+
+Ese comportamiento CONFIRMÓ el diagnóstico.
+H9.6 no debe usarse como build jugable.
+
+H9.7 ELIMINA ESA DEPENDENCIA
+----------------------------
+La ráfaga completa de CORE II ya no usa una coroutine para:
+- recorrer la coreografía;
+- saber qué golpe toca;
+- esperar fin de ataque;
+- acercarse entre beats.
+
+Ahora stage 3 es una FSM explícita por physics:
+
+PREPARAR
+  -> ACERCAR (si hace falta)
+  -> EJECUTAR GOLPE
+  -> ESPERAR FIN DE ATAQUE
+  -> siguiente índice
+  -> repetir
+
+Estado snapshotable:
+- core2_combo_paso_idx
+- core2_combo_total_pasos
+- core2_combo_subfase
+- origen/destino/duración/progreso del acercamiento entre beats
+
+SE CONSERVA
+-----------
+- repertorio trifásico:
+  A) todos los puños
+  B) todas las patadas
+  C) pasada mixta completa
+- índices exactos de sprites
+- target adaptativo
+- velocidad /900
+- clamp 0.08..0.30
+- QUAD EASE OUT
+- timings reales de cada ataque
+- daño/hitstun/knockback
+- CORE I
+- CORE III
+
+AÚN ASYNC
+---------
+Sólo el REMATADOR final de CORE II sigue por la ruta histórica.
+Ese será el próximo bloque después de certificar la ráfaga.
+
+PRUEBA H9.7
+-----------
+Primero verificar GAMEPLAY NORMAL:
+
+1. J1 usa CORE I.
+2. Carga CORE II.
+3. Activa CORE II.
+4. Debe:
+   - recargar,
+   - llegar al rival,
+   - ejecutar TODO el combo de puños/patadas,
+   - ejecutar rematador,
+   - devolver control.
+5. El personaje NO puede quedarse congelado después del primer golpe.
+
+Luego dejar correr los auto-tests.
+NO usar F11.
+
+Queremos:
+- RECARGA END -> OK
+- COMBO ENTRY -> OK
+- FIRST BEAT END -> OK
+
+Repetir al menos:
+- 1 vez J1
+- 1 vez J2
+
+Si FIRST BEAT END pasa:
+stage 3 queda estructuralmente cerrado y pasamos al rematador CORE II.

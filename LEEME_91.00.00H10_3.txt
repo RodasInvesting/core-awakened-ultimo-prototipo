@@ -1,0 +1,93 @@
+CORE AWAKENED 91.00.00-H10.3 — CORE III ENTRY SCHEDULING BARRIER
+
+RESULTADO H10.2
+---------------
+CORE I y CORE II continúan certificados.
+
+CORE III EXACT ENTRY sigue fallando en J1 y J2 en el primer subtick.
+La ventana es correcta: [evento-1 .. evento+6].
+
+H10.2 sí restauró Engine.time_scale histórico=1.0 antes del catch-up, pero el
+primer input histórico de CORE III no fue procesado por Fighter.
+
+Evidencia del primer subtick:
+- esperado time_scale=0.32 / actual=1.0
+- esperado poder=0 / actual=100
+- esperado veces_fase_absoluta=3 / actual=2
+- esperado en_secuencia_especial=true / actual=false
+- esperado z_estaba_presionado=true / actual=false
+
+Eso significa que el tick con ESPECIAL fue inyectado por Main, pero Fighter no
+ejecutó ese physics tick.
+
+CAUSA H10.2
+-----------
+FRAME A:
+- restore histórico
+- kai/rival/PerfectBlock -> set_physics_process(false)
+- se espera un frame para recalcular delta con time_scale histórico
+
+FRAME B (problema):
+- segundo restore
+- set_physics_process(true)
+- H10.2 activaba inmediatamente rollback_catchup_activo
+- Main verificaba e inyectaba tick histórico 0 en ese mismo frame
+
+Pero los Fighter estaban deshabilitados cuando Godot construyó la lista de
+physics callbacks de ese frame. Reactivarlos desde Main no hace que ejecuten
+Fighter._physics_process() retroactivamente en ese mismo frame.
+
+Resultado: Main consume tick 0, Fighter no lo procesa y en el frame siguiente
+Main ya avanza a tick 1. Se pierde exactamente el input que activa CORE III.
+Por eso tampoco se ejecuta recarga_iniciada(true) ni la transición 1.0 -> 0.32.
+
+H10.3
+-----
+Corrección mínima y exclusivamente en main.gd.
+
+En CORE III TIMESCALE BOUNDARY READY:
+1. segundo restore histórico;
+2. reactiva kai/rival/PerfectBlock;
+3. deja rollback_catchup_activo=true;
+4. RETURN inmediato del _physics_process de Main;
+5. NO verifica subtick, NO consume input y NO avanza índice en ese frame;
+6. en el physics frame siguiente los Fighter ya están schedulados;
+7. recién ahí Main verifica snapshot 0 e inyecta input histórico 0;
+8. Fighter procesa ESPECIAL en ese mismo tick y reconstruye CORE III ENTRY;
+9. recarga_iniciada(true) vuelve a poner Engine.time_scale=0.32 como en LIVE.
+
+NO SE TOCA
+----------
+- lógica de CORE I
+- lógica de CORE II
+- fighter.gd
+- rollback_snapshot.gd
+- gameplay CORE III
+- duración de recarga 1.55 s
+- daño, poses, combo ni rematador
+
+PRUEBA H10.3
+------------
+NO usar F11. El test CORE III ENTRY es automático.
+
+Probar una vez con J1 y una vez con J2:
+CORE I -> CORE II completo -> cargar tercera vez -> CORE III.
+
+Secuencia esperada:
+  CORE III EXACT ENTRY LOCALIZADO
+  CORE III TIMESCALE BOUNDARY ARMADO
+  TACTICAL ROLLBACK — CORE III ENTRY
+  CORE III TIMESCALE BOUNDARY READY
+  CORE III ENTRY RESIM
+  TACTICAL ROLLBACK OK — CORE III ENTRY — 8 ticks
+
+En el primer subtick ya NO deben aparecer:
+- time_scale esperado=0.32 actual=1.0
+- poder esperado=0 actual=100
+- veces_fase_absoluta esperado=3 actual=2
+- en_secuencia_especial esperado=true actual=false
+- z_estaba_presionado esperado=true actual=false
+
+Si J1 y J2 dan OK, CORE III ENTRY queda certificado.
+El siguiente borde a instrumentar será FIN DE RECARGA CORE III (1.55 s), donde
+la coroutine/SceneTreeTimer actual pasa a Furia + acercamiento.

@@ -1,0 +1,39 @@
+CORE AWAKENED 91.00.00-G3 — PHYSICS STATE REHYDRATE
+
+HALLAZGO DE G2
+--------------
+La mayoría de rollbacks de 8 ticks son exactos, pero los fallos restantes se
+concentran en dash, air dash, cruce aéreo y aterrizaje. En los logs aparecen
+cambios de velocity, dash_aereo_activo, en_el_aire y saltos_usados.
+
+CAUSA TÉCNICA
+-------------
+CharacterBody2D.is_on_floor()/is_on_wall()/is_on_ceiling no son variables GDScript.
+Godot las conserva internamente a partir del último move_and_slide(). Un snapshot
+restauraba posición y velocidad, pero el primer tick re-simulado podía arrancar
+con el cache de piso perteneciente al presente anterior al rollback.
+
+CAMBIO G3
+---------
+- El snapshot guarda también los contactos nativos derivados del CharacterBody2D.
+- Al restaurar se hace una micro-sonda de move_and_slide para rehidratar ese cache.
+- Inmediatamente se reponen posición y velocidad exactas del snapshot.
+- Se conserva el inicio de rollback alineado a physics tick de G2.
+- Se conserva subtrace de los 8 ticks.
+- NO se cambia la lógica normal de fighter.gd ni el Combat Feel.
+
+PRUEBA
+------
+1. Copiar encima de G2 y reemplazar archivos.
+2. Versus Local.
+3. Presionar F11 15-20 veces mezclando:
+   - caminata;
+   - dash/backdash;
+   - salto y doble salto;
+   - air dash;
+   - aterrizaje;
+   - bloqueo sin impacto.
+4. Buscar únicamente LOCAL ROLLBACK OK.
+5. Si aparece SUBTRACE DESYNC, enviar captura completa.
+
+Si G3 queda limpio, pasamos a H: rollback atravesando golpes reales.

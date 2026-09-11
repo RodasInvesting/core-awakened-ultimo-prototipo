@@ -1,0 +1,73 @@
+CORE AWAKENED 91.00.00-H2 — TACTICAL STATE ROLLBACK
+
+HALLAZGO H1
+-----------
+En PRETICK 1 el Fighter esperado y restaurado eran idénticos:
+- hitstop
+- fase/timer
+- indice_punetazo
+- botones previos
+- buffer
+
+Sin embargo, antes del PRETICK siguiente apareció un nuevo puño:
+indice 1 -> 2 y ACTIVO -> STARTUP.
+
+CAUSA AISLADA
+-------------
+PerfectBlock90_1 es un AUTOLOAD con su propia _physics_process().
+Procesa input_frame_enrutado_actual y gobierna:
+- Combo Cancel
+- Counter
+- Back Dash
+- Launcher/Air Combo
+- Quick Recovery
+
+Esa máquina de estado NO estaba incluida en snapshots.
+
+Su orden temporal es:
+1. PerfectBlock90_1 physics
+2. Main physics (acá capturamos snapshot)
+3. Main inyecta input
+4. Fighter physics
+
+Por eso al rebobinar sólo Fighter, PerfectBlock quedaba 133 ms en el futuro.
+
+CAMBIO H2
+---------
+RollbackSnapshot ahora captura/restaura el estado táctico del autoload:
+- input previo por Fighter
+- combo cancel disponible/cadena
+- ventanas tácticas
+- backdash state
+- launcher/air combo state
+- quick recovery state
+- vida_antes
+- estados IA relacionados
+
+NO modifica perfect_block_90_1.gd.
+NO modifica fighter.gd.
+NO cambia ningún timing de combate.
+
+Relojes:
+PerfectBlock todavía usa Time.get_ticks_msec().
+H2 conserva el tiempo RESTANTE de sus deadlines desplazando timestamps al
+momento de restore. Es una solución de validación; la migración definitiva a
+reloj de simulación se hará después de confirmar la causa.
+
+PRUEBA
+------
+1. Confirmar gameplay normal.
+2. J1 conecta UN puño a J2 neutral.
+3. F11 inmediatamente.
+4. Repetir luego con una patada.
+
+Meta:
+NORMAL ATTACK ROLLBACK OK — IMPACTO
+
+PRETICK ahora también imprime:
+TACTICO J1/J2 esperado vs actual
+- prev input
+- cancel disponible
+- cadena
+
+Si H2 pasa impacto, queda confirmada la causa externa a Fighter.

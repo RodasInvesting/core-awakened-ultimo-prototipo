@@ -1,0 +1,36 @@
+CORE AWAKENED 91.00.00-G7 — ROLLBACK PRESENTATION BOUNDARY
+
+Qué demostró G6
+---------------
+- Muchos DESYNC eran únicamente estado_visual_balance/tension.
+- Fighter calcula ese micro-balance con Time.get_ticks_msec(), por lo que es
+  PRESENTACIÓN y nunca debe entrar en el checksum determinista.
+- Hubo dos fallos físicos reales con desplazamiento externo de ~8.666 px aun
+  con input neutral, velocity y last_motion correctos.
+- Ese patrón es compatible con collision recovery interno dejado por la
+  micro-sonda move_and_slide() usada para rehidratar is_on_floor().
+
+Cambios G7
+----------
+1. estado_visual_balance/tension quedan fuera del checksum lógico.
+2. La pose se restaura usando Fighter._actualizar_textura(), no sólo asignando
+   Sprite2D.texture. Así escala_actual, sprite_base_y y datos derivados quedan
+   coherentes.
+3. Rehidratación nativa más segura:
+   - snapshot en piso -> apply_floor_snap()
+   - snapshot en aire -> move_and_slide con collision_mask=0
+   Ninguna de las dos rutas puede aplicar recovery horizontal contra escenario.
+4. Después se reimponen posición y velocidad exactas del snapshot.
+5. NO se modifica fighter.gd ni Combat Feel.
+
+PRUEBA
+------
+- Reemplazar encima de G6.
+- Versus Local.
+- Hacer 15-20 F11 con caminar, dash/backdash, salto, doble salto, air dash y
+  aterrizajes, sin golpes.
+- Meta: todos LOCAL ROLLBACK OK.
+- Si aparece ROLLBACK CAUSAL DESYNC, enviar el bloque completo.
+
+Si G7 pasa:
+91.00.00-H — rollback atravesando un puñetazo/patada real.

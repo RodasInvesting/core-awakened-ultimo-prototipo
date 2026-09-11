@@ -1,0 +1,17 @@
+CORE AWAKENED 91.02.11 — HELENA RECARGA FEMENINA
+
+Contenido del parche root:
+- scripts/main.gd
+- assets/sonidos/helena_real/helena_recarga_femenina.mp3
+
+Qué hace:
+- Integra el grito femenino enviado por el usuario como voz dedicada de recarga para Helena.
+- La voz suena tanto en CORE II como en CORE III.
+- Helena deja de usar la excepción silenciosa anterior en el evento de recarga.
+
+Qué NO toca:
+- No cambia mecánicas, daño, físicas, IA, inputs, sprites ni escalas.
+- No cambia otros audios ya integrados.
+
+Instalación:
+- Copiar y reemplazar este contenido en la raíz del proyecto.

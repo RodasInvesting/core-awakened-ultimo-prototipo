@@ -1,0 +1,80 @@
+CORE AWAKENED 91.02.62 — PASS 14C
+SINCRONIZACIÓN ONLINE DE PERSONAJES + ESCENARIO + SEED
+=======================================================
+
+BASE
+- 91.02.60 rollback/proyectiles certificado.
+- 91.02.61 transporte ENet Host/Join certificado.
+
+QUÉ HACE 14C
+1. Al conectar 2 peers, el HOST ordena abrir SelectorPersonajes en ambos.
+2. HOST elige J1 en su ventana.
+3. CLIENTE elige J2 en su ventana.
+4. Al confirmar ambos, la autoridad fija:
+   J1 = personaje HOST
+   J2 = personaje CLIENTE
+5. Ambos pasan al SelectorEscenarios.
+6. Sólo HOST puede mover/confirmar escenario.
+7. El CLIENTE ve en tiempo real el mismo escenario resaltado.
+8. HOST confirma arena y genera una única seed.
+9. J1/J2/arena/seed se envían de forma fiable a ambos peers.
+10. Ambos entran a PresentacionVS con la misma configuración.
+11. Barrera de VS confirma que LOS DOS peers llegaron.
+
+IMPORTANTE
+PASS 14C se detiene deliberadamente en PresentacionVS.
+NO entra todavía a Main.tscn. Eso evita activar IA/input local incorrecto antes de
+PASS 14D, que será el intercambio real de Input Frames + rollback remoto.
+
+EN AMBAS VENTANAS DEBE VERSE
+- mismo personaje izquierdo = HOST / J1
+- mismo personaje derecho = CLIENTE / J2
+- misma pantalla VS
+- mismo número SEED
+- mensaje verde:
+  SINCRONIZACIÓN OK • SEED ... • LISTOS PARA PASS 14D
+
+ARCHIVOS MODIFICADOS
+- scripts/network_manager.gd
+- scripts/game_state.gd
+- scripts/selector_personajes.gd
+- scripts/selector_escenarios.gd
+- scripts/presentacion_vs.gd
+
+NO SE TOCA
+- main.gd
+- fighter.gd
+- proyectil_energia.gd
+- rollback_snapshot.gd 91.02.60
+- ring buffer / input recorder / replay
+- PerfectBlock
+- IA / CORE / gameplay / balance
+- IntroBatalla (auditado; Online lo omite deliberadamente)
+
+PRUEBA
+A) Cerrar las dos instancias viejas y abrir nuevamente 2 instancias.
+B) Ventana 1: ONLINE -> HOST.
+C) Ventana 2: ONLINE -> 127.0.0.1 -> CONECTAR.
+D) Deben saltar solas al selector de personajes.
+E) Elegir personajes DISTINTOS para leer fácil el resultado. Ejemplo:
+   Host: Kai
+   Cliente: Helena
+F) Confirmar ambos.
+G) En escenarios, mover sólo desde HOST. Confirmar cualquier arena.
+H) Comparar ambas PresentacionVS.
+
+CONSOLA ESPERADA
+HOST:
+[91.02.62-P14C] CONFIG HOST — Kai|Helena|...|SEED
+[91.02.62-P14C] BARRERA VS OK — ...
+
+AMBOS:
+[91.02.62-P14C] CONFIG RECIBIDA peer=... — Kai|Helena|...|SEED
+[91.02.62-P14C] PRESENTACION SINCRONIZADA peer=... — ...
+
+CRITERIO DE CERTIFICACIÓN
+- personajes idénticos en ambos peers
+- escenario idéntico
+- seed idéntica
+- barrera VS OK
+- cero crash / parse error / desconexión

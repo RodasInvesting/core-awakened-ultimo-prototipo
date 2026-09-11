@@ -1,0 +1,37 @@
+CORE AWAKENED 91.00.00-H10.29 — CORE III EIGHTH BEAT END DIAGNOSTIC
+
+OBJETIVO
+- H10.27 certificó SEVENTH BEAT END (stage 9->10) para J1/J2.
+- H10.29 NO cambia gameplay.
+- Fighter, snapshot, PerfectBlock y GameState quedan idénticos a H10.27.
+- Se observa el primer ciclo de ataque que termina dentro de stage 10.
+- Ese borde corresponde al fin del beat 8 histórico y entrega al beat 9 histórico.
+
+PRUEBA
+1. Reemplazar con este ZIP completo.
+2. Versus Local.
+3. NO presionar F11.
+4. Ejecutar CORE III completo con J1 y después con J2.
+5. Dejar terminar naturalmente ambas secuencias.
+6. Enviar el runtime completo.
+
+MARCADORES OBJETIVO
+CORE III EIGHTH BEAT END AUTO MARCADO
+CORE III EIGHTH BEAT END LOCALIZADO — stage 10 ataque 1 completo / beat 8->9
+TACTICAL ROLLBACK OK — CORE III EIGHTH BEAT END — 8 ticks; estado presente idéntico
+
+Si aparece DESYNC/TEMPORAL DESYNC, el runtime decidirá si el noveno beat histórico debe convertirse a FSM física.
+
+
+H10.29 HOTFIX DIAGNÓSTICO — EIGHTH BEAT END
+- Corrige falso positivo de H10.28: el cierre stage 9->10 del séptimo beat ya no puede marcarse como octavo beat.
+- El observador exige ver un ataque NUEVO iniciado dentro de stage 10 antes de aceptar su fin.
+- Espera de localización silenciosa con timeout de 4 ticks: jamás imprime por tick ni puede saturar la pelea.
+- fighter.gd / snapshot / PerfectBlock / gameplay: sin cambios respecto de H10.28/H10.27.
+
+PRUEBA
+1) Versus Local.
+2) No presionar F11.
+3) Hacer CORE III completo con J1. Confirmar primero que el combo y Victoria corren a velocidad normal.
+4) Si J1 termina normal, repetir CORE III completo con J2.
+5) Enviar runtime completo.

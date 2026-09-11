@@ -1,0 +1,39 @@
+CORE AWAKENED 91.02.22 — PASS 9.2 ROCE CORPORAL
+================================================
+
+INSTALACION
+1. Abrir este ZIP.
+2. Arrastrar TODO su contenido a la carpeta raiz de CORE AWAKENED.
+3. Aceptar reemplazar scripts/fighter.gd.
+4. Abrir Godot y probar VS LOCAL.
+
+CAMBIO UNICO
+- El contacto neutral entre luchadores pasa de 62 px a 78 px.
+- Si dos cuerpos quedaron demasiado superpuestos y ambos ya estan quietos,
+  el juego separa solamente la penetracion ilegal restante segun la masa.
+- Se conserva roce cercano; no se agrega una pared invisible grande.
+
+NO TOCA
+- rollback / netcode / snapshots / RPC / serializacion
+- CORE I / CORE II / CORE III
+- dano, hitstun, hitstop o knockback
+- gravedad, salto o dash
+- hitboxes/hurtboxes de los golpes
+- KO final o cuerpo derrotado
+- timings de combate
+
+PRUEBA PRINCIPAL
+A) Con ambos personajes quietos, caminar uno contra el otro y mantener direccion.
+   Deben quedar muy cerca, pero ambos torsos tienen que seguir siendo legibles.
+B) Caminar ambos uno contra el otro.
+   Deben hacer contacto y frenar sin atravesarse.
+C) Despues de golpes/dash, acercarlos de nuevo y soltar controles.
+   No debe quedar un personaje metido detras del otro.
+D) Probar ambos sentidos J1->J2 y J2->J1.
+E) Hacer un CORE II rapido para verificar que PASS 9.1 sigue intacto.
+
+OBJETIVO VISUAL
+separados -> acercamiento -> roce -> contacto corporal -> stop suave
+
+NO:
+separados -> acercamiento -> torso dentro de torso -> personaje oculto

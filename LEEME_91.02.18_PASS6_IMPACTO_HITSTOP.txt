@@ -1,0 +1,42 @@
+CORE AWAKENED 91.02.18 — PASS 6 IMPACTO LOCAL / HITSTOP
+
+OBJETIVO
+Dar más peso al contacto de golpes normales SIN enlentecer la cadencia aprobada en PASS 5.
+
+CAMBIO ÚNICO DEL PASS 6
+- Puño limpio: micro-hitstop local ligeramente más marcado en atacante y receptor.
+- Patada limpia: micro-hitstop local un poco más fuerte que el puño.
+- Bloqueos: tiempos EXACTAMENTE iguales al PASS 5.
+- Hitstun: SIN CAMBIOS en este pass.
+
+NO TOCA
+- startup / activo / recovery de PASS 5
+- daño
+- hitstun
+- knockback / empuje
+- rangos / lunge
+- dash / backdash
+- salto / doble salto / caída PASS 1–4
+- IA / decisiones defensivas
+- Combo Cancel
+- launcher / air combo
+- CORE I / II / III
+- rollback / snapshots / input frames
+
+PRUEBA RECOMENDADA
+1) Puños limpios a corta distancia.
+2) Patadas limpias a corta distancia.
+3) Alternar puño -> patada durante 15–20 s.
+4) Probar contra IA y en Versus si podés.
+
+QUÉ MIRAR
+- Que el instante del contacto se sienta más seco/pesado.
+- Que la patada tenga más presencia que el puño.
+- Que NO aparezca sensación de cámara lenta.
+- Que después del impacto se recupere con la misma rapidez del PASS 5.
+- Que bloquear no quede más pesado ni pegajoso.
+
+NOTA IA
+Este PASS no modifica la defensa de CPU. La IA ya posee bloqueo/backdash/punish táctico y
+protección específica para Combo Cancel confirmado; la diferencia IA vs Versus se revisará
+como bloque independiente para no mezclarla con el tuning de impacto.

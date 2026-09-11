@@ -1,0 +1,41 @@
+CORE AWAKENED 91.02.46 — PASS 12C / PROYECTIL EVASIÓN AÉREA
+===============================================================
+
+VIDEO 91.02.45
+- Tamaño visual: APROBADO.
+- Velocidad/lectura: APROBADA.
+- Pose/lanzamiento: APROBADOS.
+- Pendiente: permitir evasión aérea clara a distancia.
+
+CAMBIO ÚNICO
+- El aspecto visual sigue EXACTAMENTE igual: radio visual 42 px.
+- Hitbox horizontal sigue 27 px por lado.
+- Hitbox vertical pasa de 27 px a 15 px por lado.
+
+RESULTADO ESPERADO
+- En suelo el proyectil sigue conectando normalmente.
+- A corta distancia sigue siendo difícil reaccionar.
+- A media/larga distancia, si el rival anticipa y hace salto/doble salto,
+  puede pasar por encima limpiamente.
+- No agrega invulnerabilidad artificial: simplemente la geometría del cuerpo
+  y la del proyectil dejan de solaparse cuando el salto es suficientemente alto.
+
+NO SE TOCA
+- daño
+- velocidad
+- empuje
+- hitstun
+- startup/recovery/cooldown
+- tamaño visual
+- Fighter
+- Helena
+- IA
+- CORE
+- rollback
+
+PRUEBA
+1. Helena lanza desde larga distancia.
+2. Rival espera desde suelo y ejecuta doble salto.
+3. Debe poder pasar por encima si alcanza altura antes del contacto.
+4. Probar también sin saltar: debe seguir recibiendo el impacto.
+5. Probar bloqueo: debe seguir funcionando.

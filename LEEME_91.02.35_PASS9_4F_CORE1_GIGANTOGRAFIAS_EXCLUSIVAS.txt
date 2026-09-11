@@ -1,0 +1,32 @@
+CORE AWAKENED 91.02.35 — PASS 9.4F CORE I GIGANTOGRAFIAS EXCLUSIVAS
+===============================================================================
+
+INSTALACION
+1. Abrir el ZIP.
+2. Arrastrar TODO a la carpeta raiz del proyecto CORE AWAKENED.
+3. Reemplazar scripts/fighter.gd y mantener assets/core2_entrada_flash/.
+4. Abrir Godot y dejar importar.
+
+OBJETIVO
+Dejar la recarga de CORE II limpia y aprovechar los PNG exclusivos enviados por
+el usuario dentro del golpe/poster de CORE I.
+
+QUE CAMBIA
+- CORE I ahora usa el PNG exclusivo del usuario si existe para ese luchador.
+- Si un luchador no tiene PNG exclusivo, CORE I cae a su especial historico.
+- CORE II ya no muestra gigantografia durante la recarga.
+- CORE II conserva su flujo: recarga -> combo -> gigantografia final.
+
+QUE NO TOCA
+- daño
+- hit-stop
+- hitstun
+- pushbox
+- rollback
+- cámaras y combate general
+- CORE III
+
+PRUEBAS SUGERIDAS
+A) CORE I con Fang, Helena, Dax, Xenoid, Varkhos.
+B) CORE II normal para confirmar recarga limpia.
+C) Cambio de lado para verificar que CORE I siga espejando bien.

@@ -1,0 +1,47 @@
+CORE AWAKENED 91.02.08 — AETHEL FINAL REDESIGN + RECHARGE SCALE PASS
+
+OBJETIVO DE ESTA VERSION
+- Integrar el rediseño final entregado de Aethel SIN alterar el diseño de los PNG.
+- Sustituir el set visual de Aethel: parado, caminata/levitación, dash, back dash,
+  bloqueo, salto, doble salto, descenso, recibidos, derrotado, puños, patadas,
+  rodillazo, recarga, combo de Furia, remate, CORE I/II/III y victoria.
+- Integrar los nuevos rediseños de recarga entregados para Cibor-X, Fang,
+  Helena, Jester, Kai, Kali, Magnus y Dax.
+- Evitar que las nuevas recargas se vean demasiado pequeñas respecto al fighter
+  normal: la escala se calcula contra el parado REAL de cada personaje y se
+  aplica una compensacion visual de encuadre del 12% solo a estos rediseños.
+
+CAMBIO DE CODIGO
+- scripts/fighter.gd
+  * Se retiraron las escalas precalculadas antiguas de Aethel, que pertenecian
+    al arte anterior y podian volver gigante o pequeño el nuevo sprite.
+  * Se retiraron las escalas antiguas de recarga de los personajes rediseñados.
+  * Se agrego RECARGA_REDRAW_MULT = 1.12 para Aethel, Cibor-X, Fang, Helena,
+    Jester, Kai, Kali, Magnus y Dax.
+  * La compensacion actua solo cuando la textura activa es textura_recarga.
+
+NO SE TOCO
+- fisica de dash/backdash
+- daño
+- hitboxes base
+- velocidad
+- timings de CORE I/II/III
+- rollback_snapshot.gd
+- perfect_block_90_1.gd
+- main.gd
+- posters VS de Krovan/Nekhar
+
+NOTA DAX
+- El archivo entregado de recarga de Dax estaba en JPG. Se convirtio a PNG
+  compatible con Godot y se elimino unicamente el fondo negro conectado al borde.
+  No se rediseño el personaje.
+
+PRUEBA RECOMENDADA
+1) Aethel: parado -> caminar/levitar -> dash -> back dash -> salto/doble/descenso.
+2) Aethel: recibir golpes -> derrotado.
+3) Aethel: CORE I, CORE II y CORE III completos, verificando tamaño de recarga,
+   combo y remate.
+4) Probar una recarga de cada rediseñado y comparar el tamaño corporal contra
+   su pose normal inmediatamente antes/despues.
+5) Si algun personaje queda apenas grande/chico, ajustar SOLO el multiplicador
+   visual individual; no tocar gameplay.

@@ -1,0 +1,50 @@
+CORE AWAKENED 91.02.54 — PASS 12K / FIX POSE PROYECTIL DAX
+==============================================================
+
+VIDEO TANDA 3
+- Jester: APROBADO.
+- Xenoid: APROBADO.
+- Dax:
+  * proyectil: APROBADO;
+  * trayectoria/impacto: APROBADOS;
+  * problema: el cuerpo se veía aprox. 10–12 % más chico al entrar en la pose.
+
+CAUSA
+El PNG de lanzamiento de Dax incluye un VFX rojo muy ancho.
+La normalización geométrica de Fighter mide el conjunto visible completo,
+por lo que el cuerpo humano quedaba proporcionalmente reducido.
+
+CORRECCIÓN ÚNICA
+proyectil_pose_escala_mult:
+  1.14 -> 1.27
+
+No se agrega desplazamiento físico ni offset de Fighter.
+El sistema existente ya ancla el borde inferior visible de cada PNG a la
+línea de combate, por lo que al aumentar la pose los pies permanecen en suelo.
+
+ARCHIVO MODIFICADO
+- scripts/dax.gd
+
+NO SE TOCA
+- fighter.gd
+- proyectil_energia.gd
+- proyectil de Dax
+- velocidad 805 px/s
+- hitbox
+- sonido
+- daño/hitstun/empuje
+- Jester
+- Xenoid
+- IA
+- CORE
+- PerfectBlock
+- rollback/netcode
+
+INSTALACIÓN
+Abrir ZIP -> arrastrar todo a la raíz -> aceptar reemplazar.
+
+PRUEBA FINAL
+Comparar Dax en reposo inmediatamente antes de ↓ → + PUÑO y durante la pose.
+El cuerpo debe conservar prácticamente el mismo tamaño visual.
+
+Si pasa: TANDA 3 CERRADA.

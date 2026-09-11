@@ -17,7 +17,8 @@ func _init() -> void:
 	dano_punetazo = 11.0
 	cooldown_punetazo = 0.21
 	poder_por_golpe = 15.0
-	# 90.11.02 — Helena ya muestra 10 puños + 5 patadas en la pasada completa.
+	# 91.02.78 — PRE-RC HOTFIX: se conserva TODO el bloque de proyectil certificado
+	# y se elimina únicamente la referencia inexistente a punetazo_9.png.
 	# En el remix de CORE II priorizamos 4 patadas + 1 puño para que sus cinco
 	# poses de pierna se perciban con la misma riqueza que en combo manual.
 	combo_core_remix_prioriza_patadas = true
@@ -42,7 +43,6 @@ func _init() -> void:
 		load("res://assets/helena/punetazo_6.png"),
 		load("res://assets/helena/punetazo_7.png"),
 		load("res://assets/helena/punetazo_8.png"),
-		load("res://assets/helena/punetazo_9.png"),
 	]
 
 	# Dos patadas nuevas: patada frontal/rodilla y patada baja. Se intercalan
@@ -97,6 +97,24 @@ func _init() -> void:
 
 	# Pose dedicada para carrera/doble toque.
 	textura_carrera = load("res://assets/helena/carrera.png")
+
+	# 91.02.44 — PASS 12A / PROTOTIPO PROYECTIL HELENA.
+	proyectil_especial_habilitado = true
+	textura_proyectil_pose = load("res://assets/helena/poder_proyectil.png")
+	textura_proyectil_nucleo = load("res://assets/helena/proyectil_oficial.png")
+	proyectil_pose_escala_mult = 1.06
+	color_proyectil_primario = Color(1.0, 0.08, 0.64, 1.0)
+	color_proyectil_secundario = Color(1.0, 0.82, 0.96, 1.0)
+	# 91.02.47 — incremento leve aprobado: +5.9 % respecto de 760.
+	proyectil_velocidad = 805.0
+	proyectil_dano_mult = 0.86
+	proyectil_empuje = 148.0
+	proyectil_hitstun = 0.22
+	proyectil_startup = 0.16
+	proyectil_recovery = 0.30
+	proyectil_cooldown = 0.62
+	# 91.02.48 — impacto corto procesado desde el audio suministrado.
+	sonido_proyectil_impacto = load("res://assets/helena/proyectil_impacto.wav")
 
 func _procesar_entrada(_delta: float, vel_actual: float) -> void:
 	if controlado_por_jugador:
