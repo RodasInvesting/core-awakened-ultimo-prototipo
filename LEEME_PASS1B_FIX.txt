@@ -1,0 +1,13 @@
+CORE AWAKENED 91.04.00 PASS 1B - VIRGILIO
+
+CORRIGE:
+- ParserError del instalador PowerShell del PASS 1.
+- Indentacion de scripts/virgilio.gd (tabs reales).
+
+PASOS:
+1. Copiar TODO este ROOT dentro de CORE_AWAKENED_GITHUB_RC1.
+2. Reemplazar archivos cuando Windows pregunte.
+3. Ejecutar APLICAR_VIRGILIO_91.04.00.bat.
+4. Solo si aparece PASS 1B OK, abrir Godot.
+
+NO HACE FALTA VOLVER A COPIAR LOS ASSETS.

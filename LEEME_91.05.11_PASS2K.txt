@@ -1,0 +1,17 @@
+CORE AWAKENED 91.05.11 PASS 2K — HOTFIX RÁFAGA CORE
+
+CORRECCIÓN
+- Corrige el error de carga introducido en PASS 2J.
+- La variable local empuje_base_contacto ahora se declara antes de usarse.
+- Mantiene el objetivo de PASS 2J: durante la ráfaga automática CORE II/III,
+  el hit-stop usa masa virtual 1.60 (ritmo tipo Magnus) sin cambiar masa física,
+  empuje, hitstun, daño ni movimiento real de ningún luchador.
+
+ARCHIVO MODIFICADO
+- scripts/fighter.gd
+
+NO TOCA
+- main.gd
+- scripts de personajes
+- audio/HUD
+- rollback/netcode

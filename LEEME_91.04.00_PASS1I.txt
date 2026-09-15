@@ -1,0 +1,27 @@
+CORE AWAKENED 91.04.00 — PASS 1I VIRGILIO RESET FIX
+
+Este paquete RESETEA los cambios que salieron mal y deja solo los ajustes que pediste.
+
+Incluye:
+- assets/fondos/virgilio_chaco_paraguayo.png  -> restaurado desde el original limpio
+- assets/ui/selector_personajes_nuevo.png     -> reencuadrado de verdad
+- scripts/main.gd                             -> ajuste de encuadre SOLO para el escenario de Virgilio
+- scripts/virgilio.gd                         -> gigantografia CORE 1 un poco mas grande
+
+Qué corrige:
+1) escenario de Virgilio vuelve limpio (sin cartel espejado)
+2) se abre un poco el encuadre del escenario, manteniendo el cartel y la tienda
+3) se elimina el ajuste anterior que te desacomodó todo
+4) roster de selección usa una imagen más arriba / más llena
+5) CORE 1 queda un poco más grande
+
+Instalación:
+- CERRA Godot.
+- Extrae este ZIP.
+- Copia assets y scripts dentro de la raíz del proyecto CORE_AWAKENED_GITHUB_RC1.
+- Reemplaza los archivos cuando Windows te lo pida.
+- Abre project.godot y prueba.
+
+Importante:
+- este ZIP NO usa PS1 ni BAT.
+- es SOLO reemplazo de archivos.

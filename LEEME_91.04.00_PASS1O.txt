@@ -1,0 +1,19 @@
+CORE AWAKENED 91.04.00 PASS 1O - VIRGILIO FINAL MICROFIX
+
+Microajustes unicamente:
+
+1) Selector de personajes
+- Se estira un poco mas hacia arriba y hacia abajo.
+- Ajuste fino del encuadre vertical del roster.
+
+2) Virgilio CORE I
+- La gigantografia del PRIMER CORE (el golpe unico, no el combo de CORE II) se va un poco mas atras.
+- Queda apenas mas chica para verse mejor.
+
+No toca:
+- escenario
+- proyectil
+- recarga
+- back dash
+- remate CORE II
+- audio base / rollback / network / perfect block

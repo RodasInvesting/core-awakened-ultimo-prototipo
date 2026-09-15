@@ -1,0 +1,33 @@
+CORE AWAKENED 91.05.03 — PASS 2C HUD EVENTOS
+
+CAMBIO VISUAL ÚNICO:
+- COMBO xN
+- AIR xN
+- PERFECT!
+- COUNTER!
+- LAUNCH!
+- RECOVER!
+- EVADE!
+
+ya no aparecen encima del personaje.
+
+Ahora aparecen en el HUD:
+- J1 debajo del nombre izquierdo.
+- J2 debajo del nombre derecho.
+
+Además se oculta el antiguo COMBO central para evitar duplicados.
+
+NO cambia:
+- daño
+- timing
+- hitstun
+- física
+- inputs
+- lógica de Perfect Block/Counter/Air Combo
+- rollback
+- CORE
+- audio
+
+Archivos:
+- scripts/main.gd
+- scripts/perfect_block_90_1.gd

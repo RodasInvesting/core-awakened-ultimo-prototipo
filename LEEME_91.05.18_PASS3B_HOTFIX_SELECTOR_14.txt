@@ -1,0 +1,16 @@
+CORE AWAKENED 91.05.18 — PASS 3B HOTFIX SELECTOR 14
+
+CAUSA:
+PASS 3A reemplazó selector_personajes.gd con una base anterior de 13 paneles, mientras la imagen final del roster ya contiene 14 personajes con Virgilio. Eso desalineó los marcos de selección.
+
+CORRECCIÓN:
+- Restaura EXACTAMENTE la geometría certificada de PASS 1T.
+- Roster visual/lógico de 14: Kai, Cibor-X, Fang, Kali, Aethel, Magnus, Helena, Jester, Xenoid, Dax, Krovan, Nekhar, Virgilio, Varkhos.
+- X_BORDES PASS1T restaurados.
+- TARJETA_Y = 76.0.
+- TARJETA_H = 554.0.
+- Varkhos permanece visible pero NO se puede confirmar/seleccionar.
+- No toca Final Arcade, gameplay, audio, rollback, HUD ni ningún otro script.
+
+INSTALACIÓN:
+Cerrar Godot, copiar la carpeta scripts sobre la raíz del proyecto y reemplazar selector_personajes.gd. Luego abrir Godot y probar el selector.

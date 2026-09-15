@@ -1,0 +1,27 @@
+CORE AWAKENED 91.05.00 — PASS 1 BIOGRAFIAS
+
+Nueva sección aditiva BIOGRAFÍAS.
+
+Incluye:
+- botón BIOGRAFÍAS en el menú principal
+- pantalla con 14 biografías
+- navegación izquierda/derecha
+- ESC/B vuelve al menú
+- cada personaje reproduce la música de su escenario
+- crossfade de 0.35 s al cambiar de personaje
+- usa los mismos niveles de volumen calibrados que el combate
+- pitch_scale = 1.0
+
+No toca:
+- gameplay
+- Fighter
+- rollback
+- NetworkManager
+- selector de personajes
+- escenarios de batalla
+
+Instalación:
+1) Cerrar Godot.
+2) Copiar assets, scenes y scripts a la raíz CORE_AWAKENED_GITHUB_RC1.
+3) Reemplazar scripts/menu_principal.gd cuando Windows lo pida.
+4) Abrir Godot y probar MENÚ PRINCIPAL -> BIOGRAFÍAS.

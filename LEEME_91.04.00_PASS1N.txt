@@ -1,0 +1,19 @@
+CORE AWAKENED 91.04.00 PASS 1N - VIRGILIO MICROFINAL
+
+Este PASS hace SOLO dos microajustes finales:
+
+1) Selector de personajes
+- Se mantiene el ancho ya cerrado.
+- Se aumenta apenas el largo/alto del marco de seleccion para cubrir mejor el roster.
+
+2) CORE I de Virgilio
+- La gigantografia se aleja un poco (menor escala) para que respire mejor y se vea mejor el leon.
+
+No toca:
+- escenario
+- back dash
+- proyectil
+- recarga
+- remate CORE II
+- audio/velocidad de musica
+- rollback / perfect block / network

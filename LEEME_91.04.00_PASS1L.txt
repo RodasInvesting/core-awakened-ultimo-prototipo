@@ -1,0 +1,21 @@
+CORE AWAKENED 91.04.00 — PASS 1L VIRGILIO BACKDASH + SELECTOR TUNE
+
+Este PASS toca SOLO dos cosas:
+
+1) Selector de personajes
+- microajuste del marco selector
+- sube el inicio del marco
+- extiende la altura del marco
+- objetivo: que cubra mejor todo el roster sin tocar el escenario ni el audio
+
+2) Virgilio back dash
+- reemplaza back_dash.png por el nuevo sprite enviado
+- mantiene la ruta que ya usa scripts/virgilio.gd
+- no modifica rollback, Fighter, físicas ni audio
+
+Instalación:
+- Cerrá Godot.
+- Extraé este ZIP.
+- Copiá la carpeta scripts y la carpeta assets dentro de la raíz del proyecto.
+- Reemplazá cuando te lo pida.
+- Abrí project.godot y probá selector + back dash.

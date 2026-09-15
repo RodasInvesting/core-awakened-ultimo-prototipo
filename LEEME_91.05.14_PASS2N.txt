@@ -1,0 +1,17 @@
+CORE AWAKENED 91.05.14 PASS 2N — RAFAGA CORE RECEPTOR MAGNUS
+
+BASE: PASS 2M / fighter.gd completo correcto.
+
+CAMBIO AISLADO SOLO EN RAFAGA AUTOMATICA CORE II/III:
+- hit-stop del atacante: masa virtual receptor 1.60 (Magnus)
+- distancia/tolerancia del combo: presencia virtual Magnus
+- reaccion visual + hit-stop local del receptor: recalculados como si masa=1.60
+
+NO CAMBIA:
+- _masa_corporal() real
+- empuje/knockback real fuera de la rafaga
+- velocidad, gravedad, movimiento, dash, salto
+- dano ni hitstun de gameplay
+- CORE I, remates, audio, HUD, rollback/netcode
+
+INSTALACION: cerrar Godot y reemplazar solo scripts/fighter.gd.

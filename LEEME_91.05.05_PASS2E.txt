@@ -1,0 +1,18 @@
+CORE AWAKENED 91.05.05 — PASS 2E — PURGA SND_ESPECIAL LEGACY EN CORE I/II
+
+CAMBIO AISLADO:
+- Mantiene todo el HUD del PASS 2C y audio del PASS 2D.
+- CORE I/II: si la ruta sonora iba a caer en el SFX legacy especial.wav,
+  lo reemplaza por impactos_pesados/boxing_strong_punch.wav.
+- La detección del impacto CORE I/II usa veces_fase_absoluta en vez de
+  en_fase_absoluta para evitar que el callback tardío reactive especial.wav.
+- CORE II: la entrada del rematador/gigantografía también purga el fallback
+  especial.wav cuando corresponde.
+- CORE III: sin cambios.
+- No modifica Fighter, PerfectBlock, rollback, física, daño ni timing.
+
+INSTALACIÓN:
+1. Cerrar Godot.
+2. Copiar la carpeta scripts sobre la raíz del proyecto.
+3. Reemplazar scripts/main.gd.
+4. Probar CORE I y CORE II con Virgilio (y, si es posible, otro personaje sin SFX elemental dedicado).

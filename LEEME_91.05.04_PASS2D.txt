@@ -1,0 +1,18 @@
+CORE AWAKENED 91.05.04 — PASS 2D AUDIO GIGANTOGRAFIA
+
+CAMBIO ÚNICO:
+- CORE I / CORE II: se elimina la reproducción de cinematicas/poder_final.mp3
+  en la activación (tono sintético "booooup").
+- En ese mismo punto se usa impactos_pesados/boxing_strong_punch.wav.
+- CORE III: audio de entrada intacto.
+
+NO SE TOCA:
+- Fighter / físicas / daño / timing
+- rollback / online
+- lógica CORE
+- HUD
+- escenarios / música
+- selector / biografías
+
+INSTALACIÓN:
+Copiar la carpeta scripts sobre la raíz del proyecto y reemplazar main.gd.

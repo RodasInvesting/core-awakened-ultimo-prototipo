@@ -1,0 +1,29 @@
+CORE AWAKENED 91.05.17 — PASS 3A FINAL ARCADE
+
+CONTENIDO
+- Bloqueo de Varkhos en el selector (sigue visible como jefe final, pero ya no se puede elegir).
+- Nueva escena FinalArcade.tscn.
+- Secuencia final del Arcade:
+  1) Varkhos derrotado
+  2) Héroes alrededor de Varkhos derrotado
+  3) Imagen final variable según el ganador del Arcade
+- Música 1 para las dos primeras imágenes.
+- Música 2 para la imagen final del ganador.
+
+INSTALACIÓN
+1. Extraer este ZIP.
+2. Copiar el contenido encima de la raíz del proyecto CORE AWAKENED.
+3. Reemplazar archivos cuando Windows lo pida.
+4. Abrir el proyecto en Godot 4.7.1 para que importe los PNG/MP3 nuevos.
+5. Probar Arcade hasta derrotar a Varkhos.
+
+RUTAS NUEVAS
+- scenes/FinalArcade.tscn
+- scripts/final_arcade.gd
+- assets/final_arcade/...
+- assets/sonidos/cinematicas/varkhos_derrotado_secuencia.mp3
+- assets/sonidos/cinematicas/final_ganador_arcade.mp3
+
+COMPORTAMIENTO ESPERADO
+- Si Arcade termina en victoria total, Resultado salta directo a FinalArcade.tscn.
+- La pantalla final queda esperando A / ENTER / ESC / CLICK para volver al menú.

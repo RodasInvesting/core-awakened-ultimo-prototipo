@@ -1,0 +1,10 @@
+CORE AWAKENED 91.04.00 PASS 1R - SELECTOR MICROAJUSTE EXTRA
+
+Ajuste unico del selector:
+- se recorta un poco mas arriba
+- se recorta un poco mas abajo
+- no toca la imagen del roster
+- no toca ningun otro sistema
+
+Reemplazar solamente:
+- scripts/selector_personajes.gd

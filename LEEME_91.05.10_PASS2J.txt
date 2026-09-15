@@ -1,0 +1,23 @@
+CORE AWAKENED 91.05.10 PASS 2J
+RAFAGA CORE II/III — RITMO MAGNUS PARA TODO RECEPTOR
+
+CAMBIO UNICO
+- Durante en_combo_auto_visual, el hit-stop del atacante se calcula con masa virtual de receptor 1.60 (Magnus).
+- Fuera de la rafaga automatica se conserva el calculo original.
+
+NO CAMBIA
+- masa real de ningun personaje
+- empuje real
+- hitstun real
+- dano
+- movimiento
+- gravedad
+- velocidad normal
+- golpes manuales
+- CORE I
+- remate/poster
+- rollback/netcode
+- main.gd / audio / HUD
+
+ARCHIVO
+- scripts/fighter.gd

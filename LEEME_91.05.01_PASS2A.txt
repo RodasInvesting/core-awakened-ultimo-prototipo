@@ -1,0 +1,24 @@
+CORE AWAKENED 91.05.01 — PASS 2A HUD RAYO + AUDIO CORE
+
+CAMBIOS UNICAMENTE DE PRESENTACION:
+
+1) HUD
+- Se retira el texto central "CORE RACE".
+- Las barras rectangulares de poder se reemplazan por medidores con silueta de rayo.
+- El progreso sigue usando exactamente el mismo valor de poder; solo cambia la forma visual.
+
+2) AUDIO CORE II
+- Se retira el whoosh genérico de patada que sonaba exactamente cuando termina el combo CORE II y entra la gigantografía/rematador.
+- Se conserva el sonido elemental del personaje.
+- Se conserva el sonido real del impacto del remate.
+
+NO TOCA:
+- Fighter
+- rollback
+- física
+- daño
+- lógica CORE
+- NetworkManager
+- escenarios
+- selector
+- biografías

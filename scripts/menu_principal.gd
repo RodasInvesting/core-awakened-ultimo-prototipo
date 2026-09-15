@@ -58,9 +58,9 @@ func crear_menu_centrado() -> void:
 	# 91.02.61 — PASS 14B: ONLINE entra como sexto modo del menú.
 	# El panel crece hacia arriba; la ayuda inferior conserva su posición.
 	const PANEL_ANCHO := 560.0
-	const PANEL_ALTO := 353.0
+	const PANEL_ALTO := 390.0
 	const PANEL_X := (1280.0 - PANEL_ANCHO) * 0.5
-	const PANEL_Y := 331.0
+	const PANEL_Y := 294.0
 
 	var panel := Panel.new()
 	panel.position = Vector2(PANEL_X, PANEL_Y)
@@ -94,14 +94,15 @@ func crear_menu_centrado() -> void:
 		["VERSUS LOCAL", Callable(self, "_versus_local")],
 		["ONLINE", Callable(self, "_online")],
 		["CÓMO JUGAR", Callable(self, "_como_jugar")],
+		["BIOGRAFÍAS", Callable(self, "_biografias")],
 		["SALIR", Callable(self, "_salir")],
 	]
 
 	const BTN_X := 410.0
 	const BTN_W := 460.0
 	const BTN_H := 38.0
-	const BTN_Y := 372.0
-	const BTN_SEP := 47.0
+	const BTN_Y := 338.0
+	const BTN_SEP := 44.0
 	for i in range(datos.size()):
 		var b := Button.new()
 		b.text = datos[i][0]
@@ -189,6 +190,16 @@ func _como_jugar() -> void:
 		estado.reproducir_sfx_global("res://assets/sonidos/menu/start.mp3", -5.0)
 	await get_tree().create_timer(0.18).timeout
 	get_tree().change_scene_to_file("res://scenes/ComoJugar.tscn")
+
+func _biografias() -> void:
+	if not botones.is_empty():
+		for b in botones:
+			b.disabled = true
+	var estado := get_node_or_null("/root/GameState")
+	if estado and estado.has_method("reproducir_sfx_global"):
+		estado.reproducir_sfx_global("res://assets/sonidos/menu/start.mp3", -5.0)
+	await get_tree().create_timer(0.18).timeout
+	get_tree().change_scene_to_file("res://scenes/Biografias.tscn")
 
 func _salir() -> void:
 	get_tree().quit()

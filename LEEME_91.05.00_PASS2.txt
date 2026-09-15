@@ -1,0 +1,25 @@
+CORE AWAKENED 91.05.00 — PASS 2 HUD FINAL / AUDIO VIRGILIO
+
+ALCANCE CERRADO
+- Virgilio escenario: volumen -5.0 dB -> -2.5 dB.
+- HUD de combate: nombres J1/J2, CORE 0/3 y CORE RACE reciben jerarquia visual, tamaño, color, contorno y sombra.
+- Se elimina de la pelea normal el texto inferior de controles/selección que era de prototipo.
+- En modo REPLAY el aviso técnico inferior se conserva.
+
+NO TOCA
+- Fighter
+- rollback
+- NetworkManager / online
+- física
+- lógica CORE
+- escenarios
+- sprites
+- selector
+- biografías
+
+INSTALACION
+1) Cerrar Godot.
+2) Extraer el ZIP.
+3) Copiar scripts dentro de la raíz CORE_AWAKENED_GITHUB_RC1.
+4) Reemplazar scripts/main.gd.
+5) Abrir Godot y hacer prueba visual/audio local corta.

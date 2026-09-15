@@ -526,6 +526,12 @@ var rollback_core2_sequence_end_tick_ya_probado: int = -1
 var barra_poder_kai: ColorRect
 var barra_poder_rival: ColorRect
 var etiqueta_combo: Label
+# 91.05.03 PASS 2C — feedback táctico fuera de la escena de combate.
+# COMBO/AIR/PERFECT/COUNTER/LAUNCH/RECOVER se muestran debajo de los nombres HUD.
+var etiqueta_evento_j1: Label
+var etiqueta_evento_j2: Label
+var tween_evento_j1: Tween
+var tween_evento_j2: Tween
 var etiqueta_poder_listo: Label
 var etiqueta_cargas_kai: Label
 var etiqueta_cargas_rival: Label
@@ -614,6 +620,7 @@ const AMBIENTE_COLORES := {
 	"Dax": Color(0.96, 0.18, 0.08),
 	"Krovan": Color(1.0, 0.62, 0.12),
 	"Nekhar": Color(1.0, 0.38, 0.08),
+	"Virgilio": Color(0.72, 0.76, 0.58),
 	# 90.11.15 — arena final violeta de Varkhos / El Ojo del Núcleo.
 	"Varkhos": Color(0.62, 0.18, 1.0),
 }
@@ -631,6 +638,7 @@ const FONDOS := {
 	"Dax": "res://assets/fondos/dax.png",
 	"Krovan": "res://assets/fondos/krovan.png",
 	"Nekhar": "res://assets/fondos/nekhar.png",
+	"Virgilio": "res://assets/fondos/virgilio_chaco_paraguayo.png",
 	"Varkhos": "res://assets/fondos/varkhos.png",
 }
 
@@ -715,6 +723,7 @@ const SND_VARKHOS_AMBIENTE := preload("res://assets/sonidos/escenarios/varkhos.m
 # 91.02.10 — música oficial de las dos arenas nuevas.
 const SND_KROVAN_AMBIENTE := preload("res://assets/sonidos/escenarios/krovan.mp3")
 const SND_NEKHAR_AMBIENTE := preload("res://assets/sonidos/escenarios/nekhar.mp3")
+const SND_VIRGILIO_AMBIENTE := preload("res://assets/sonidos/escenarios/virgilio_chaco_paraguayo.mp3")
 const SND_CIBOR_STUN := preload("res://assets/sonidos/cibor_real/stun_intermitente.wav")
 const SND_CIBOR_STUN_BURST := preload("res://assets/sonidos/cibor_real/stun_burst.wav")
 const SND_CIBOR_BLASTER := preload("res://assets/sonidos/cibor_real/space_blaster.wav")
@@ -747,7 +756,7 @@ const SND_VOZ_RECARGA_GENERICA := preload("res://assets/sonidos/aporte_90_10_48/
 const SND_GIGANTOGRAFIA_FINAL_USUARIO := preload("res://assets/sonidos/aporte_90_10_49/gigantografia_final_usuario.wav")
 const PERSONAJES_VOZ_RECARGA_MASC := [
 	"Kai", "Fang", "Aethel", "Magnus", "Jester", "Xenoid", "Kali", "Dax",
-	"Krovan", "Nekhar", "Varkhos"
+	"Krovan", "Nekhar", "Virgilio", "Varkhos"
 ]
 
 var audio_golpe: AudioStreamPlayer
@@ -1246,6 +1255,7 @@ func _actualizar_audio_escenario(nombre_luchador: String) -> void:
 	ambiente_escenario_actual = nombre_luchador
 	audio_ambiente_escenario.stop()
 	audio_ambiente_escenario.stream = null
+	audio_ambiente_escenario.pitch_scale = 1.0
 
 	# Volúmenes compensados según el nivel real de cada archivo para que todas
 	# las arenas queden al fondo de la mezcla sin tapar golpes, voces ni poderes.
@@ -1279,6 +1289,10 @@ func _actualizar_audio_escenario(nombre_luchador: String) -> void:
 			audio_ambiente_escenario.stream = SND_NEKHAR_AMBIENTE
 			# Intro más atmosférica; un poco más presente que Krovan.
 			audio_ambiente_escenario.volume_db = -8.5
+		"Virgilio":
+			audio_ambiente_escenario.stream = SND_VIRGILIO_AMBIENTE
+			# 91.05.00 PASS2 — mezcla final aprobada para igualar presencia con el resto.
+			audio_ambiente_escenario.volume_db = -2.5
 		"Magnus":
 			audio_ambiente_escenario.stream = SND_MAGNUS_AMBIENTE
 			audio_ambiente_escenario.volume_db = -13.0
@@ -1591,18 +1605,22 @@ func _intentar_grito_ataque(personaje: Fighter, fuerte: bool = false, chance: fl
 	_reproducir_sfx(stream, -7.5 if fuerte else -10.0, _pitch_voz(personaje))
 
 func _sfx_elemento(personaje: Fighter) -> AudioStream:
+	# PASS 2H — se eliminan SOLAMENTE dos capas de audio del flujo CORE/
+	# gigantografía: especial.wav y helena_luz.wav. El resto del enrutado
+	# queda intacto. Devolver null es seguro porque _reproducir_sfx() lo
+	# ignora y no afecta la lógica.
 	if not is_instance_valid(personaje):
-		return SND_ESPECIAL
+		return null
 	match personaje.nombre_luchador:
 		"Kai": return SND_KAI_OSCURO
-		"Helena": return SND_HELENA_LUZ
+		"Helena": return null
 		"Fang": return SND_FANG_FUEGO
 		"Cibor-X": return _elegir_sfx([SND_CIBOR_ELECTRICO, SND_CIBOR_STUN])
 		"Kali": return SND_KALI_ACIDO
 		"Aethel": return SND_AETHEL_VIENTO
 		"Magnus": return SND_MAGNUS_PIEDRA
 		"Dax": return SND_FANG_FUEGO
-		_: return SND_ESPECIAL
+		_: return null
 
 func _crear_onda_impacto_premium(tipo: String, bloqueado: bool, intensidad: float) -> void:
 	if modo_bajo_visual:
@@ -1858,9 +1876,13 @@ func _obtener_tono_base_suelo(nombre_luchador: String) -> Color:
 	return Color(bs, bs, bs, 1.0)
 
 func _escenario_redisenado(nombre_luchador: String) -> bool:
-	return nombre_luchador in ["Varkhos", "Aethel", "Cibor-X", "Helena", "Kali", "Krovan", "Nekhar"]
+	return nombre_luchador in ["Varkhos", "Aethel", "Cibor-X", "Helena", "Kali", "Krovan", "Nekhar", "Virgilio"]
 
 func _zoom_base_escenario(nombre_luchador: String) -> float:
+	if nombre_luchador == "Virgilio":
+		# Microajuste final: un poco más de cobertura para evitar negro abajo
+		# cuando los luchadores quedan muy separados, sin perder el letrero ni la tienda.
+		return 1.10
 	return 1.08 if _escenario_redisenado(nombre_luchador) else 1.18
 
 func _transform_fondo(nombre_luchador: String, zoom_fondo_actual: float) -> Dictionary:
@@ -1874,6 +1896,10 @@ func _transform_fondo(nombre_luchador: String, zoom_fondo_actual: float) -> Dict
 		# El piso diseñado de los rediseños está compuesto para quedar sobre la
 		# línea física Y=560. Recalculamos el offset según el zoom actual.
 		fondo_y_base = 560.0 - (560.0 * zoom_fondo_actual)
+		if nombre_luchador == "Virgilio":
+			# Microajuste final: bajamos apenas el escenario para que los laterales
+			# apoyen mejor visualmente y no aparezca negro abajo en aperturas.
+			fondo_y_base += 4.0
 	return {
 		"scale": Vector2(zoom_fondo_actual, zoom_fondo_actual),
 		"position": Vector2(-sobrante_x_actual / 2.0, fondo_y_base)
@@ -2712,6 +2738,7 @@ func _crear_luchador(nombre: String) -> Fighter:
 		"Dax": return Dax.new()
 		"Krovan": return Krovan.new()
 		"Nekhar": return Nekhar.new()
+		"Virgilio": return Virgilio.new()
 		"Varkhos": return Varkhos.new()
 		_: return Kai.new()
 
@@ -4495,14 +4522,22 @@ func _al_impactar_detallado(fuerza: float, tipo: String, bloqueado: bool, victim
 		"especial":
 			_reproducir_sfx(_sfx_pesado_real(), 0.0, randf_range(0.90, 0.99))
 			_reproducir_sfx(SND_THUMP_GRAVE, -2.0, 0.82)
-			_reproducir_sfx(SND_ESPECIAL, -7.0, randf_range(0.96, 1.04))
+			# PASS 2B — en el impacto final de CORE I reemplazamos la capa
+			# sintética/especial por un golpe fuerte real. Fuera de CORE se
+			# conserva el SFX especial histórico.
+			if is_instance_valid(atacante) and atacante.en_fase_absoluta:
+				_reproducir_sfx(SND_PUNO_BOXING_FUERTE, 0.4, randf_range(0.96, 1.02))
+			else:
+				_reproducir_sfx(SND_ESPECIAL, -7.0, randf_range(0.96, 1.04))
 			sacudir_camara(10.0, 0.18)
 			var color_especial := Color(1.0, 0.92, 0.6)
 			if is_instance_valid(atacante):
 				color_especial = atacante.color_energia_poder()
 			_destello_pantalla(color_especial, 0.30, 0.30)
 		"rematador":
-			_reproducir_sfx(SND_REMATADOR_IMPACTO, 0.5, randf_range(0.96, 1.02))
+			# PASS 2B — reemplazo del impacto sintético del rematador por
+			# el golpe fuerte real ya presente en el proyecto.
+			_reproducir_sfx(SND_PUNO_BOXING_FUERTE, 0.8, randf_range(0.96, 1.02))
 			_reproducir_sfx(_sfx_pesado_real(), -0.5, randf_range(0.86, 0.95))
 			_reproducir_sfx(SND_THUMP_GRAVE, -0.8, 0.74)
 			sacudir_camara(19.0, 0.34)
@@ -4511,10 +4546,11 @@ func _al_impactar_detallado(fuerza: float, tipo: String, bloqueado: bool, victim
 				color_remate = atacante.color_energia_poder().lightened(0.25)
 			_destello_pantalla(color_remate, 0.52, 0.42)
 		"absoluto":
-			_reproducir_sfx(SND_ABSOLUTO_IMPACTO, 1.5, 1.0)
+			# PASS 2B — sin absoluto_impacto/rematador_impacto sintéticos.
+			# Un único golpe fuerte real encabeza el impacto final.
+			_reproducir_sfx(SND_PUNO_BOXING_FUERTE, 1.2, 0.96)
 			_reproducir_sfx(_sfx_pesado_real(), -0.2, 0.84)
 			_reproducir_sfx(SND_THUMP_GRAVE, 0.0, 0.66)
-			_reproducir_sfx(SND_REMATADOR_IMPACTO, -2.0, 0.72)
 			sacudir_camara(30.0, 0.52)
 			_destello_pantalla(Color(1.0, 1.0, 1.0), 0.85, 0.62)
 		_:
@@ -4691,7 +4727,7 @@ func _al_rematador_iniciado(personaje: Fighter) -> void:
 	_reaccion_escenario_poder(personaje, 1.05)
 	_intentar_grito_ataque(personaje, false, 0.58)
 	_reproducir_sfx(_sfx_elemento(personaje), -4.0, randf_range(0.88, 0.98))
-	_reproducir_sfx(SND_WHOOSH_PATADA, -8.0, 0.72)
+	# PASS 2B — sin whoosh genérico al entrar a la gigantografía/rematador.
 	sacudir_camara(6.0, 0.14)
 
 func _al_rematador(personaje: Fighter) -> void:
@@ -5247,7 +5283,8 @@ func _reiniciar_partida() -> void:
 		_iniciar_grabacion_inputs()
 
 func _actualizar_marcador() -> void:
-	etiqueta_marcador.text = "CORE RACE"
+	# 91.05.02 PASS 2B — HUD final: sin texto central CORE RACE.
+	etiqueta_marcador.text = ""
 
 func _cambiar_rival(nuevo: Fighter) -> void:
 	if is_instance_valid(rival):
@@ -5258,7 +5295,7 @@ func _cambiar_rival(nuevo: Fighter) -> void:
 	kai.objetivo = rival
 	rival.objetivo = kai
 	_conectar_luchador(rival, false)
-	etiqueta_rival.text = rival.nombre_luchador + (" (J2)" if versus_local_activo else " (IA)")
+	etiqueta_rival.text = (rival.nombre_luchador + (" (J2)" if versus_local_activo else " (IA)")).to_upper()
 	barra_poder_rival.color = rival.color_base.lightened(0.2)
 	fondo_rival.color = rival.color_base.darkened(0.75)
 	_actualizar_fondo(rival.nombre_luchador)
@@ -5316,13 +5353,26 @@ func _cambiar_jugador(nuevo: Fighter) -> void:
 	ronda_activa = true
 	etiqueta_resultado.text = ""
 
+func _estilizar_label_hud(label: Label, tamano: int, color: Color, outline: int = 4) -> void:
+	if label == null:
+		return
+	label.add_theme_font_size_override("font_size", tamano)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.94))
+	label.add_theme_constant_override("outline_size", outline)
+	label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.62))
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+
 func _crear_ui() -> void:
 	var capa := CanvasLayer.new()
 	add_child(capa)
 
 	etiqueta_jugador = Label.new()
 	etiqueta_jugador.text = kai.nombre_luchador.to_upper()
-	etiqueta_jugador.position = Vector2(40, 4)
+	etiqueta_jugador.position = Vector2(40, 0)
+	etiqueta_jugador.size = Vector2(360, 30)
+	_estilizar_label_hud(etiqueta_jugador, 22, kai.color_base.lightened(0.62), 5)
 	capa.add_child(etiqueta_jugador)
 
 	# Ya no hay barra de vida: la que importa ahora es la de PODER, porque
@@ -5342,7 +5392,9 @@ func _crear_ui() -> void:
 
 	etiqueta_cargas_kai = Label.new()
 	etiqueta_cargas_kai.text = "CORE 0/3"
-	etiqueta_cargas_kai.position = Vector2(40, 54)
+	etiqueta_cargas_kai.position = Vector2(40, 52)
+	etiqueta_cargas_kai.size = Vector2(140, 28)
+	_estilizar_label_hud(etiqueta_cargas_kai, 18, Color(1.0, 0.94, 0.72), 4)
 	capa.add_child(etiqueta_cargas_kai)
 	cores_kai = _crear_indicadores_core(capa, Vector2(125, 56), kai.color_base)
 
@@ -5354,11 +5406,20 @@ func _crear_ui() -> void:
 	etiqueta_combo = Label.new()
 	etiqueta_combo.text = ""
 	etiqueta_combo.position = Vector2(560, 150)
+	etiqueta_combo.visible = false # PASS 2C: feedback migrado al HUD lateral.
 	capa.add_child(etiqueta_combo)
 
+	etiqueta_evento_j1 = Label.new()
+	etiqueta_evento_j1.text = ""
+	etiqueta_evento_j1.position = Vector2(40, 82)
+	etiqueta_evento_j1.size = Vector2(330, 28)
+	etiqueta_evento_j1.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_estilizar_label_hud(etiqueta_evento_j1, 18, Color(1.0, 0.78, 0.28), 4)
+	capa.add_child(etiqueta_evento_j1)
+
 	etiqueta_marcador = Label.new()
-	etiqueta_marcador.text = "CORE RACE"
-	etiqueta_marcador.position = Vector2(560, 30)
+	etiqueta_marcador.text = ""
+	etiqueta_marcador.visible = false
 	capa.add_child(etiqueta_marcador)
 
 	etiqueta_resultado = Label.new()
@@ -5386,16 +5447,30 @@ func _crear_ui() -> void:
 
 	etiqueta_cargas_rival = Label.new()
 	etiqueta_cargas_rival.text = "CORE 0/3"
-	etiqueta_cargas_rival.position = Vector2(ANCHO_ARENA - 40 - ANCHO_BARRA, 54)
+	etiqueta_cargas_rival.position = Vector2(ANCHO_ARENA - 180, 52)
+	etiqueta_cargas_rival.size = Vector2(140, 28)
+	etiqueta_cargas_rival.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_estilizar_label_hud(etiqueta_cargas_rival, 18, Color(1.0, 0.94, 0.72), 4)
 	capa.add_child(etiqueta_cargas_rival)
 	cores_rival = _crear_indicadores_core(capa, Vector2(ANCHO_ARENA - 230, 56), rival.color_base, true)
 
 	fondo_rival = fondo_poder_rival
 
 	etiqueta_rival = Label.new()
-	etiqueta_rival.text = rival.nombre_luchador + (" (J2)" if versus_local_activo else " (IA)")
-	etiqueta_rival.position = Vector2(ANCHO_ARENA - 40 - ANCHO_BARRA, 4)
+	etiqueta_rival.text = (rival.nombre_luchador + (" (J2)" if versus_local_activo else " (IA)")).to_upper()
+	etiqueta_rival.position = Vector2(ANCHO_ARENA - 400, 0)
+	etiqueta_rival.size = Vector2(360, 30)
+	etiqueta_rival.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_estilizar_label_hud(etiqueta_rival, 22, rival.color_base.lightened(0.62), 5)
 	capa.add_child(etiqueta_rival)
+
+	etiqueta_evento_j2 = Label.new()
+	etiqueta_evento_j2.text = ""
+	etiqueta_evento_j2.position = Vector2(ANCHO_ARENA - 370, 82)
+	etiqueta_evento_j2.size = Vector2(330, 28)
+	etiqueta_evento_j2.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_estilizar_label_hud(etiqueta_evento_j2, 18, Color(0.58, 0.90, 1.0), 4)
+	capa.add_child(etiqueta_evento_j2)
 
 	var ayuda := Label.new()
 	var pads_ui := Input.get_connected_joypads()
@@ -5414,21 +5489,59 @@ func _crear_ui() -> void:
 		else:
 			ayuda.text = "J1 Flechas: mover/saltar/bloquear   •   X: puño   C: patada   Z: CORE"
 	ayuda.position = Vector2(40, 660)
+	ayuda.visible = replay_modo_activo
 	capa.add_child(ayuda)
 
 	var ayuda2 := Label.new()
 	ayuda2.text = "Rival: 1 Fang  2 Cibor-X  3 Kali  4 Aethel  5 Magnus  6 Helena  7 Jester  8 Varkhos  9 Xenoid  0 Dax"
 	ayuda2.position = Vector2(40, 684)
+	ayuda2.visible = false
 	capa.add_child(ayuda2)
 
 	seleccion_jugador_label = Label.new()
 	seleccion_jugador_label.text = "J1: Q Kai  W Fang  E Cibor-X  R Kali  T Aethel  Y Magnus  U Helena  I Jester  O Xenoid  P Dax"
 	seleccion_jugador_label.position = Vector2(650, 684)
+	seleccion_jugador_label.visible = false
 	capa.add_child(seleccion_jugador_label)
 	var estado_ui = get_node_or_null("/root/GameState")
 	if estado_ui and estado_ui.flujo_menu_activo:
 		ayuda2.visible = false
 		seleccion_jugador_label.visible = false
+
+func _mostrar_evento_hud(luchador: Node, texto: String, color: Color) -> void:
+	if not is_instance_valid(luchador):
+		return
+	var etiqueta: Label = null
+	var es_j2 := luchador == rival
+	if es_j2:
+		etiqueta = etiqueta_evento_j2
+		if tween_evento_j2 and tween_evento_j2.is_running():
+			tween_evento_j2.kill()
+	else:
+		etiqueta = etiqueta_evento_j1
+		if tween_evento_j1 and tween_evento_j1.is_running():
+			tween_evento_j1.kill()
+	if etiqueta == null:
+		return
+
+	etiqueta.text = texto
+	etiqueta.modulate.a = 1.0
+	etiqueta.add_theme_color_override("font_color", color)
+	etiqueta.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.96))
+	etiqueta.add_theme_constant_override("outline_size", 4)
+
+	var tw := create_tween()
+	tw.tween_interval(0.48)
+	tw.tween_property(etiqueta, "modulate:a", 0.0, 0.18)
+	tw.tween_callback(func():
+		if etiqueta:
+			etiqueta.text = ""
+			etiqueta.modulate.a = 1.0
+	)
+	if es_j2:
+		tween_evento_j2 = tw
+	else:
+		tween_evento_j1 = tw
 
 func _crear_indicadores_core(capa: CanvasLayer, posicion: Vector2, color_base: Color, invertido: bool = false) -> Array[ColorRect]:
 	var resultado: Array[ColorRect] = []
@@ -5459,7 +5572,7 @@ func _aplicar_modo_versus_local_runtime(activar: bool) -> void:
 	if is_instance_valid(rival):
 		_configurar_control_lado(rival, false)
 	if etiqueta_rival and is_instance_valid(rival):
-		etiqueta_rival.text = rival.nombre_luchador + (" (J2)" if activar else " (IA)")
+		etiqueta_rival.text = (rival.nombre_luchador + (" (J2)" if activar else " (IA)")).to_upper()
 	if etiqueta_resultado:
 		if activar:
 			etiqueta_resultado.text = "VERSUS LOCAL — J2 LISTO"

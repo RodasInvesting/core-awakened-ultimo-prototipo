@@ -1,0 +1,18 @@
+CORE AWAKENED 91.04.00 — PASS 1D VIRGILIO
+
+Ajustes pedidos tras segundo video real:
+- escenario CHACO PARAGUAYO reemplazado por version exacta 1280x720
+- caminata reemplazada por los 2 sprites nuevos enviados
+- recarga/core II: +10% visual
+- pose de lanzamiento de proyectil: +9% visual
+- musica del escenario: -5 dB -> -3 dB
+- roster del selector se deja intacto (ya OK)
+
+NO toca:
+Fighter / rollback / NetworkManager / PerfectBlock / daño / hitboxes / gameplay.
+
+Instalacion:
+1. Cerrar Godot.
+2. Copiar TODO este ROOT a la raiz CORE_AWAKENED_GITHUB_RC1 y reemplazar.
+3. Ejecutar APLICAR_VIRGILIO_91.04.00_PASS1D.bat.
+4. Si dice PASS 1D OK, abrir Godot y probar.

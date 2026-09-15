@@ -1,0 +1,14 @@
+CORE AWAKENED 91.04.00 PASS 1P - SELECTOR SOLO MICROFIX
+
+Este ZIP toca SOLAMENTE el selector de personajes.
+
+Cambio unico:
+- Se achica un poco el marco/selector movil.
+- Sube un toque su borde inferior y baja un toque su borde superior.
+- No toca la imagen del roster.
+- No toca escenario.
+- No toca Virgilio.
+- No toca audio.
+
+Reemplazar solo:
+- scripts/selector_personajes.gd

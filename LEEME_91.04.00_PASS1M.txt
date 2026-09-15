@@ -1,0 +1,26 @@
+CORE AWAKENED 91.04.00 — PASS 1M VIRGILIO
+
+CAMBIOS PUNTUALES
+1) Selector de personajes
+- corrige X_BORDES usando los bordes reales medidos del roster de 14 personajes
+- restaura TARJETA_Y=64 y TARJETA_H=574 para que el marco coincida con el arte
+
+2) Virgilio CORE 2
+- remate final deja de usar combo_5 (patada)
+- ahora usa combo_2 (machetazo fuerte)
+
+3) Música de escenario Virgilio
+- volumen -6.0 dB -> -5.0 dB
+- pitch/velocidad NO se modifica
+
+CERRADO / NO TOCAR
+- back dash Virgilio queda tal como está
+- escenario queda tal como está
+- rollback / Fighter / NetworkManager / PerfectBlock no se tocan
+
+INSTALACIÓN
+1. Cerrá Godot.
+2. Extraé este ZIP.
+3. Copiá la carpeta scripts en la raíz CORE_AWAKENED_GITHUB_RC1.
+4. Reemplazá archivos.
+5. Abrí Godot y probá selector + CORE 2 + música.

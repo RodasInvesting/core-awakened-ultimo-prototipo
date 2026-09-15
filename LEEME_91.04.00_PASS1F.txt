@@ -1,0 +1,17 @@
+CORE AWAKENED 91.04.00 — PASS 1F VIRGILIO
+
+Ajustes pedidos:
+- selector: subir el roster para que haya menos negro arriba
+- escenario: version panoramica ancha para evitar negro en las orillas sin meter mucho zoom
+- volumen de musica: -2 dB
+- salto, doble salto, descenso y back dash: un poco mas grandes
+- pose de proyectil: un toque mas grande
+
+NO toca:
+Fighter / rollback / NetworkManager / PerfectBlock / daño / hitboxes / gameplay.
+
+Instalacion:
+1. Cerrar Godot.
+2. Copiar TODO este ROOT a la raiz CORE_AWAKENED_GITHUB_RC1 y reemplazar.
+3. Ejecutar APLICAR_VIRGILIO_91.04.00_PASS1F.bat.
+4. Si aparece PASS 1F OK, abrir Godot y probar.

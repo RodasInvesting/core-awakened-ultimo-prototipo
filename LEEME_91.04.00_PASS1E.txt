@@ -1,0 +1,19 @@
+CORE AWAKENED 91.04.00 — PASS 1E
+
+HOTFIX DEL INSTALADOR PASS 1D.
+
+El PASS 1D anterior falló por sintaxis de comillas en PowerShell.
+Los archivos visuales ya fueron copiados al proyecto antes de ejecutar el BAT:
+- escenario Virgilio 1280x720
+- nueva caminata
+- recarga +10% visual
+- pose de proyectil +9% visual
+
+Este PASS 1E únicamente completa el ajuste pendiente:
+- música de Virgilio: -5 dB -> -3 dB
+
+USO:
+1. Godot cerrado.
+2. Copiar TODO este ROOT a CORE_AWAKENED_GITHUB_RC1.
+3. Ejecutar APLICAR_VIRGILIO_91.04.00_PASS1E.bat.
+4. Si aparece PASS 1E OK, abrir Godot.

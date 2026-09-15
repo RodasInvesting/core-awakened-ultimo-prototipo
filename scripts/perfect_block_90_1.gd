@@ -1761,14 +1761,21 @@ func _mostrar_texto(luchador: Node, texto: String, color: Color) -> void:
 	if not is_instance_valid(luchador):
 		return
 
+	# 91.05.03 PASS 2C — sólo presentación.
+	# El evento táctico ya no se dibuja sobre el cuerpo del luchador: Main lo
+	# presenta debajo del nombre correspondiente en el HUD. Gameplay intacto.
+	var escena := get_tree().current_scene
+	if escena != null and escena.has_method("_mostrar_evento_hud"):
+		escena.call("_mostrar_evento_hud", luchador, texto, color)
+		return
+
+	# Fallback seguro si este módulo alguna vez se usa fuera de Main.
 	var etiqueta := Label.new()
 	etiqueta.text = texto
 	etiqueta.z_index = 100
-
 	var altura := 255.0
 	if luchador.has_method("_altura_visible_objetivo"):
 		altura = float(luchador.call("_altura_visible_objetivo"))
-
 	etiqueta.position = Vector2(-68.0, -altura - 42.0)
 	etiqueta.add_theme_font_size_override("font_size", 28)
 	etiqueta.add_theme_color_override("font_color", color)
@@ -1776,14 +1783,12 @@ func _mostrar_texto(luchador: Node, texto: String, color: Color) -> void:
 	etiqueta.add_theme_constant_override("shadow_offset_x", 2)
 	etiqueta.add_theme_constant_override("shadow_offset_y", 2)
 	luchador.add_child(etiqueta)
-
 	var destino := etiqueta.position + Vector2(0.0, -20.0)
 	var tween := etiqueta.create_tween()
 	tween.set_parallel(true)
 	tween.tween_property(etiqueta, "position", destino, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	tween.tween_property(etiqueta, "modulate:a", 0.0, 0.32).set_delay(0.10)
 	tween.chain().tween_callback(etiqueta.queue_free)
-
 
 func _tiene_propiedad(objeto: Object, nombre: String) -> bool:
 	for item in objeto.get_property_list():

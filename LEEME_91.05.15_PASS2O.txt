@@ -1,0 +1,14 @@
+CORE AWAKENED 91.05.15 PASS 2O
+CORE II / III — RÁFAGA CON DISTANCIA FIJA
+
+Base: PASS 2M (fighter.gd completo/correcto).
+
+Cambio único adicional:
+- Durante en_combo_auto_visual, _distancia_combo_auto_adaptativa() devuelve
+  DISTANCIA_COMBO_AUTO_PUSH_MAX (100 px).
+- Evita que el ancho variable de sprites de golpe recibido (alas, telas, etc.)
+  provoque micro-acercamientos de 0.08 s o más entre golpes.
+- Fuera de CORE II/III, la distancia adaptativa original queda intacta.
+
+Se conserva el ajuste PASS 2M de hit-stop calculado con receptor virtual 1.60.
+NO cambia masa real, empuje, daño, hitstun, movimiento, CORE I, audio, HUD ni rollback.

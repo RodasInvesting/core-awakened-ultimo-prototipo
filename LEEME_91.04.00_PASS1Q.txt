@@ -1,0 +1,12 @@
+CORE AWAKENED 91.04.00 PASS 1Q - SELECTOR MICROAJUSTE FINAL
+
+Este ZIP toca solamente el selector.
+
+Microajuste:
+- el marco de seleccion sube un poquito desde abajo
+- se recorta un poquito arriba y abajo
+- no toca la imagen del roster
+- no toca ningun otro sistema
+
+Reemplazar solamente:
+- scripts/selector_personajes.gd

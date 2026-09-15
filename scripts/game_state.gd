@@ -1,6 +1,6 @@
 extends Node
 
-const ROSTER: Array[String] = ["Kai", "Cibor-X", "Fang", "Kali", "Aethel", "Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar"]
+const ROSTER: Array[String] = ["Kai", "Cibor-X", "Fang", "Kali", "Aethel", "Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar", "Virgilio"]
 
 # Jefe final de Arcade. A propósito NO está en ROSTER: no es seleccionable
 # ni entra al sorteo de Batalla Rápida. Se agrega únicamente al final del
@@ -11,7 +11,7 @@ const JEFE_FINAL := "Varkhos"
 # de Varkhos. Los IDs coinciden con las claves que usa main.gd.
 const ESCENARIOS_VERSUS: Array[String] = [
 	"Kai", "Cibor-X", "Fang", "Kali", "Aethel",
-	"Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar", "Varkhos"
+	"Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar", "Virgilio", "Varkhos"
 ]
 
 var flujo_menu_activo: bool = true

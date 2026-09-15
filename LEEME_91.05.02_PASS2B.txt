@@ -1,0 +1,24 @@
+CORE AWAKENED 91.05.02 — PASS 2B HUD BARRA + AUDIO GOLPE CORE
+
+CAMBIOS UNICOS
+1. Se restaura EXACTAMENTE la barra rectangular de CORE aprobada en PASS 2.
+2. CORE RACE permanece eliminado.
+3. Se mantiene retirado el whoosh genérico de entrada al rematador CORE II.
+4. Impactos finales CORE:
+   - CORE I: durante la fase CORE, la capa sintética especial se reemplaza por boxing_strong_punch.wav.
+   - CORE II rematador: rematador_impacto.wav se reemplaza por boxing_strong_punch.wav.
+   - CORE III absoluto: absoluto_impacto.wav + rematador_impacto.wav dejan de sonar; encabezado por boxing_strong_punch.wav.
+   - Se mantienen las capas de golpe pesado real y thump grave.
+
+NO TOCA
+- Fighter
+- rollback
+- NetworkManager
+- física
+- lógica CORE
+- escenarios
+- selector
+- biografías
+
+INSTALACION
+Cerrar Godot. Copiar scripts/main.gd sobre la raíz del proyecto y reemplazar.

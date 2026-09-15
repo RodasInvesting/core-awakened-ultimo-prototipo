@@ -1,0 +1,24 @@
+CORE AWAKENED 91.04.00 — PASS 1K VIRGILIO MICROFIX
+
+Ajustes de este PASS:
+1) Escenario de Virgilio
+   - sube el zoom base apenas a 1.10
+   - baja un poco el fondo para apoyar mejor el piso
+   - reduce la aparición de negro abajo cuando los luchadores se separan
+
+2) Selector de personajes
+   - integra bien el roster de 14 paneles
+   - agrega a Virgilio en el selector
+   - recalibra los bordes del marco selector para cubrir mejor todo el roster
+   - pequeño ajuste vertical del marco
+
+3) No se modifica el tempo de la música.
+   - pitch_scale sigue en 1.0
+   - el audio no se vuelve más lento por este PASS
+
+Instalación:
+- Cerrá Godot.
+- Extraé este ZIP.
+- Copiá las carpetas assets y scripts dentro de la raíz del proyecto CORE_AWAKENED_GITHUB_RC1.
+- Reemplazá cuando te lo pida.
+- Abrí project.godot y probá.

@@ -4,7 +4,7 @@ extends Control
 # Arcade conserva escenario automático según rival.
 const ESCENARIOS: Array[String] = [
 	"Kai", "Cibor-X", "Fang", "Kali", "Aethel", "Magnus",
-	"Helena", "Jester", "Xenoid", "Dax", "Varkhos", "Krovan", "Nekhar"
+	"Helena", "Jester", "Xenoid", "Dax", "Varkhos", "Krovan", "Nekhar", "Virgilio"
 ]
 
 const NOMBRES := {
@@ -21,6 +21,7 @@ const NOMBRES := {
 	"Varkhos": "TRONO DEL NÚCLEO",
 	"Krovan": "CAMPO DE LA ÚLTIMA COSECHA",
 	"Nekhar": "SEPULCRO DE KHEMET",
+	"Virgilio": "CHACO PARAGUAYO",
 }
 
 const RUTAS := {
@@ -37,6 +38,7 @@ const RUTAS := {
 	"Varkhos": "res://assets/fondos/varkhos.png",
 	"Krovan": "res://assets/fondos/krovan.png",
 	"Nekhar": "res://assets/fondos/nekhar.png",
+	"Virgilio": "res://assets/fondos/virgilio_chaco_paraguayo.png",
 }
 
 const COLORES := {
@@ -53,6 +55,7 @@ const COLORES := {
 	"Varkhos": Color(0.62, 0.18, 1.0),
 	"Krovan": Color(1.0, 0.62, 0.12),
 	"Nekhar": Color(1.0, 0.38, 0.08),
+	"Virgilio": Color(0.72, 0.76, 0.58),
 }
 
 const COLUMNAS := 6
@@ -168,7 +171,7 @@ func _crear_tarjetas() -> void:
 		nombre.size = Vector2(TARJETA_W - 16.0, 22.0)
 		nombre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nombre.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		nombre.add_theme_font_size_override("font_size", 11 if escenario in ["Krovan", "Nekhar"] else 12)
+		nombre.add_theme_font_size_override("font_size", 11 if escenario in ["Krovan", "Nekhar", "Virgilio"] else 12)
 		nombre.add_theme_color_override("font_color", Color.WHITE)
 		nombre.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		panel.add_child(nombre)

@@ -1,0 +1,21 @@
+CORE AWAKENED 91.04.00 — PASS 1H VIRGILIO CLEAN FIX
+
+Este paquete REEMPLAZA solamente archivos visuales / script de Virgilio.
+No tiene BAT ni PS1 para evitar errores de instalador.
+
+Corrige:
+- escenario de Virgilio restaurado LIMPIO (sin espejado del letrero) y exportado en 1920x1080
+- selector de personajes reencuadrado, con menos negro arriba
+- gigantografia CORE 1 un poco mas grande
+- proyectil y recarga se mantienen como ya te gustaron
+
+Importante:
+- no toca Fighter, rollback, NetworkManager, PerfectBlock, daño ni gameplay
+- si en el escenario siguiera apareciendo una franja negra, ya no seria por el PNG en si sino por el zoom/encuadre en main.gd
+
+Instalacion:
+1) Cerra Godot.
+2) Extrae este ZIP.
+3) Copia las carpetas assets y scripts a la raiz de CORE_AWAKENED_GITHUB_RC1.
+4) Reemplaza los archivos cuando Windows lo pida.
+5) Abri Godot y proba.

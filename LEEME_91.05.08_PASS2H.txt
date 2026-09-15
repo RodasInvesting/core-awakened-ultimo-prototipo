@@ -1,0 +1,17 @@
+CORE AWAKENED 91.05.08 PASS 2H
+
+OBJETIVO
+- Sacar SOLAMENTE estos dos audios del flujo CORE/gigantografias:
+  1) especial.wav
+  2) helena_luz.wav
+
+QUE HACE
+- modifica solo scripts/main.gd
+- deja intactos todos los otros sonidos ya aprobados
+- NO toca HUD, Fighter, rollback, escenarios ni biografias
+
+INSTALACION
+- Cerrar Godot
+- Extraer este ZIP
+- Copiar scripts/main.gd a la raiz del proyecto
+- Reemplazar archivo

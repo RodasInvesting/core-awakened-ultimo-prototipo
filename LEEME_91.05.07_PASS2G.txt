@@ -1,0 +1,25 @@
+CORE AWAKENED 91.05.07 PASS 2G — RESTAURACION AUDIO A PASS 2C
+
+Objetivo:
+- Volver EXACTAMENTE al estado de codigo de PASS 2C, ultimo punto aprobado antes de las pruebas PASS 2D/2E/2F sobre el sonido CORE.
+- Recupera el enrutamiento y las capas de audio que estaban presentes en CORE I, CORE II y CORE III en PASS 2C.
+- NO incluye ni reemplaza archivos MP3/WAV.
+
+Se conservan los cambios visuales aprobados de PASS 2C:
+- Barra CORE rectangular.
+- CORE RACE oculto.
+- COMBO/AIR/PERFECT/COUNTER/LAUNCH/RECOVER/EVADE debajo de los nombres del HUD.
+- HUD limpio.
+- Ajuste de volumen de Virgilio ya integrado en main.gd.
+
+Archivos incluidos:
+- scripts/main.gd
+- scripts/perfect_block_90_1.gd
+
+Instalacion:
+1. Cerrar Godot.
+2. Copiar la carpeta scripts sobre la raiz del proyecto.
+3. Reemplazar los dos archivos.
+4. Abrir Godot y probar CORE I, CORE II y CORE III.
+
+A partir de este PASS el audio CORE queda congelado: no modificar sonidos.

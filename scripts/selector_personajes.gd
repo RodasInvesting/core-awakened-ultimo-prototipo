@@ -1,12 +1,12 @@
 extends Control
 
-# CORE AWAKENED 91.02.38 — PASS 10.3 QA / VARKHOS DESBLOQUEADO TEMPORALMENTE.
-# Basado en el selector definitivo de 13 personajes.
-# Único cambio funcional de este PASS: permitir seleccionar Varkhos para QA final.
-# No altera roster, zonas, VS local, Arcade, escenarios ni gameplay.
+# CORE AWAKENED 91.05.19 — PASS 3C
+# - Conserva EXACTAMENTE la geometría certificada del selector de 14 personajes.
+# - Varkhos sigue funcionalmente bloqueado para la versión pública.
+# - Se agrega bloqueo visual gris para que quede claro a simple vista.
 const ROSTER: Array[String] = [
 	"Kai", "Cibor-X", "Fang", "Kali", "Aethel",
-	"Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar", "Varkhos"
+	"Magnus", "Helena", "Jester", "Xenoid", "Dax", "Krovan", "Nekhar", "Virgilio", "Varkhos"
 ]
 
 const COLORES := [
@@ -22,14 +22,16 @@ const COLORES := [
 	Color(0.96, 0.18, 0.08),
 	Color(1.0, 0.62, 0.12),
 	Color(1.0, 0.78, 0.15),
+	Color(0.82, 0.84, 0.86),
 	Color(0.95, 0.10, 0.16),
 ]
 
-# Bordes medidos sobre el roster definitivo 1672x941 y convertidos a 1280x720.
-# 14 límites = 13 paneles: Kai ... Krovan, Nekhar, Varkhos.
-const X_BORDES := [9.95, 120.96, 229.67, 322.30, 410.34, 499.90, 589.47, 680.57, 769.38, 855.89, 946.22, 1037.32, 1154.45, 1268.52]
-const TARJETA_Y := 64.0
-const TARJETA_H := 574.0
+# Bordes medidos sobre el roster real de 14 personajes.
+# 15 límites = 14 paneles: Kai ... Nekhar, Virgilio, Varkhos.
+const X_BORDES := [6.45, 114.25, 209.78, 296.92, 380.19, 462.17, 544.79, 624.83, 705.52, 786.20, 865.60, 948.22, 1043.75, 1157.36, 1265.80]
+const TARJETA_Y := 76.0
+const TARJETA_H := 554.0
+const INDICE_VARKHOS := 13
 
 var indice := 0
 var marco: Panel
@@ -43,6 +45,7 @@ var estado_versus_label: Label
 
 func _ready() -> void:
 	crear_fondo()
+	_crear_bloqueo_visual_varkhos()
 	crear_marco()
 	crear_interaccion()
 	crear_audio()
@@ -75,6 +78,53 @@ func crear_fondo() -> void:
 	imagen.stretch_mode = TextureRect.STRETCH_SCALE
 	imagen.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(imagen)
+
+func _crear_bloqueo_visual_varkhos() -> void:
+	var r := _rect_pantalla(INDICE_VARKHOS)
+
+	var overlay := Panel.new()
+	overlay.position = r.position
+	overlay.size = r.size
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.10, 0.10, 0.10, 0.46)
+	st.border_color = Color(0.72, 0.72, 0.72, 0.90)
+	st.set_border_width_all(3)
+	overlay.add_theme_stylebox_override("panel", st)
+	add_child(overlay)
+
+	var banda := ColorRect.new()
+	banda.position = Vector2(8, 14)
+	banda.size = Vector2(r.size.x - 16.0, 30)
+	banda.color = Color(0.16, 0.16, 0.16, 0.88)
+	banda.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(banda)
+
+	var texto := Label.new()
+	texto.text = "BLOQ."
+	texto.position = Vector2(0, 0)
+	texto.size = banda.size
+	texto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	texto.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	texto.add_theme_font_size_override("font_size", 16)
+	texto.add_theme_color_override("font_color", Color(0.92, 0.92, 0.92, 1.0))
+	texto.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	texto.add_theme_constant_override("outline_size", 4)
+	texto.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banda.add_child(texto)
+
+	var subtitulo := Label.new()
+	subtitulo.text = "FINAL"
+	subtitulo.position = Vector2(0, r.size.y - 42)
+	subtitulo.size = Vector2(r.size.x, 24)
+	subtitulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitulo.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	subtitulo.add_theme_font_size_override("font_size", 14)
+	subtitulo.add_theme_color_override("font_color", Color(0.88, 0.88, 0.88, 0.95))
+	subtitulo.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	subtitulo.add_theme_constant_override("outline_size", 3)
+	subtitulo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(subtitulo)
 
 func crear_marco() -> void:
 	marco = Panel.new()
@@ -141,8 +191,6 @@ func _actualizar_estado_versus() -> void:
 			return
 		var rol_txt := "HOST / JUGADOR 1" if red.es_host() else "CLIENTE / JUGADOR 2"
 		if confirmando:
-			# 91.02.63 — Godot 4.7.1 no puede inferir String desde propiedades
-			# dinámicas de un Node en una expresión ternaria.
 			var propio: String = str(red.personaje_host) if red.es_host() else str(red.personaje_cliente)
 			var otro: String = str(red.personaje_cliente) if red.es_host() else str(red.personaje_host)
 			if otro.is_empty():
@@ -278,7 +326,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				indice += 1
 				_sonido_navegacion()
 				actualizar_seleccion()
-				return
 			KEY_F:
 				confirmar()
 				return
@@ -313,8 +360,9 @@ func confirmar() -> void:
 		return
 	var estado = get_node("/root/GameState")
 	var elegido: String = ROSTER[indice]
-	# 91.02.38 — QA FINAL: Varkhos queda seleccionable temporalmente.
-	# En Arcade sigue entrando por la ruta segura de Batalla Rápida definida abajo.
+	if elegido == "Varkhos":
+		_sonido_navegacion()
+		return
 
 	if _es_online():
 		var red := _network()

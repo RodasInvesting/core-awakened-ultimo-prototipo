@@ -1,0 +1,25 @@
+CORE AWAKENED 91.05.19 — PASS 3C
+
+Contenido:
+- scripts/final_arcade.gd
+- scripts/selector_personajes.gd
+
+Cambios incluidos:
+1) FINAL ARCADE
+   - Imagen 1 (Varkhos derrotado): +3.0 segundos.
+   - Imagen 2 (héroes alrededor de Varkhos): +3.0 segundos.
+   - No cambia audios ni la imagen final del ganador.
+
+2) SELECTOR
+   - Se conserva la geometría certificada de 14 personajes.
+   - Varkhos permanece BLOQUEADO funcionalmente.
+   - Se agrega bloqueo visual gris para que se note claramente.
+
+Instalación:
+- Cerrar Godot.
+- Copiar la carpeta scripts sobre la raíz del proyecto.
+- Reemplazar los archivos cuando lo pida.
+
+Prueba sugerida:
+- Abrir selector y verificar que Varkhos se vea gris/bloqueado.
+- Ejecutar un arcade y confirmar que las imágenes 1 y 2 duren más tiempo.

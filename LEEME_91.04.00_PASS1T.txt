@@ -1,0 +1,10 @@
+CORE AWAKENED 91.04.00 PASS 1T - SELECTOR MICROCIERRE
+
+Ajuste unico del selector:
+- se recorta un toquesito mas arriba
+- se recorta un toquesito mas abajo
+- no toca la imagen del roster
+- no toca ningun otro sistema
+
+Reemplazar solamente:
+- scripts/selector_personajes.gd

@@ -1,0 +1,19 @@
+CORE AWAKENED 91.05.12 PASS 2L
+
+HOTFIX PARSE RAFAGA CORE
+
+Causa exacta del crash:
+- empuje_base_contacto estaba declarado dos veces dentro de la misma funcion.
+- Godot 4.7.1 rechaza la segunda declaracion y Fighter no puede cargar.
+- Los errores posteriores de Aethel/Kai/etc. son consecuencia de que Fighter no parsea.
+
+Cambio unico:
+- elimina la segunda declaracion redundante de empuje_base_contacto.
+- conserva la rafaga CORE II/III con hit-stop virtual de receptor Magnus (masa 1.60).
+- no cambia masa real, empuje real, hitstun real, dano, movimiento, audio, HUD ni rollback.
+
+Instalacion:
+1. Cerrar Godot.
+2. Copiar scripts/fighter.gd sobre el proyecto.
+3. Reemplazar.
+4. Abrir Godot y probar inicio de pelea + CORE II/III.

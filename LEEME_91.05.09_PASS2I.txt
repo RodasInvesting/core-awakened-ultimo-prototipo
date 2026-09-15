@@ -1,0 +1,7 @@
+CORE AWAKENED 91.05.09 PASS 2I
+
+Cambio unico:
+- Reemplaza assets/sonidos/cinematicas/poder_final.mp3
+  por el nuevo archivo PODER FINAL(1).mp3 enviado por el usuario.
+
+No modifica scripts ni ninguna otra parte del proyecto.

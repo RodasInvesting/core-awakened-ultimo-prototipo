@@ -1,0 +1,21 @@
+CORE AWAKENED 91.04.00 — PASS 1J VIRGILIO STAGE + SELECTOR FIX
+
+Este PASS corrige 3 cosas puntuales:
+1) Selector: nuevo armado del PNG para que el roster calce con el marco y no quede negro feo.
+2) Escenario: Virgilio ahora usa el mismo sistema base que los otros escenarios rediseñados.
+3) CORE 1: la gigantografía inicial sale más grande.
+
+Música:
+- No se toca el tempo del archivo.
+- Se fuerza pitch_scale = 1.0.
+- Solo queda volumen de ambiente en -6.0 dB para Virgilio.
+
+Instalación:
+- Cerrá Godot.
+- Extraé este ZIP.
+- Copiá assets y scripts dentro de la raíz del proyecto CORE_AWAKENED_GITHUB_RC1.
+- Reemplazá archivos.
+- Abrí project.godot y probá otra vez.
+
+NO usa BAT ni PS1.
+Es solo reemplazo de archivos.

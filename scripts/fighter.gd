@@ -2933,6 +2933,14 @@ func _chequear_impacto_ataque() -> void:
 	velocity.x = mirando * avance_contacto
 	seguimiento_ataque_x = mirando * (3.0 if _atk_tipo == "punetazo" else 5.0) * _mult_followthrough_personalidad()
 	var intensidad_contacto: float = clampf(empuje_final / 280.0, 0.65, 1.45)
+	# 91.05.13 PASS 2M — durante la ráfaga automática de CORE II/III, la
+	# CADENCIA usa una masa virtual de receptor igual a Magnus (1.60). Esto
+	# modifica únicamente el hit-stop local del atacante: no toca la masa real,
+	# el empuje, el hitstun, el daño ni la física del receptor.
+	if en_combo_auto_visual:
+		var empuje_base_cadencia_core: float = (_atk_empuje_base * peso_golpe + dano * 4.0) * MULT_EMPUJE_GLOBAL
+		var transferencia_masa_cadencia_core: float = clampf((_masa_corporal() * peso_golpe) / 1.60, 0.72, 1.32)
+		intensidad_contacto = clampf((empuje_base_cadencia_core * transferencia_masa_cadencia_core) / 280.0, 0.65, 1.45)
 	# 90.10.73 — HIT FEEDBACK competitivo. Los golpes normales ya no necesitan
 	# congelar el Engine completo para sentirse sólidos: el contacto se resuelve
 	# con hit-stop LOCAL del Fighter. Puño = seco/rápido; patada = un poco más
@@ -9342,6 +9350,15 @@ func _distancia_combo_auto_adaptativa(otro: Fighter) -> float:
 	if not otro or not is_instance_valid(otro):
 		return DISTANCIA_COMBO_AUTO_PUSH_MIN
 
+	# 91.05.15 PASS 2O — durante la RÁFAGA automática el receptor está anclado,
+	# por lo que no necesitamos recalcular la separación con cada nueva pose de
+	# golpe recibido. Aethel/Kali/etc. pueden cambiar mucho su radio visual entre
+	# sprites y eso disparaba micro-acercamientos de al menos 0.08 s entre beats.
+	# Usamos el mismo target compacto máximo que ya admite el CORE (100 px):
+	# cadencia constante para todos, sin cambiar masa, hitstun ni física real.
+	if en_combo_auto_visual or otro.en_combo_auto_visual:
+		return DISTANCIA_COMBO_AUTO_PUSH_MAX
+
 	var radio_suma: float = _radio_corporal_visual() + otro._radio_corporal_visual()
 	# El radio de pie está recortado a 40..62 px por luchador. Tomamos sólo una
 	# fracción de lo que excede el cuerpo compacto para no alejar los golpes.
@@ -9734,9 +9751,38 @@ func _aplicar_limites_arena() -> void:
 
 func _actualizar_profundidad_visual() -> void:
 	var base_z := int(round(global_position.y / Z_BASE_Y_DIVISOR))
-	# Saltar hacia arriba = ligeramente más atrás; permanecer en el suelo =
-	# más adelante. El estado de impacto añade una pequeña prioridad para
-	# que el contacto se vea limpio.
+
+	# 91.05.16 — PASS 2P. En contacto NORMAL alternamos la lectura de capas:
+	# 1er golpe = receptor delante, 2do = atacante delante, y así sucesivamente.
+	# La paridad sale de combo_count, que ya forma parte de la simulación; no
+	# agregamos azar ni estado nuevo. CORE II/III queda EXCLUIDO y conserva
+	# exactamente su profundidad aprobada en PASS 2O.
+	if objetivo and is_instance_valid(objetivo):
+		var combo_core_activo: bool = en_combo_auto_visual or objetivo.en_combo_auto_visual
+		var secuencia_especial_activa: bool = en_secuencia_especial or objetivo.en_secuencia_especial
+		if not combo_core_activo and not secuencia_especial_activa:
+			var yo_conecte_normal: bool = fase_ataque != FaseAtaque.NINGUNA \
+				and _atk_ya_conecto and objetivo.hitstun_timer > 0.0
+			var yo_recibo_normal: bool = hitstun_timer > 0.0 \
+				and objetivo.fase_ataque != FaseAtaque.NINGUNA and objetivo._atk_ya_conecto
+
+			# En un trade simultáneo dejamos la regla histórica; la alternancia sólo
+			# gobierna un contacto limpio con un atacante y un receptor inequívocos.
+			if yo_conecte_normal != yo_recibo_normal:
+				var base_pareja: int = maxi(
+					int(round(global_position.y / Z_BASE_Y_DIVISOR)),
+					int(round(objetivo.global_position.y / Z_BASE_Y_DIVISOR))
+				)
+				var numero_golpe: int = combo_count if yo_conecte_normal else objetivo.combo_count
+				var atacante_delante: bool = numero_golpe > 0 and (numero_golpe % 2 == 0)
+				if yo_conecte_normal:
+					z_index = base_pareja + (3 if atacante_delante else 1)
+				else:
+					z_index = base_pareja + (1 if atacante_delante else 3)
+				return
+
+	# Regla histórica intacta para aire, CORE, especiales, trades y cualquier
+	# situación fuera del contacto normal limpio.
 	if fase_ataque == FaseAtaque.ACTIVO:
 		base_z += 1
 	if hitstun_timer > 0.0:

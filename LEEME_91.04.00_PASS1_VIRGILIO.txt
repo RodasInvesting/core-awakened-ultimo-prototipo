@@ -1,0 +1,35 @@
+CORE AWAKENED 91.04.00 — PASS 1 VIRGILIO
+
+PAQUETE COMPLETO PARA PRIMERA PRUEBA.
+
+PASOS:
+1. USAR SOLO EN LA COPIA/RAMA DE DESARROLLO. NO TOCAR 91.03.00 RC1 MASTER.
+2. EXTRAER ESTE ZIP.
+3. COPIAR/ARRASTRAR TODO EL CONTENIDO A LA RAIZ DEL PROYECTO Y REEMPLAZAR CUANDO WINDOWS PREGUNTE.
+4. EN LA RAIZ DEL PROYECTO HACER DOBLE CLIC EN: APLICAR_VIRGILIO_91.04.00.bat
+5. ESPERAR EL MENSAJE: VIRGILIO INTEGRADO - PASS 1 OK.
+6. ABRIR project.godot.
+7. ESPERAR LA IMPORTACION DE RECURSOS.
+8. PROBAR PRIMERO BATALLA RAPIDA -> VIRGILIO.
+
+ESTE PASS AGREGA:
+- Virgilio antes de Varkhos en el selector de 14 luchadores.
+- Script propio scripts/virgilio.gd basado en Fighter generico.
+- 6 punos, 3 golpes de pierna, recibidos, derrota, caminata, dash/back dash, salto/doble/descenso, bloqueo.
+- Combo/furia con 6 sprites.
+- CORE I/II/III.
+- Proyectil.
+- Escenario CHACO PARAGUAYO.
+- Musica oficial de escenario.
+- Pantalla VS.
+- Fondo de resultado.
+- Registro Arcade/Batalla Rapida/Versus/Online sin modificar netcode.
+
+NO MODIFICA:
+- fighter.gd
+- rollback_snapshot.gd
+- network_manager.gd
+- pause_manager_online.gd
+- perfect_block_90_1.gd
+
+VERSION BASE ESPERADA: 91.03.00 RC1 / main sellado.

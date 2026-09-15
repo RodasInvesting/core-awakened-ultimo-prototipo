@@ -1,0 +1,19 @@
+CORE AWAKENED 91.05.13 PASS 2M
+
+RECUPERACION + CAMBIO CORRECTO DE RAFAGA CORE
+
+IMPORTANTE
+- Este fighter.gd parte de la base completa actual (414 KB), no del archivo viejo/incompleto de los PASS 2J/2K/2L.
+- Recupera los sistemas actuales de proyectil, evasion, CORE, combo remix, dash, etc.
+
+CAMBIO UNICO NUEVO
+- Durante en_combo_auto_visual (rafaga CORE II/III), SOLO el calculo de hit-stop del atacante usa masa virtual de receptor 1.60 (Magnus).
+- La masa real de cada receptor NO cambia.
+- Empuje real, hitstun, daño, fisica, gravedad, movimiento, CORE I y remates quedan intactos.
+
+INSTALACION
+1. Cerrar Godot.
+2. Copiar scripts/fighter.gd a la raiz del proyecto y reemplazar.
+3. Abrir Godot.
+4. Primero comprobar que una pelea inicia sin errores.
+5. Luego probar CORE II/III contra varios receptores.

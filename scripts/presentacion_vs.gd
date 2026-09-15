@@ -15,6 +15,7 @@ const POSTERS := {
 	"Dax": "gigantografias/dax.png",
 	"Krovan": "gigantografias/krovan_core_vs_910207.png",
 	"Nekhar": "gigantografias/nekhar_core_vs_910207.png",
+	"Virgilio": "gigantografias/virgilio_vs.png",
 	"Varkhos": "varkhos_vs.png"
 }
 
@@ -30,6 +31,7 @@ const POSTER_FIT_SCALE := {
 	"Xenoid": 1.12,
 	"Krovan": 1.24,
 	"Nekhar": 1.24,
+	"Virgilio": 1.12,
 	"Varkhos": 0.78
 }
 
@@ -45,6 +47,7 @@ const POSTER_OFFSET := {
 	"Xenoid": Vector2(32.0, 0.0),
 	"Krovan": Vector2(22.0, 12.0),
 	"Nekhar": Vector2(22.0, 12.0),
+	"Virgilio": Vector2(26.0, 4.0),
 	"Varkhos": Vector2.ZERO
 }
 

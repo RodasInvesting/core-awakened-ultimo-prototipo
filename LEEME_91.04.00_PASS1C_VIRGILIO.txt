@@ -1,0 +1,18 @@
+CORE AWAKENED 91.04.00 — PASS 1C VIRGILIO
+
+Correcciones basadas en el video real:
+- escenario CHACO PARAGUAYO: zoom exclusivo Virgilio 1.00
+- roster: PNG recalibrado a 1280x720 sin recortar extremos
+- zonas del selector recalibradas
+- pose de victoria: +20% visual sólo Virgilio
+- pose de proyectil reemplazada por el nuevo sprite 1254x1254
+- se elimina el +6% extra de escala de la pose de proyectil
+- música del escenario: -10 dB -> -5 dB
+
+NO toca:
+Fighter / rollback / NetworkManager / PerfectBlock / física / daño / hitboxes.
+
+Instalación:
+1. Copiar TODO este ROOT a la raíz CORE_AWAKENED_GITHUB_RC1 y reemplazar.
+2. Ejecutar APLICAR_VIRGILIO_91.04.00_PASS1C.bat.
+3. Si termina PASS 1C OK, abrir Godot y probar.

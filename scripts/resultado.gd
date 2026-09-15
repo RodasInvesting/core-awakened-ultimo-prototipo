@@ -11,6 +11,13 @@ var transicion_en_curso := false
 
 func _ready() -> void:
 	estado = get_node("/root/GameState")
+	# 91.05.17 — cuando Arcade termina con victoria total contra Varkhos,
+	# Resultado redirige a la secuencia final dedicada con las dos imágenes
+	# narrativas y la imagen final variable del ganador. No toca Versus ni Online.
+	if estado.modo == "arcade" and estado.ultimo_resultado == "campeon":
+		get_tree().change_scene_to_file("res://scenes/FinalArcade.tscn")
+		return
+
 	# 90.12.00 — en Versus Local el fondo de resultado debe ser el escenario
 	# que realmente eligieron los jugadores, no el escenario local del rival.
 	var fondo_resultado: String = estado.escenario_actual if estado.modo == "versus_local" else (estado.ultimo_rival if estado.ultimo_rival != "" else estado.rival_actual)

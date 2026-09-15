@@ -1,0 +1,20 @@
+CORE AWAKENED 91.04.00 — PASS 1G VIRGILIO
+
+MICROAJUSTES pedidos:
+- escenario de Virgilio rehecho mas ANCHO para evitar negro a la derecha sin borrar el letrero ni la tienda
+- proyectil: un toque mas grande
+- recarga / entrada a CORE II: un poco mas grande
+- gigantografia CORE I: un poco mas grande
+- salto, doble salto, descenso y back dash: un poquito mas grandes
+
+IMPORTANTE
+- Este paquete NO necesita BAT.
+- Solo hay que reemplazar archivos.
+- No toca Fighter, rollback, NetworkManager, PerfectBlock, daño ni gameplay.
+
+INSTALACION
+1) Cerra Godot.
+2) Extrae este ZIP.
+3) Copia las carpetas assets y scripts a la raiz de CORE_AWAKENED_GITHUB_RC1.
+4) Reemplaza los archivos cuando Windows lo pida.
+5) Abri Godot y proba.
